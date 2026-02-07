@@ -639,7 +639,7 @@ document.addEventListener('keypress', (e) => {
 
       try {
         const userLoc = await getCurrentPosition().catch(() => null);
-        const stops = pendingJobs.map(p => `${p.name}, ${p.pickup_location}, ${p.city || ''}`);
+        const stops = pendingJobs.map(p => `${p.delivery_name}, ${p.destination}`);
         
         const origin = userLoc ? 
           { location: { latLng: { latitude: parseFloat(userLoc.split(',')[0]), longitude: parseFloat(userLoc.split(',')[1]) } } } : 
@@ -686,7 +686,7 @@ document.addEventListener('keypress', (e) => {
 
       } catch (err) {
         console.error("Routing Error:", err);
-        const fallback = pendingJobs.map(p => encodeURIComponent(`${p.name}, ${p.pickup_location}, ${p.city || ''}`)).join('/');
+        const fallback = pendingJobs.map(p => encodeURIComponent(`${p.delivery_name}, ${p.destination}`)).join('/');
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${fallback}`, '_blank');
       } finally {
         btn.innerText = oldText;
