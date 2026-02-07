@@ -672,9 +672,9 @@ document.addEventListener('keypress', (e) => {
       
       const stops = pendingJobs.map(p => {
          if (p.jobType === 'pickup') {
-             return `${p.pickup_location}, ${p.city || ''}`;
+             return `${p.name}, ${p.pickup_location}, ${p.city || ''}`;
          } else {
-             return `${p.destination}, ${p.city || ''}`;
+             return `${p.delivery_name}, ${p.destination}, ${p.city || ''}`;
          }
       });
       
@@ -725,9 +725,9 @@ document.addEventListener('keypress', (e) => {
       console.error("Routing Error:", err);
       const fallback = pendingJobs.map(p => {
          if (p.jobType === 'pickup') {
-             return encodeURIComponent(`${p.pickup_location}, ${p.city || ''}`);
+             return encodeURIComponent(`${p.name}, ${p.pickup_location}, ${p.city || ''}`);
          } else {
-             return encodeURIComponent(`${p.destination}, ${p.city || ''}`);
+             return encodeURIComponent(`${p.delivery_name}, ${p.destination}, ${p.city || ''}`);
          }
       }).join('/');
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${fallback}`, '_blank');
