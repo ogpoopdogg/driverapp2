@@ -964,7 +964,7 @@ document.addEventListener('keypress', (e) => {
           </div>
           
           <div class="card-action-row">
-            <button class="info-btn ${internalChange && needsAlert ? 'info-btn-animate' : ''}" onclick="dndJob('${id}', '${escapedNotes}')">${dndButtonText}</button>
+            <button class="info-btn" onclick="dndJob('${id}', '${escapedNotes}')">${dndButtonText}</button>
             <button class="done-btn" onclick="markDone('${id}')">DONE</button>
           </div>
         `;
