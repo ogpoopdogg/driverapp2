@@ -690,7 +690,7 @@ document.addEventListener('keypress', (e) => {
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": GOOGLE_KEY,
-          "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex"
+          "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline"
         },
         body: JSON.stringify({
           origin: origin,
@@ -702,6 +702,14 @@ document.addEventListener('keypress', (e) => {
       });
 
       const result = await response.json();
+      
+      if (result.routes && result.routes[0] && result.routes[0].polyline) {
+        db.ref(`driver_locations/${currentDriver}`).update({
+          active_route: result.routes[0].polyline.encodedPolyline,
+          route_timestamp: Date.now()
+        });
+      }
+
       let finalSequence = [];
 
       if (result.routes && result.routes[0].optimizedIntermediateWaypointIndex) {
