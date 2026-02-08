@@ -674,10 +674,11 @@ document.addEventListener('keypress', (e) => {
       const userLoc = await getCurrentPosition().catch(() => null);
       
       const stops = pendingJobs.map(p => {
+         const uid = (p.timestamp || 0).toString().slice(-3);
          if (p.jobType === 'pickup') {
-             return `${p.name}, ${p.pickup_location}, ${p.city || ''}`;
+             return `${p.name} ${uid}, ${p.pickup_location}, ${p.city || ''}`;
          } else {
-             return `${p.delivery_name}, ${p.destination}, ${p.city || ''}`;
+             return `${p.delivery_name} ${uid}, ${p.destination}, ${p.city || ''}`;
          }
       });
       
