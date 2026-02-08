@@ -912,8 +912,10 @@ document.addEventListener('keypress', (e) => {
 
         card.id = `card-${id}`;
         
+        const noteWithTags = (p.other_info || "").replace(/\[([^\]]+)\]:/g, '<span style="color:var(--update-blue); font-weight:900; text-shadow:0 0 5px rgba(0,212,255,0.3);">[$1]:</span>');
+
         const notesDisplay = (p.other_info && p.other_info.trim() !== "") ? 
-          `<div class="${isEdited ? 'notes-edited' : ''} ${needsAlert && changedFields.includes('notes') ? 'field-highlight' : ''}" style="text-align:center; width:100%; margin-top:10px; color:#ddd; font-size:14px; word-wrap:break-word; font-style:italic;">${p.other_info}</div>` 
+          `<div class="${isEdited ? 'notes-edited' : ''} ${needsAlert && changedFields.includes('notes') ? 'field-highlight' : ''}" style="text-align:center; width:100%; margin-top:10px; color:#ddd; font-size:14px; word-wrap:break-word; font-style:italic;">${noteWithTags}</div>` 
           : '';
 
         card.innerHTML = `
