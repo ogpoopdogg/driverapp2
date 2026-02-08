@@ -587,12 +587,22 @@ document.addEventListener('keypress', (e) => {
   function toggleDriverNoteEdit(e, id) {
     e.stopPropagation();
     const container = document.getElementById(`driver-note-display-${id}`);
+    const btns = document.getElementById(`card-${id}`).querySelectorAll('.card-action-row button');
+
     if(container.innerHTML.trim() !== "") {
         container.innerHTML = "";
+        btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
     } else {
+        btns.forEach(b => { b.disabled = true; b.style.opacity = '0.3'; });
         container.innerHTML = `
-          <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" onclick="event.stopPropagation()"></textarea>
-          <button class="save-note-btn" style="width: 100%; padding: 12px; margin-top: 10px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND</button>
+          <div style="position: fixed; bottom: 0; left: 0; width: 100%; background: #151515; padding: 15px; border-top: 2px solid var(--accent); z-index: 10000; box-shadow: 0 -5px 30px rgba(0,0,0,0.9);">
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="color:var(--accent); font-weight:900;">DRIVER NOTE</span>
+                <button onclick="toggleDriverNoteEdit(event, '${id}')" style="background:transparent; border:none; color:#666; font-weight:bold;">CANCEL</button>
+             </div>
+             <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" style="height:80px; margin-bottom:10px;" onclick="event.stopPropagation()"></textarea>
+             <button class="save-note-btn" style="width: 100%; padding: 12px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND NOTE</button>
+          </div>
         `;
         setTimeout(() => document.getElementById(`driver-edit-input-${id}`).focus(), 100);
     }
