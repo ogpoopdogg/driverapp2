@@ -681,12 +681,19 @@ document.addEventListener('keypress', (e) => {
          }
       });
       
-      const origin = userLoc ? 
-        { location: { latLng: { latitude: parseFloat(userLoc.split(',')[0]), longitude: parseFloat(userLoc.split(',')[1]) } } } : 
-        { address: stops[0] };
-        
-      const destination = { address: stops[stops.length - 1] };
-      const intermediates = (userLoc ? stops.slice(0, -1) : stops.slice(1, -1)).map(addr => ({ address: addr }));
+      const SHOP_ADDRESS = "E&C Courier, 1604 Moreland Ave, Brandon MB";
+      
+      let origin, intermediates;
+
+      if (userLoc) {
+        origin = { location: { latLng: { latitude: parseFloat(userLoc.split(',')[0]), longitude: parseFloat(userLoc.split(',')[1]) } } };
+        intermediates = stops.map(addr => ({ address: addr }));
+      } else {
+        origin = { address: stops[0] };
+        intermediates = stops.slice(1).map(addr => ({ address: addr }));
+      }
+      
+      const destination = { address: SHOP_ADDRESS };
 
       const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
         method: "POST",
@@ -717,12 +724,12 @@ document.addEventListener('keypress', (e) => {
 
       if (result.routes && result.routes[0].optimizedIntermediateWaypointIndex) {
         const order = result.routes[0].optimizedIntermediateWaypointIndex;
-        const middleStops = userLoc ? stops.slice(0, -1) : stops.slice(1, -1);
+        const middleStops = userLoc ? stops : stops.slice(1);
         if (!userLoc) finalSequence.push(stops[0]);
         order.forEach(idx => finalSequence.push(middleStops[idx]));
-        finalSequence.push(stops[stops.length - 1]);
+        finalSequence.push(SHOP_ADDRESS);
       } else {
-        finalSequence = stops;
+        finalSequence = [...stops, SHOP_ADDRESS];
       }
 
       const originParam = userLoc || encodeURIComponent(finalSequence[0]);
@@ -734,13 +741,15 @@ document.addEventListener('keypress', (e) => {
 
     } catch (err) {
       console.error("Routing Error:", err);
-      const fallback = pendingJobs.map(p => {
+      const fallbackList = pendingJobs.map(p => {
          if (p.jobType === 'pickup') {
              return encodeURIComponent(`${p.name}, ${p.pickup_location}, ${p.city || ''}`);
          } else {
              return encodeURIComponent(`${p.delivery_name}, ${p.destination}, ${p.city || ''}`);
          }
-      }).join('/');
+      });
+      fallbackList.push(encodeURIComponent("E&C Courier, 1604 Moreland Ave, Brandon MB"));
+      const fallback = fallbackList.join('/');
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${fallback}`, '_blank');
     } finally {
       btn.innerText = oldText;
