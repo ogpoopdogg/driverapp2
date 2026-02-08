@@ -377,9 +377,11 @@
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('header-name').innerHTML = `
       <img src="icon-512.png" class="header-logo">
-      <span style="font-size: 24px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${currentDriver}</span>
-      <span id="stop-counter" class="stop-badge">0 STOPS</span>
-      <span id="new-stops-badge" class="new-stops-badge">0 NEW</span>
+      <span style="font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
+      <span style="white-space: nowrap;">
+        <span id="stop-counter" class="stop-badge" style="margin-left: 0;">0 STOPS</span>
+        <span id="new-stops-badge" class="new-stops-badge">0 NEW</span>
+      </span>
     `;
     startContinuousTracking();
     setupIntersectionObserver();
@@ -592,6 +594,7 @@ document.addEventListener('keypress', (e) => {
           <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" onclick="event.stopPropagation()"></textarea>
           <button class="save-note-btn" style="width: 100%; padding: 12px; margin-top: 10px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND</button>
         `;
+        setTimeout(() => document.getElementById(`driver-edit-input-${id}`).focus(), 100);
     }
   }
 
