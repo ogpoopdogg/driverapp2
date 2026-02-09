@@ -6,299 +6,226 @@
   <title>E&C Dispatch | Driver Portal</title>
   <style>
     :root {
-      /* Professional Palette */
+      --accent: #ffcc00;
+      --queue-orange: #ff9800;
+      --card-bg: #1e1e1e;
+      --active-green: #4caf50;
+      --review-blue: #2196f3;
+      --decline-red: #f44336;
+      --text-main: #ffffff;
+      --update-blue: #00d4ff;
       --bg-base: #121212;
-      --bg-card: #1e1e1e;
       --bg-sidebar: #181818;
-      
-      --border-subtle: #27272a;
-      --border-focus: #52525b;
-      
-      --text-primary: #ffffff;
+      --border-color: #333;
       --text-secondary: #a1a1aa;
-      --text-muted: #71717a;
-      
-      --accent-yellow: #f59e0b; /* Pending/Queue */
-      --accent-green: #22c55e; /* Success/Done */
-      --accent-blue: #3b82f6; /* Info/Action */
-      --accent-red: #ef4444; /* Urgent/New */
     }
-
     * { box-sizing: border-box; }
     
-    html, body { 
-      height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; 
-      background: var(--bg-base); color: var(--text-primary); 
-    }
+    html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg-base); color: #e0e0e0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; font-size: 14px; line-height: 1.5; font-weight: 400; }
     
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-      display: flex; flex-direction: column; 
-      font-size: 14px; line-height: 1.5; font-weight: 400;
-    }
-    
-    /* UTILITY CLASSES */
-    .hidden { display: none !important; }
-    
-    /* UPDATES & INDICATORS (Static, No Pulsing) */
+    /* NEW INFO ANIMATIONS */
     .has-update {
-      border-left: 4px solid var(--accent-blue) !important;
+      border: 1px solid var(--update-blue) !important;
     }
 
+    /* SPECIFIC FIELD HIGHLIGHTING */
     .field-highlight {
-      color: var(--accent-blue) !important;
+      color: var(--update-blue) !important;
       font-weight: 600;
+      display: inline-block;
     }
 
+    /* INFO BUTTON ANIMATION */
     .info-btn-animate {
-      border-color: var(--accent-blue) !important;
-      background: rgba(59, 130, 246, 0.1) !important;
+      background: rgba(0, 212, 255, 0.1) !important;
+      border-color: var(--update-blue) !important;
     }
 
     .update-badge {
-      background: var(--accent-blue);
-      color: #fff; font-size: 11px; font-weight: 600; 
-      padding: 2px 8px; border-radius: 12px; margin-left: 8px;
+      background: var(--update-blue);
+      color: #000; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 8px;
+      letter-spacing: 0.5px;
     }
 
     .header-logo {
-      height: 24px; width: auto; margin-right: 12px; vertical-align: middle;
+      height: 28px; 
+      width: auto;
+      margin-right: 12px;
+      vertical-align: middle;
     }
 
     .stop-badge {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-primary);
-      border: 1px solid var(--border-subtle);
+      background: rgba(0, 212, 255, 0.1);
+      color: var(--update-blue);
+      border: 1px solid var(--update-blue);
       padding: 4px 10px;
       border-radius: 6px;
       font-size: 12px;
       margin-left: 10px;
       font-weight: 600;
+      letter-spacing: 0.5px;
       display: inline-block;
       vertical-align: middle;
     }
 
     .new-stops-badge {
-      background: var(--accent-red);
+      background: #ff0000;
       color: #fff;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      margin-left: 12px;
-      font-weight: 600;
+      border: 2px solid #fff;
+      padding: 4px 12px;
+      border-radius: 50px;
+      font-size: 14px;
+      margin-left: 15px;
+      font-weight: 700;
       display: none;
       vertical-align: middle;
     }
 
-    /* LOGIN OVERLAY */
     #login-overlay {
-      position: fixed; inset: 0; background: #000; z-index: 999;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+      position: fixed; inset: 0; background: var(--bg-base); z-index: 999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;
     }
     .login-box {
-      width: 100%; max-width: 360px; background: var(--bg-card); padding: 32px; 
-      border-radius: 12px; border: 1px solid var(--border-subtle); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      width: 100%; max-width: 350px; background: var(--card-bg); padding: 30px; 
+      border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.5);
       text-align: center;
     }
-    .login-box h2 { color: var(--text-primary); margin-top: 0; font-weight: 700; font-size: 20px; }
-    
+    .login-box h2 { color: var(--accent); margin-top: 0; font-weight: 700; letter-spacing: 1px; }
     .login-input {
-      width: 100%; padding: 12px 16px; margin: 12px 0; background: var(--bg-base); 
-      border: 1px solid var(--border-subtle); color: var(--text-primary); 
-      border-radius: 6px; font-size: 16px; outline: none; transition: 0.2s;
+      width: 100%; padding: 0 16px; margin: 10px 0; background: #222; border: 1px solid #444;
+      color: #fff; border-radius: 8px; font-size: 16px; outline: none; transition: 0.3s; height: 44px;
     }
-    .login-input:focus { border-color: var(--accent-blue); background: #000; }
-    
+    .login-input:focus { border-color: var(--accent); background: #2a2a2a; }
     .login-submit {
-      width: 100%; padding: 14px; margin-top: 16px; background: var(--accent-yellow); 
-      border: none; color: #000; font-weight: 700; font-size: 14px; 
-      border-radius: 6px; cursor: pointer; text-transform: uppercase;
-    }
-
-    /* HEADER */
-    header { 
-      padding: 12px 20px; background: var(--bg-card); border-bottom: 1px solid var(--border-subtle); 
-      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 10; 
-    }
-    h1 { margin: 0; color: var(--text-primary); font-size: 16px; font-weight: 600; display: flex; align-items: center; }
-    #clock { font-size: 14px; color: var(--text-secondary); font-weight: 500; font-variant-numeric: tabular-nums; }
-
-    /* LAYOUT */
-    #main-container { display: flex; flex: 1; width: 100%; overflow: hidden; background: var(--bg-base); }
-    
-    #history-sidebar { 
-      width: 200px; /* Increased width for touch targets */
-      border-right: 1px solid var(--border-subtle); 
-      overflow-y: auto; background: var(--bg-sidebar); 
-      padding: 16px; flex-shrink: 0; display: flex; flex-direction: column; padding-bottom: 80px; 
-    }
-    
-    #multi-route-btn {
-      position: fixed; bottom: 16px; left: 16px; width: 168px;
-      padding: 14px; background: var(--bg-card); border: 1px solid var(--border-subtle);
-      color: var(--text-primary); font-weight: 600; font-size: 13px; border-radius: 6px;
-      cursor: pointer; text-align: center; z-index: 100; transition: background 0.2s;
-    }
-    #multi-route-btn:active { background: var(--border-subtle); }
-    
-    .glow-active {
-      background: var(--accent-yellow) !important;
-      color: #000 !important;
-      border: none !important;
-    }
-
-    .glow-max {
-      background: var(--accent-green) !important;
-      color: #fff !important;
-      border: none !important;
-    }
-
-    .section-label-pending { 
-      font-size: 12px; font-weight: 600; text-transform: uppercase; margin: 0 0 12px 0; 
-      color: var(--text-secondary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 4px; 
-    }
-    .section-label-done { 
-      font-size: 12px; font-weight: 600; text-transform: uppercase; margin: 24px 0 12px 0; 
-      color: var(--text-secondary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 4px; 
-    }
-    
-    .history-item { 
-      background: var(--bg-card); padding: 12px; margin-bottom: 8px; border-radius: 6px; 
-      border: 1px solid var(--border-subtle); border-left: 3px solid var(--border-subtle); 
-      font-size: 13px; cursor: pointer; transition: background 0.2s; 
-    }
-    .history-item:hover { background: #27272a; }
-    
-    .just-archived { background: #27272a; border-left-color: var(--accent-green); }
-
-    .new-mini-pop { /* Subtle fade in handled by JS insert, css transition optional */ }
-
-    .history-contact { color: var(--text-primary); font-size: 13px; display: block; margin-bottom: 4px; font-weight: 500; }
-    .history-package { color: var(--text-muted); font-size: 12px; display: block; font-weight: 400; margin-top: 4px; }
-
-    /* LIVE FEED & CARDS */
-    #live-feed { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
-    
-    .active-card { 
-      background: var(--bg-card); padding: 20px; border-radius: 8px; 
-      border: 1px solid var(--border-subtle); width: 100%; display: flex; flex-direction: column; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative; 
-      transition: transform 0.2s ease, opacity 0.2s ease;
-    }
-
-    .new-job-highlight {
-      border-left: 4px solid var(--accent-green) !important;
-      background: #1c221c !important; /* Very subtle green tint */
-    }
-
-    .card-exit-success { opacity: 0.5; pointer-events: none; }
-    
-    .done-slash { opacity: 0.5; filter: grayscale(1); }
-
-    .card-date-badge { 
-      font-size: 11px; font-weight: 600; color: var(--text-secondary); 
-      text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; 
-    }
-    
-    .card-layout { display: flex; justify-content: space-between; gap: 24px; }
-    .address-side { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-    .specs-side { width: 100px; text-align: right; display: flex; flex-direction: column; gap: 8px; }
-    
-    .card-label { 
-      color: var(--text-muted); font-size: 11px; font-weight: 600; 
-      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; 
-    }
-    
-    .nav-link { text-decoration: none; color: inherit; }
-    
-    .city-tag { 
-      display: inline-block; font-size: 12px; background: #27272a; color: var(--text-primary); 
-      padding: 4px 12px; border-radius: 4px; font-weight: 500; 
-      border: 1px solid var(--border-subtle); margin-bottom: 8px; 
-    }
-    
-    .pickup-value { 
-      font-size: 18px; font-weight: 600; line-height: 1.4; color: var(--text-primary); 
-      margin-bottom: 8px; 
-    }
-    .drop-value { 
-      font-size: 16px; font-weight: 400; line-height: 1.4; color: var(--text-secondary); 
-    }
-    
-    .tech-info { 
-      font-size: 15px; font-weight: 500; color: var(--text-primary); line-height: 1.3; 
-    }
-    .dim-x { color: var(--text-muted); font-weight: 400; }
-    
-    .time-stack { 
-      text-align: center; margin: 24px 0 16px 0; border-top: 1px solid var(--border-subtle); 
-      padding-top: 12px; display: flex; justify-content: center; gap: 12px; align-items: baseline; 
-    }
-    .job-time-stamp { font-size: 14px; font-weight: 600; color: var(--accent-yellow); font-variant-numeric: tabular-nums; }
-    .job-date-stamp { font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; }
-
-    /* ACTION BUTTONS */
-    .card-action-row { display: flex; gap: 12px; margin-top: 8px; }
-    
-    .info-btn { 
-      flex: 0 0 88px; background: transparent; color: var(--accent-blue); 
-      border: 1px solid var(--border-subtle); padding: 0; min-height: 44px; 
-      font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background 0.2s; 
-    }
-    .info-btn:active { background: rgba(59, 130, 246, 0.1); border-color: var(--accent-blue); }
-    
-    .done-btn { 
-      flex: 1; padding: 0; min-height: 44px; border: none; border-radius: 6px; 
-      color: #fff; font-weight: 600; cursor: pointer; text-transform: uppercase; 
-      background: var(--accent-green); font-size: 14px; letter-spacing: 0.5px; 
-      transition: opacity 0.2s;
-    }
-    .done-btn:active { opacity: 0.8; }
-    
-    .details-box { 
-      display: none; background: #181818; padding: 16px; border-radius: 6px; margin-bottom: 16px; 
-      border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent-blue); 
-      font-size: 14px; color: var(--text-secondary); line-height: 1.6; overflow-wrap: anywhere; 
-    }
-    
-    .decline-btn {
-      width: 100%; margin-top: 16px; padding: 12px; background: transparent; 
-      color: var(--accent-red); border: 1px solid var(--border-subtle); 
-      border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; 
-      text-transform: uppercase; transition: border-color 0.2s;
-    }
-    .decline-btn:active { border-color: var(--accent-red); background: rgba(239, 68, 68, 0.1); }
-
-    .dnd-btn {
-      width: 100%; margin-top: 12px; padding: 12px; background: var(--bg-sidebar); 
-      color: var(--accent-yellow); border: 1px solid var(--border-subtle); border-radius: 6px; font-weight: 600; 
-      font-size: 14px; cursor: pointer; text-transform: uppercase;
-    }
-
-    .driver-note-btn {
-      width: 100%; margin-top: 12px; padding: 12px; background: transparent; 
-      color: var(--text-primary); border: 1px solid var(--border-subtle); 
-      border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; 
+      width: 100%; padding: 12px; margin-top: 15px; background: var(--accent); border: none;
+      color: #000; font-weight: 700; font-size: 16px; border-radius: 8px; cursor: pointer;
       text-transform: uppercase;
     }
 
-    /* NOTES EDITING */
-    .notes-edited { color: var(--accent-yellow) !important; font-style: italic; }
-    
-    .edit-note-input { 
-      width: 100%; background: var(--bg-base); color: var(--text-primary); border: 1px solid var(--border-subtle); 
-      border-radius: 6px; padding: 12px; font-family: inherit; margin-top: 8px; font-size: 14px; min-height: 80px; 
-    }
-    .save-note-btn { 
-      background: var(--accent-green); color: #fff; border: none; padding: 8px 16px; 
-      border-radius: 6px; font-size: 12px; margin-top: 8px; cursor: pointer; font-weight: 600; 
-    }
-    
-    .glow-yellow { border-color: var(--accent-yellow) !important; }
+    header { padding: 12px 16px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 10; }
+    h1 { margin: 0; color: var(--accent); font-size: 18px; font-weight: 700; display: flex; align-items: center; letter-spacing: 0.5px; }
+    #clock { font-size: 14px; color: var(--accent); font-weight: 500; opacity: 0.9; }
 
-    .heavy-word { display: inline-block; font-weight: 700; text-transform: uppercase; color: var(--accent-red); }
+    #main-container { display: flex; flex: 1; width: 100%; overflow: hidden; background: var(--bg-base); }
+    
+    #history-sidebar { width: 115px; border-right: 1px solid var(--border-color); overflow-y: auto; background: var(--bg-sidebar); padding: 8px; flex-shrink: 0; display: flex; flex-direction: column; padding-bottom: 80px; }
+    
+    #multi-route-btn {
+      position: fixed; bottom: 10px; left: 8px; width: 100px;
+      padding: 10px 4px; background: #222; border: 1px solid #444;
+      color: var(--text-secondary); font-weight: 600; font-size: 12px; border-radius: 8px;
+      cursor: pointer; text-align: center; z-index: 100; transition: all 0.3s;
+    }
+    
+    .glow-active {
+      background: var(--queue-orange) !important;
+      color: #000 !important;
+      border-color: var(--queue-orange) !important;
+    }
 
-    @keyframes slideInRight { from { transform: translateX(10px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .glow-max {
+      background: var(--active-green) !important;
+      color: #fff !important;
+      border: 1px solid var(--active-green) !important;
+    }
+
+    .section-label-pending { font-size: 13px; font-weight: 600; text-transform: uppercase; margin: 10px 0 6px 0; color: var(--queue-orange); border-bottom: 1px solid var(--border-color); letter-spacing: 0.5px; }
+    .section-label-done { font-size: 12px; font-weight: 600; text-transform: uppercase; margin: 15px 0 6px 0; color: var(--active-green); border-bottom: 1px solid var(--border-color); opacity: 0.8; }
+    
+    .history-item { background: #222; padding: 10px 8px; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid var(--active-green); font-size: 12px; cursor: pointer; overflow: hidden; white-space: normal; transition: all 0.2s ease; }
+    .just-archived { animation: proArchivePop 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; z-index: 10; border-left-width: 6px; }
+
+    @keyframes proArchivePop {
+      0% { transform: scale(0.5) translateX(50px); opacity: 0; background: var(--active-green); }
+      30% { transform: scale(1.1) translateX(0); opacity: 1; background: var(--active-green); }
+      100% { transform: scale(1); opacity: 1; background: #151515; }
+    }
+
+    /* NEW MINI JOB ANIMATION */
+    .new-mini-pop { animation: miniPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes miniPop {
+      0% { transform: scale(0.8); opacity: 0; background: var(--update-blue); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .history-contact { color: var(--queue-orange); font-size: 11px; display: block; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
+    .history-package { color: var(--text-secondary); font-size: 12px; display: block; text-transform: uppercase; font-weight: 600; margin-top: 3px; }
+
+    #live-feed { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+    .active-card { background: var(--card-bg); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); width: 100%; display: flex; flex-direction: column; animation: slideInRight 0.4s both; transition: all 0.3s ease; position: relative; }
+
+    .new-job-highlight {
+      border: 1px solid var(--active-green) !important;
+      background: #1a1f1a !important;
+    }
+
+    .card-exit-success { transform: scale(0.9) translateX(-20px); opacity: 0; filter: blur(5px); pointer-events: none; transition: 0.5s ease; }
+    
+    .done-slash {
+      border-left-color: #555 !important;
+      opacity: 0.5;
+      filter: grayscale(1);
+    }
+
+    .card-date-badge { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; letter-spacing: 0.5px; }
+    .card-layout { display: flex; justify-content: space-between; gap: 12px; }
+    .address-side { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .specs-side { width: 90px; text-align: right; display: flex; flex-direction: column; gap: 8px; }
+    .card-label { color: var(--accent); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; margin-bottom: 2px; }
+    .nav-link { text-decoration: none; color: inherit; }
+    .city-tag { display: inline-block; font-size: 12px; background: #2a2a2a; color: #fff; padding: 4px 10px; border-radius: 20px; font-weight: 600; text-transform: uppercase; border: 1px solid #444; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .pickup-value { font-size: 18px; font-weight: 600; line-height: 1.4; color: #fff; text-transform: uppercase; margin-bottom: 4px; word-wrap: break-word; }
+    .drop-value { font-size: 16px; font-weight: 500; line-height: 1.4; color: #bbb; text-transform: uppercase; word-wrap: break-word; }
+    .tech-info { font-size: 14px; font-weight: 600; color: #eee; text-transform: uppercase; line-height: 1.2; }
+    .dim-x { color: var(--text-secondary); font-weight: 400; padding: 0 1px; }
+    
+    .time-stack { text-align: center; margin: 12px 0 8px 0; border-top: 1px solid #2a2a2a; padding-top: 8px; display: flex; justify-content: center; gap: 8px; align-items: baseline; }
+    .job-time-stamp { font-size: 14px; font-weight: 600; color: #FFB020; }
+    .job-date-stamp { font-size: 12px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; }
+
+    .card-action-row { display: flex; gap: 10px; align-items: stretch; margin-top: 5px; }
+    .info-btn { flex: 0 0 70px; background: transparent; color: var(--review-blue); border: 1px solid var(--review-blue); padding: 10px 0; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+    .info-btn:active { background: rgba(33, 150, 243, 0.1); }
+    .done-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer; text-transform: uppercase; background: var(--active-green); font-size: 16px; transition: transform 0.1s; letter-spacing: 1px; }
+    .done-btn:active { transform: scale(0.98); }
+    
+    .details-box { display: none; background: #111; padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid var(--review-blue); font-size: 15px; color: #ddd; line-height: 1.5; overflow-wrap: anywhere; pointer-events: auto; }
+    
+    .decline-btn {
+      width: 100%; margin-top: 15px; padding: 12px; background: transparent; 
+      color: var(--decline-red); border: 1px solid var(--decline-red); 
+      border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; 
+      text-transform: uppercase; transition: 0.3s;
+    }
+    .decline-btn:active { background: rgba(244, 67, 54, 0.1); }
+
+    /* DND BUTTON STYLING */
+    .dnd-btn {
+      width: 100%; margin-top: 10px; padding: 12px; background: #333; 
+      color: var(--queue-orange); border: 1px solid var(--queue-orange); border-radius: 6px; font-weight: 600; 
+      font-size: 14px; cursor: pointer; text-transform: uppercase; transition: 0.2s;
+    }
+    .dnd-btn:active { background: var(--queue-orange); color: #000; }
+
+    /* DRIVER NOTE BUTTON STYLING */
+    .driver-note-btn {
+      width: 100%; margin-top: 10px; padding: 12px; background: transparent; 
+      color: var(--accent); border: 1px solid var(--accent); 
+      border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; 
+      text-transform: uppercase; transition: 0.3s;
+    }
+    .driver-note-btn:active { background: var(--accent); color: #000; }
+
+    /* EDITED NOTES STYLE */
+    .notes-edited { color: var(--queue-orange) !important; font-style: italic; }
+    .edit-note-input { width: 100%; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 8px; font-family: inherit; margin-top: 5px; font-size: 14px; }
+    .save-note-btn { background: var(--active-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; margin-top: 8px; cursor: pointer; font-weight: 600; }
+    .glow-yellow { border: 1px solid var(--accent) !important; outline: none; }
+
+    .heavy-word { display: inline-block; font-weight: 700; text-transform: uppercase; color: #fff; }
+
+    @keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   </style>
 </head>
 <body>
@@ -389,7 +316,7 @@
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('header-name').innerHTML = `
       <img src="icon-512.png" class="header-logo">
-      <span style="font-size: 14px; color: var(--accent-green); font-weight: 600; text-transform: uppercase; border: 1px solid var(--accent-green); padding: 4px 10px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
+      <span style="font-size: 14px; color: #39FF14; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
       <span style="white-space: nowrap;">
         <span id="stop-counter" class="stop-badge" style="margin-left: 0;">0 STOPS</span>
         <span id="new-stops-badge" class="new-stops-badge">0 NEW</span>
@@ -457,8 +384,8 @@
     if (card) {
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       card.style.transition = '0.3s';
-      card.style.background = '#27272a';
-      setTimeout(() => card.style.background = 'var(--bg-card)', 500);
+      card.style.background = '#2a2a2a';
+      setTimeout(() => card.style.background = 'var(--card-bg)', 500);
     }
   }
 
@@ -607,13 +534,13 @@ document.addEventListener('keypress', (e) => {
     } else {
         btns.forEach(b => { b.disabled = true; b.style.opacity = '0.3'; });
         container.innerHTML = `
-          <div style="position: fixed; bottom: 0; left: 0; width: 100%; background: #151515; padding: 20px; border-top: 1px solid var(--border-subtle); z-index: 10000; box-shadow: 0 -10px 40px rgba(0,0,0,0.8);">
-             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <span style="color:var(--text-primary); font-weight:600;">DRIVER NOTE</span>
-                <button onclick="toggleDriverNoteEdit(event, '${id}')" style="background:transparent; border:none; color:var(--text-secondary); font-weight:600;">CANCEL</button>
+          <div style="position: fixed; bottom: 0; left: 0; width: 100%; background: #151515; padding: 15px; border-top: 2px solid var(--accent); z-index: 10000; box-shadow: 0 -5px 30px rgba(0,0,0,0.9);">
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="color:var(--accent); font-weight:700;">DRIVER NOTE</span>
+                <button onclick="toggleDriverNoteEdit(event, '${id}')" style="background:transparent; border:none; color:#666; font-weight:600;">CANCEL</button>
              </div>
-             <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" style="height:100px; margin-bottom:12px;" onclick="event.stopPropagation()"></textarea>
-             <button class="save-note-btn" style="width: 100%; padding: 14px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND NOTE</button>
+             <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" style="height:80px; margin-bottom:10px;" onclick="event.stopPropagation()"></textarea>
+             <button class="save-note-btn" style="width: 100%; padding: 12px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND NOTE</button>
           </div>
         `;
         setTimeout(() => document.getElementById(`driver-edit-input-${id}`).focus(), 100);
@@ -640,8 +567,8 @@ document.addEventListener('keypress', (e) => {
     const container = document.getElementById(`po-container-${id}`);
     const safeVal = currentVal.replace(/"/g, "");
     container.innerHTML = `
-        <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center; margin-top:8px;">
-          <input type="text" id="po-input-${id}" class="login-input glow-yellow" style="width: 140px; padding: 8px; margin: 0; font-size:14px;" value="${safeVal}" onclick="event.stopPropagation()">
+        <div style="display:flex; gap:5px; justify-content:flex-end; align-items:center; margin-top:5px;">
+          <input type="text" id="po-input-${id}" class="login-input glow-yellow" style="width: 120px; padding: 6px; margin: 0; font-size:13px; height:32px;" value="${safeVal}" onclick="event.stopPropagation()">
           <button class="save-note-btn" style="margin:0;" onclick="savePoEdit(event, '${id}')">SAVE</button>
           <button class="save-note-btn" style="background:#555; margin:0;" onclick="cancelPoEdit(event, '${id}', '${safeVal}')">X</button>
         </div>
@@ -661,7 +588,7 @@ document.addEventListener('keypress', (e) => {
 
   function cancelPoEdit(e, id, original) {
     e.stopPropagation();
-    document.getElementById(`po-container-${id}`).innerHTML = `PO: <span style="color:var(--text-primary);">${original}</span>`;
+    document.getElementById(`po-container-${id}`).innerHTML = `PO: <span style="color:var(--accent);">${original}</span>`;
   }
 
   function getNavUrl(addr, city) {
@@ -867,7 +794,7 @@ document.addEventListener('keypress', (e) => {
       let dndButtonText;
 
       if (p.jobType === 'pickup') {
-            badgeColor = "#f59e0b"; // Orange
+            badgeColor = "#ff9800"; // Orange
             badgeText = "PICK UP";
             dndButtonText = "DNP";
             
@@ -879,7 +806,7 @@ document.addEventListener('keypress', (e) => {
             botAddr = p.destination;
             botContact = p.delivery_name;
       } else {
-            badgeColor = "#22c55e"; // Green
+            badgeColor = "#00ff41"; // Green
             badgeText = "DELIVERY";
             dndButtonText = "DND";
             
@@ -912,9 +839,9 @@ document.addEventListener('keypress', (e) => {
       if(needsAlert) item.classList.add('has-update');
 
       item.innerHTML = `
-        <div style="background:${badgeColor}; width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;"></div>
-        <span class="history-contact" style="display:inline;">${contactName}</span>
-        <div style="font-weight:600; font-size:12px; line-height:1.3; color:#a1a1aa; margin-top:2px;">${shortAddr}</div>
+        <div style="background:${badgeColor}; width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px;"></div>
+        <span class="history-contact" style="font-size:12px; margin-bottom:1px; display:inline;">${contactName}</span>
+        <div style="font-weight:700; font-size:12px; line-height:1.2; color:#ccc;">${shortAddr}</div>
         <span class="history-package">${(p.package_details || '').replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</span>
       `;
 
@@ -944,45 +871,45 @@ document.addEventListener('keypress', (e) => {
 
         card.id = `card-${id}`;
         
-        const noteWithTags = (p.other_info || "").replace(/\[([^\]]+)\]:/g, '<span style="color:var(--accent-blue); font-weight:600;">[$1]:</span>');
+        const noteWithTags = (p.other_info || "").replace(/\[([^\]]+)\]:/g, '<span style="color:var(--update-blue); font-weight:700;">[$1]:</span>');
 
         const notesDisplay = (p.other_info && p.other_info.trim() !== "") ? 
-          `<div class="${isEdited ? 'notes-edited' : ''} ${needsAlert && changedFields.includes('notes') ? 'field-highlight' : ''}" style="text-align:left; width:100%; margin-top:12px; padding-top:12px; border-top:1px solid #333; color:#ccc; font-size:14px; word-wrap:break-word;">${noteWithTags}</div>` 
+          `<div class="${isEdited ? 'notes-edited' : ''} ${needsAlert && changedFields.includes('notes') ? 'field-highlight' : ''}" style="text-align:center; width:100%; margin-top:10px; color:#ddd; font-size:14px; word-wrap:break-word; font-style:italic;">${noteWithTags}</div>` 
           : '';
 
         card.innerHTML = `
           <div class="card-date-badge">
-            <div style="background:${badgeColor}; color:#fff; font-weight:700; padding:4px 8px; border-radius:4px; font-size:11px;">${badgeText}</div>
+            <div style="background:${badgeColor}; color:#000; font-weight:700; padding:2px 6px; border-radius:4px; font-size:11px;">${badgeText}</div>
             ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
           </div>
           
-          <div style="position: absolute; top: 20px; right: 20px; cursor: pointer; z-index: 5;" onclick="toggleDriverNoteEdit(event, '${id}')">
-            <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: var(--text-muted); transition:0.2s;">
+          <div style="position: absolute; top: 12px; right: 12px; cursor: pointer; z-index: 5;" onclick="toggleDriverNoteEdit(event, '${id}')">
+            <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));">
               <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
             </svg>
           </div>
 
           <div class="card-layout">
             <div class="address-side">
-              <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
                   <a href="${navUrl}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${p.city || '??'}</div></a>
               </div>
               
-              <div class="card-label">${topLabel}</div>
-              <div class="tech-info ${needsAlert && changedFields.includes('contact') ? 'field-highlight' : ''}" style="color: var(--accent-yellow); font-size:18px;">${topContact || 'N/A'}</div>
+              <div class="card-label" style="margin-top:2px;">${topLabel}</div>
+              <div class="tech-info ${needsAlert && changedFields.includes('contact') ? 'field-highlight' : ''}" style="margin-bottom:2px; color: var(--queue-orange); font-size:22px; line-height:1.2;">${topContact || 'N/A'}</div>
               <a href="${navUrl}" target="_blank" class="nav-link">
                  <div class="pickup-value ${needsAlert && changedFields.includes('addr') ? 'field-highlight' : ''}">${topAddr}</div>
               </a>
 
-              <div class="card-label" style="margin-top:12px;">${botLabel}</div>
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+              <div class="card-label" style="margin-top:8px;">${botLabel}</div>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:5px;">
                   <div style="flex:1;">
-                      <div class="tech-info ${needsAlert && changedFields.includes('dropName') ? 'field-highlight' : ''}" style="color: #a1a1aa; font-size:15px;">${botContact || 'N/A'}</div>
-                      <div class="drop-value ${needsAlert && changedFields.includes('dest') ? 'field-highlight' : ''}" style="font-size:15px;">${botAddr}</div>
+                      <div class="tech-info ${needsAlert && changedFields.includes('dropName') ? 'field-highlight' : ''}" style="color: #bbb; font-size:14px;">${botContact || 'N/A'}</div>
+                      <div class="drop-value ${needsAlert && changedFields.includes('dest') ? 'field-highlight' : ''}" style="font-size:14px;">${botAddr}</div>
                   </div>
                   <div style="text-align:right; min-width:80px; display:flex; flex-direction:column; align-items:flex-end;">
-                     <div class="tech-info ${needsAlert && changedFields.includes('details') ? 'field-highlight' : ''}" style="border:1px solid #333; border-radius:4px; padding:4px 8px; background:#222; margin-bottom:6px; font-size:13px;">${(p.package_details || "-").replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</div>
-                     ${(p.po_number && p.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" style="font-weight:600; color:#777; font-size:14px; cursor:pointer;">PO: <span class="${needsAlert && changedFields.includes('po') ? 'field-highlight' : ''}" style="color:var(--text-primary);">${p.po_number}</span></div>` : ''}
+                     <div class="tech-info ${needsAlert && changedFields.includes('details') ? 'field-highlight' : ''}" style="border:1px solid #b3ffb3; border-radius:5px; padding:6px 10px; background:rgba(0,50,0,0.4); margin-bottom:4px;">${(p.package_details || "-").replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</div>
+                     ${(p.po_number && p.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" style="font-weight:600; color:#aaa; font-size:15px; cursor:pointer;">PO: <span class="${needsAlert && changedFields.includes('po') ? 'field-highlight' : ''}" style="color:var(--accent);">${p.po_number}</span></div>` : ''}
                   </div>
               </div>
             </div>
