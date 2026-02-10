@@ -226,6 +226,7 @@
   let markersArray = [];
   let routePolyline = null;
   let jobOrder = []; // Stores IDs in optimized order
+  let jobLocations = {}; // Stores lat/lng for jobs from API
   let autoRouteTimer = null;
   let isAutoRoutePending = false;
   let lastJobCount = 0;
@@ -255,31 +256,36 @@
 
   function updateMapMarkers(orderedJobs) {
       if (!mapInstance) return;
-
-      // Clear existing
+      
       markersArray.forEach(m => m.setMap(null));
       markersArray = [];
 
-      const bounds = new google.maps.LatLngBounds();
-
       orderedJobs.forEach((job, index) => {
-          // Geocode fallback needs real lat/lng, for now we assume simple view or future geocoding.
-          // In a real production app, you'd store lat/lng in Firebase. 
-          // For now, we will only map if we can get coords or use a placeholder if geocoding was done.
-          // NOTE: Since the script relied on Google URL previously, we don't have stored LatLngs. 
-          // **CRITICAL FIX**: For this display to work without geocoding every single time, 
-          // we need the browser to help or just rely on the Route Polyline.
-          // However, to drop pins, we need coords. 
-          // *SIMULATION*: Since I can't geocode 20 addrs instantly for free in Client JS without billing risk,
-          // I will assume the Route API step captures locations or we rely on the Polyline zoom.
+          if (!job.lat || !job.lng) return;
+          const pos = { lat: job.lat, lng: job.lng };
+          const color = job.type === 'delivery' ? 'green' : 'orange';
+          const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
+
+          const marker = new google.maps.Marker({
+              position: pos,
+              map: mapInstance,
+              icon: iconUrl,
+              title: job.contact,
+              label: {
+                  text: (index + 1).toString(),
+                  color: 'black',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+              }
+          });
           
-          // *ACTUAL SOLUTION*: The Markers will only appear if we have LatLng. 
-          // Since we don't store them, I will skip drawing markers for addresses that lack coords,
-          // BUT the Polyline will show the route. 
+          const infoWindow = new google.maps.InfoWindow({
+              content: `<div style="color:black; font-weight:bold;">${index + 1}. ${job.contact}</div><div>${job.address}</div>`
+          });
+          marker.addListener("click", () => infoWindow.open(mapInstance, marker));
+          
+          markersArray.push(marker);
       });
-      
-      // Since we don't have lat/lngs in the job object, we depend on the Route API response.
-      // The API call below has been updated to return locations if possible, or we rely on the line.
   }
 
   function drawRouteLine(encodedString) {
@@ -297,9 +303,6 @@
 
       routePolyline.setMap(mapInstance);
 
-      // Add markers based on Polyline vertices (Approximate for stops)
-      // Note: This is a visual approximation because we don't have coords in DB.
-      // In a full version, we'd save the lat/lng from the Route API response.
       const bounds = new google.maps.LatLngBounds();
       path.forEach(p => bounds.extend(p));
       mapInstance.fitBounds(bounds);
@@ -393,7 +396,6 @@
     const card = document.getElementById(`card-${id}`);
     if (card) {
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Map zoom to pin would go here if we had precise lat/lng
     }
   }
 
@@ -592,7 +594,7 @@
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": GOOGLE_KEY,
-          "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline"
+          "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs"
         },
         body: JSON.stringify({
           origin: origin,
@@ -606,30 +608,40 @@
       const result = await response.json();
       
       if (result.routes && result.routes[0]) {
-        // 1. Draw Polyline
         if (result.routes[0].polyline) {
             drawRouteLine(result.routes[0].polyline.encodedPolyline);
         }
 
-        // 2. Reorder List Logic
         if (result.routes[0].optimizedIntermediateWaypointIndex) {
             const indexOrder = result.routes[0].optimizedIntermediateWaypointIndex;
-            // The API returns indices of the 'intermediates' array.
-            // We need to map these back to jobEntries.
-            
+            const legs = result.routes[0].legs || [];
+
             let newOrderIds = [];
             if (!userLoc) {
-                // First job was used as Origin, so it stays #1
                 newOrderIds.push(jobEntries[0][0]);
-                // Reorder the rest
+                if(legs.length > 0) jobLocations[jobEntries[0][0]] = legs[0].startLocation;
+
                 const restOfJobs = jobEntries.slice(1);
-                indexOrder.forEach(idx => newOrderIds.push(restOfJobs[idx][0]));
+                indexOrder.forEach((idx, i) => {
+                  const jobId = restOfJobs[idx][0];
+                  newOrderIds.push(jobId);
+                  // legs[i] ends at restOfJobs[idx] ?? No.
+                  // legs order matches the STOP order (Waypoint order).
+                  // Leg 0 goes to Stop 1 (which is restOfJobs[idx]?). 
+                  // If Origin is Stop 0. Leg 0 Start=Origin. Leg 0 End = Stop 1.
+                  // Wait, computeRoutes legs logic:
+                  // legs[i].endLocation matches the i-th waypoint in the OPTIMIZED order.
+                  // The i-th waypoint is newOrderIds[i+1] (since index 0 is origin).
+                  if(legs[i]) jobLocations[jobId] = legs[i].endLocation; 
+                });
             } else {
-                // All jobs were intermediates
-                indexOrder.forEach(idx => newOrderIds.push(jobEntries[idx][0]));
+                indexOrder.forEach((idx, i) => {
+                   const jobId = jobEntries[idx][0];
+                   newOrderIds.push(jobId);
+                   if(legs[i]) jobLocations[jobId] = legs[i].endLocation;
+                });
             }
             
-            // Save to state and redraw
             jobOrder = newOrderIds;
             renderUnifiedFeed();
         }
@@ -712,7 +724,8 @@
       }
       
       // Add to Map Array
-      jobsForMap.push({ id, type: p.jobType, address: topAddr });
+      const latLng = jobLocations[id] || null;
+      jobsForMap.push({ id, type: p.jobType, address: topAddr, contact: topContact, lat: latLng ? latLng.latitude : null, lng: latLng ? latLng.longitude : null });
 
       const navUrl = getNavUrl(topAddr, p.city || '');
       const card = document.createElement("div"); 
