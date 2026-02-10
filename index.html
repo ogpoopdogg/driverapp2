@@ -77,13 +77,13 @@
 
     /* MINI MAP LIST */
     #mini-map-list {
-        position: absolute; top: 60px; left: 10px;
-        background: rgba(0,0,0,0.8); padding: 8px; border-radius: 8px;
-        max-height: 40%; overflow-y: auto; z-index: 40;
+        position: absolute; top: 60px; left: 10px; bottom: 85px; width: 100px;
+        background: rgba(0,0,0,0.8); padding: 6px; border-radius: 8px;
+        overflow-y: auto; z-index: 40;
         border: 1px solid #444; display: none;
     }
-    .mini-list-item { font-size: 11px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; }
-    .mini-num { font-weight: 900; color: #000; background: #fff; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; margin-right: 6px; font-size: 10px; }
+    .mini-list-item { font-size: 10px; color: #fff; margin-bottom: 8px; display: flex; align-items: flex-start; }
+    .mini-num { font-weight: 900; color: #000; background: #fff; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; margin-right: 6px; font-size: 10px; flex-shrink: 0; margin-top: 1px; }
 
     /* NEW INFO ANIMATIONS */
     .has-update {
@@ -512,7 +512,7 @@
         btn.innerText = "STOP ROUTE";
         btn.style.background = "var(--decline-red)";
         btn.style.borderColor = "var(--decline-red)";
-        // announce immediate target if desired, or let updateRoute handle it
+        lastAnnouncedId = null; updateRoute();
     } else {
         routeActive = false;
         btn.innerText = "START ROUTE";
@@ -689,7 +689,7 @@
                    mapLabels.push(info);
 
                    // Mini List Item
-                   listHtml += `<div class="mini-list-item"><div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div><span>${bizName}</span></div>`;
+                   listHtml += `<div class="mini-list-item"><div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div><div style="flex:1; line-height:1.1;">${bizName}</div></div>`;
                 }
             });
             
