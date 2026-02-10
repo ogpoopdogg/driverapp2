@@ -27,8 +27,7 @@
     /* FULL SCREEN MODE */
     body.fullscreen-mode #map-container { height: 100vh !important; position: fixed; top: 0; left: 0; z-index: 9999; border: none; }
     body.fullscreen-mode header, body.fullscreen-mode #main-container { display: none !important; }
-    body.fullscreen-mode #mini-map-list { display: none !important; }
-
+    
     /* CUSTOM MAP LABELS (No Bubble) */
     .gm-style-iw-c { background: none !important; box-shadow: none !important; padding: 0 !important; max-width: none !important; max-height: none !important; }
     .gm-style-iw-d { overflow: visible !important; background: none !important; color: #00ff41 !important; font-weight: 900 !important; font-size: 14px !important; text-shadow: 0 0 4px #000; text-transform: uppercase; }
@@ -62,6 +61,13 @@
 
     #back-btn {
       position: absolute; top: 10px; left: 10px; padding: 8px 16px;
+      background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #777;
+      border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer;
+      z-index: 50; backdrop-filter: blur(4px); display: none;
+    }
+
+    #list-btn {
+      position: absolute; top: 55px; left: 10px; padding: 8px 16px;
       background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #777;
       border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer;
       z-index: 50; backdrop-filter: blur(4px); display: none;
@@ -391,6 +397,7 @@
     <div id="zoom-btn" onclick="zoomToFit()">-</div>
     <div id="fs-btn" onclick="toggleFullScreen()">FULL SCREEN</div>
     <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
+    <div id="list-btn" onclick="toggleList()">LIST</div>
     <button id="route-toggle-btn" onclick="toggleRoute()">START ROUTE</button>
 </div>
 
@@ -518,7 +525,13 @@
     const isFs = document.body.classList.contains('fullscreen-mode');
     document.getElementById('fs-btn').style.display = isFs ? 'none' : 'block';
     document.getElementById('back-btn').style.display = isFs ? 'block' : 'none';
+    document.getElementById('list-btn').style.display = isFs ? 'block' : 'none';
     if(map) google.maps.event.trigger(map, "resize");
+  }
+
+  function toggleList() {
+    const list = document.getElementById('mini-map-list');
+    list.style.display = (list.style.display === 'none' || list.style.display === '') ? 'block' : 'none';
   }
 
   function toggleRoute() {
@@ -1068,15 +1081,6 @@ document.addEventListener('keypress', (e) => {
     // Auto-Start Route Logic
     const currentPending = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver).length;
     if (currentPending > lastPendingCount) {
-         if (!routeActive) {
-             routeActive = true;
-             const btn = document.getElementById('route-toggle-btn');
-             if(btn) {
-                 btn.innerText = "STOP ROUTE";
-                 btn.style.background = "var(--decline-red)";
-                 btn.style.borderColor = "var(--decline-red)";
-             }
-         }
          lastAnnouncedId = null;
          updateRoute();
     }
