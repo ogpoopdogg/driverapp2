@@ -27,7 +27,6 @@
     /* FULL SCREEN MODE */
     body.fullscreen-mode #map-container { height: 100vh !important; position: fixed; top: 0; left: 0; z-index: 9999; border: none; }
     body.fullscreen-mode header, body.fullscreen-mode #main-container { display: none !important; }
-    body.fullscreen-mode #mini-map-list { display: none !important; }
 
     /* CUSTOM MAP LABELS (No Bubble) */
     .gm-style-iw-c { background: none !important; box-shadow: none !important; padding: 0 !important; max-width: none !important; max-height: none !important; }
@@ -67,6 +66,13 @@
       z-index: 50; backdrop-filter: blur(4px); display: none;
     }
 
+    #fs-list-btn {
+      position: absolute; top: 50px; left: 10px; padding: 8px 16px;
+      background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #777;
+      border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer;
+      z-index: 50; backdrop-filter: blur(4px); display: none;
+    }
+
     #route-toggle-btn {
       position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); 
       padding: 12px 24px; width: 60%; text-align: center;
@@ -78,8 +84,8 @@
 
     /* MINI MAP LIST */
     #mini-map-list {
-        position: absolute; top: 60px; left: 10px;
-        max-height: calc(100% - 150px); width: fit-content;
+        position: absolute; top: 60px; left: 10px; bottom: 85px; 
+        width: fit-content;
         background: rgba(0,0,0,0.8); padding: 6px; border-radius: 8px;
         overflow-y: auto; z-index: 40;
         border: 1px solid #444; display: none;
@@ -391,6 +397,7 @@
     <div id="zoom-btn" onclick="zoomToFit()">-</div>
     <div id="fs-btn" onclick="toggleFullScreen()">FULL SCREEN</div>
     <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
+    <div id="fs-list-btn" onclick="toggleMiniList()">LIST</div>
     <button id="route-toggle-btn" onclick="toggleRoute()">START ROUTE</button>
 </div>
 
@@ -518,7 +525,23 @@
     const isFs = document.body.classList.contains('fullscreen-mode');
     document.getElementById('fs-btn').style.display = isFs ? 'none' : 'block';
     document.getElementById('back-btn').style.display = isFs ? 'block' : 'none';
+    document.getElementById('fs-list-btn').style.display = isFs ? 'block' : 'none';
+    
+    // Manage list visibility - hidden by default in FS until requested
+    const list = document.getElementById('mini-map-list');
+    if(isFs) {
+        list.style.display = 'none';
+    } else {
+        if(list.innerHTML !== "") list.style.display = 'block';
+    }
+
     if(map) google.maps.event.trigger(map, "resize");
+  }
+
+  function toggleMiniList() {
+      const list = document.getElementById('mini-map-list');
+      if(list.innerHTML === "") return;
+      list.style.display = (list.style.display === 'none' || list.style.display === '') ? 'block' : 'none';
   }
 
   function toggleRoute() {
