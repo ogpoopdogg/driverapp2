@@ -457,6 +457,8 @@
   let lastPendingCount = 0;
   let routeActive = false;
   let lastAnnouncedId = null;
+  let currentRouteSteps = [];
+  let currentStepIndex = 0;
 
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
@@ -587,6 +589,24 @@
           map.setHeading(pos.coords.heading || 0);
       }
 
+      // AUDIO NAVIGATION LOGIC
+      if(routeActive && currentRouteSteps.length > currentStepIndex && isNavigating) {
+          const step = currentRouteSteps[currentStepIndex];
+          if(step.startLocation && step.startLocation.latLng) {
+             const stepLoc = new google.maps.LatLng(step.startLocation.latLng.latitude, step.startLocation.latLng.longitude);
+             const dist = google.maps.geometry.spherical.computeDistanceBetween(latLng, stepLoc);
+             
+             if(dist < 40) { // 40 meters threshold
+                 if(step.navigationInstruction && step.navigationInstruction.instructions) {
+                     const cleanText = step.navigationInstruction.instructions.replace(/<[^>]*>/g, "");
+                     const utter = new SpeechSynthesisUtterance(cleanText);
+                     window.speechSynthesis.speak(utter);
+                 }
+                 currentStepIndex++;
+             }
+          }
+      }
+
       const now = Date.now();
       if (now - lastGpsUpdate > gpsInterval) {
         db.ref(`driver_locations/${currentDriver}`).update({
@@ -642,7 +662,7 @@
             headers: {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": GOOGLE_KEY,
-                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs"
+                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs.endLocation,routes.legs.steps.navigationInstruction,routes.legs.steps.startLocation"
             },
             body: JSON.stringify({
                 origin: origin,
@@ -688,6 +708,17 @@
             // Update Global Order
             optimizedOrder = orderedJobs.map(j => Object.keys(globalJobs).find(key => globalJobs[key] === j));
             
+            // EXTRACT STEPS FOR AUDIO NAV
+            currentRouteSteps = [];
+            currentStepIndex = 0;
+            if(result.routes[0].legs) {
+                result.routes[0].legs.forEach(leg => {
+                    if(leg.steps) {
+                        leg.steps.forEach(step => currentRouteSteps.push(step));
+                    }
+                });
+            }
+
             const legs = result.routes[0].legs;
             let listHtml = "";
 
