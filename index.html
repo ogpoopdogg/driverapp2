@@ -27,6 +27,7 @@
     /* FULL SCREEN MODE */
     body.fullscreen-mode #map-container { height: 100vh !important; position: fixed; top: 0; left: 0; z-index: 9999; border: none; }
     body.fullscreen-mode header, body.fullscreen-mode #main-container { display: none !important; }
+    body.fullscreen-mode #mini-map-list { display: none !important; }
 
     /* CUSTOM MAP LABELS (No Bubble) */
     .gm-style-iw-c { background: none !important; box-shadow: none !important; padding: 0 !important; max-width: none !important; max-height: none !important; }
@@ -77,13 +78,20 @@
 
     /* MINI MAP LIST */
     #mini-map-list {
-        position: absolute; top: 60px; left: 10px; bottom: 85px; width: 100px;
+        position: absolute; top: 60px; left: 10px; bottom: 85px; 
+        width: fit-content;
         background: rgba(0,0,0,0.8); padding: 6px; border-radius: 8px;
         overflow-y: auto; z-index: 40;
         border: 1px solid #444; display: none;
     }
-    .mini-list-item { font-size: 10px; color: #fff; margin-bottom: 8px; display: flex; align-items: flex-start; }
+    .mini-list-item { font-size: 10px; color: #fff; margin-bottom: 8px; display: flex; align-items: flex-start; line-height: 1.2; padding-right: 6px; }
     .mini-num { font-weight: 900; color: #000; background: #fff; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; margin-right: 6px; font-size: 10px; flex-shrink: 0; margin-top: 1px; }
+    
+    .mini-flash { animation: mini-pulse-anim 1s infinite alternate; border-radius: 4px; background: rgba(0, 212, 255, 0.2); }
+    @keyframes mini-pulse-anim {
+        from { box-shadow: 0 0 2px var(--update-blue); }
+        to { box-shadow: 0 0 10px var(--update-blue); }
+    }
 
     /* NEW INFO ANIMATIONS */
     .has-update {
@@ -296,7 +304,7 @@
     .tech-info { font-size: 14px; font-weight: 700; color: #eee; text-transform: uppercase; line-height: 1.2; }
     .dim-x { color: #666; font-weight: 400; padding: 0 1px; }
     
-    .time-stack { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding-right: 25px; }
+    .time-stack { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding-right: 60px; }
     .job-time-stamp { font-size: 13px; font-weight: 700; color: #FFB020; }
     .job-date-stamp { font-size: 9px; font-weight: 600; color: #666; text-transform: uppercase; }
 
@@ -337,6 +345,14 @@
     .edit-note-input { width: 100%; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 8px; font-family: inherit; margin-top: 5px; font-size: 14px; }
     .save-note-btn { background: var(--active-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; margin-top: 8px; cursor: pointer; font-weight: bold; }
     .glow-yellow { border: 1px solid var(--accent) !important; box-shadow: 0 0 10px var(--accent) !important; outline: none; }
+
+    .cancel-note-btn {
+        position: absolute; bottom: 15px; right: 10px;
+        background: #e60000; color: #fff; border: 1px solid #fff;
+        padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; cursor: pointer;
+        z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+    .cancel-note-btn:active { transform: scale(0.95); background: #ff3333; }
 
     @keyframes heavy-flash {
       0% { color: #ff3333; text-shadow: 0 0 5px #ff0000; transform: scale(1); }
@@ -564,6 +580,7 @@
 
   function announceStop(text) {
       if('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance("New destination. " + text);
           window.speechSynthesis.speak(u);
       }
@@ -688,8 +705,11 @@
                    info.open(map);
                    mapLabels.push(info);
 
-                   // Mini List Item
-                   listHtml += `<div class="mini-list-item"><div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div><div style="flex:1; line-height:1.1;">${bizName}</div></div>`;
+                   // Mini List Item & Animation Logic
+                   const isUnseen = !job.seen_by || !job.seen_by[currentDriver];
+                   const animClass = isUnseen ? 'mini-flash' : '';
+                   
+                   listHtml += `<div class="mini-list-item ${animClass}"><div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div><div style="flex:1; line-height:1.1;">${bizName}</div></div>`;
                 }
             });
             
@@ -945,9 +965,11 @@ document.addEventListener('keypress', (e) => {
           <div style="position: fixed; bottom: 0; left: 0; width: 100%; background: #151515; padding: 15px; border-top: 2px solid var(--accent); z-index: 10000; box-shadow: 0 -5px 30px rgba(0,0,0,0.9);">
              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <span style="color:var(--accent); font-weight:900;">DRIVER NOTE</span>
-                <button onclick="toggleDriverNoteEdit(event, '${id}')" style="background:transparent; border:none; color:#666; font-weight:bold;">CANCEL</button>
              </div>
-             <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" style="height:80px; margin-bottom:10px;" onclick="event.stopPropagation()"></textarea>
+             <div style="position:relative;">
+                 <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" style="height:100px; margin-bottom:10px; padding-bottom: 30px;" onclick="event.stopPropagation()"></textarea>
+                 <button onclick="toggleDriverNoteEdit(event, '${id}')" class="cancel-note-btn">CANCEL</button>
+             </div>
              <button class="save-note-btn" style="width: 100%; padding: 12px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND NOTE</button>
           </div>
         `;
@@ -1043,8 +1065,24 @@ document.addEventListener('keypress', (e) => {
         globalJobs[k] = { ...v, jobType: 'delivery' };
     });
     
+    // Auto-Start Route Logic
+    const currentPending = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver).length;
+    if (currentPending > lastPendingCount) {
+         if (!routeActive) {
+             routeActive = true;
+             const btn = document.getElementById('route-toggle-btn');
+             if(btn) {
+                 btn.innerText = "STOP ROUTE";
+                 btn.style.background = "var(--decline-red)";
+                 btn.style.borderColor = "var(--decline-red)";
+             }
+         }
+         updateRoute();
+    }
+    lastPendingCount = currentPending;
+
     renderUnifiedFeed(); // RENDER IMMEDIATELY ON LOAD
-    updateRoute(); // RE-OPTIMIZE ONLY IF ACTIVE
+    if(routeActive) updateRoute(); // RE-OPTIMIZE ONLY IF ACTIVE
   }
 
   function renderUnifiedFeed() {
