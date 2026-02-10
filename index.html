@@ -27,6 +27,7 @@
     /* FULL SCREEN MODE */
     body.fullscreen-mode #map-container { height: 100vh !important; position: fixed; top: 0; left: 0; z-index: 9999; border: none; }
     body.fullscreen-mode header, body.fullscreen-mode #main-container { display: none !important; }
+    body.fullscreen-mode #mini-map-list { display: none !important; }
 
     /* CUSTOM MAP LABELS (No Bubble) */
     .gm-style-iw-c { background: none !important; box-shadow: none !important; padding: 0 !important; max-width: none !important; max-height: none !important; }
@@ -77,12 +78,13 @@
 
     /* MINI MAP LIST */
     #mini-map-list {
-        position: absolute; top: 60px; left: 10px; bottom: 85px; width: 100px;
+        position: absolute; top: 60px; left: 10px;
+        max-height: calc(100% - 150px); width: fit-content; max-width: 90px;
         background: rgba(0,0,0,0.8); padding: 6px; border-radius: 8px;
         overflow-y: auto; z-index: 40;
         border: 1px solid #444; display: none;
     }
-    .mini-list-item { font-size: 10px; color: #fff; margin-bottom: 8px; display: flex; align-items: flex-start; }
+    .mini-list-item { font-size: 10px; color: #fff; margin-bottom: 8px; display: flex; align-items: flex-start; line-height: 1.2; }
     .mini-num { font-weight: 900; color: #000; background: #fff; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; margin-right: 6px; font-size: 10px; flex-shrink: 0; margin-top: 1px; }
 
     /* NEW INFO ANIMATIONS */
@@ -296,7 +298,7 @@
     .tech-info { font-size: 14px; font-weight: 700; color: #eee; text-transform: uppercase; line-height: 1.2; }
     .dim-x { color: #666; font-weight: 400; padding: 0 1px; }
     
-    .time-stack { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding-right: 25px; }
+    .time-stack { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding-right: 40px; }
     .job-time-stamp { font-size: 13px; font-weight: 700; color: #FFB020; }
     .job-date-stamp { font-size: 9px; font-weight: 600; color: #666; text-transform: uppercase; }
 
@@ -564,6 +566,7 @@
 
   function announceStop(text) {
       if('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance("New destination. " + text);
           window.speechSynthesis.speak(u);
       }
@@ -945,9 +948,11 @@ document.addEventListener('keypress', (e) => {
           <div style="position: fixed; bottom: 0; left: 0; width: 100%; background: #151515; padding: 15px; border-top: 2px solid var(--accent); z-index: 10000; box-shadow: 0 -5px 30px rgba(0,0,0,0.9);">
              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <span style="color:var(--accent); font-weight:900;">DRIVER NOTE</span>
-                <button onclick="toggleDriverNoteEdit(event, '${id}')" style="background:transparent; border:none; color:#666; font-weight:bold;">CANCEL</button>
              </div>
-             <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" style="height:80px; margin-bottom:10px;" onclick="event.stopPropagation()"></textarea>
+             <div style="position:relative;">
+                 <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" style="height:80px; margin-bottom:10px; padding-bottom: 25px;" onclick="event.stopPropagation()"></textarea>
+                 <div onclick="toggleDriverNoteEdit(event, '${id}')" style="position:absolute; bottom:15px; right:8px; color:#ff3333; font-weight:bold; font-size:11px; cursor:pointer; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px;">CANCEL</div>
+             </div>
              <button class="save-note-btn" style="width: 100%; padding: 12px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND NOTE</button>
           </div>
         `;
