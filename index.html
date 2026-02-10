@@ -78,8 +78,8 @@
 
     /* MINI MAP LIST */
     #mini-map-list {
-        position: absolute; top: 60px; left: 10px; bottom: 85px; 
-        width: fit-content;
+        position: absolute; top: 60px; left: 10px;
+        max-height: calc(100% - 150px); width: fit-content;
         background: rgba(0,0,0,0.8); padding: 6px; border-radius: 8px;
         overflow-y: auto; z-index: 40;
         border: 1px solid #444; display: none;
@@ -1077,6 +1077,7 @@ document.addEventListener('keypress', (e) => {
                  btn.style.borderColor = "var(--decline-red)";
              }
          }
+         lastAnnouncedId = null;
          updateRoute();
     }
     lastPendingCount = currentPending;
