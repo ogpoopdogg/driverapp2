@@ -1070,6 +1070,8 @@ document.addEventListener('keypress', (e) => {
   function mergeAndRender() {
     if(!currentDriver) return;
     
+    const prevTop = optimizedOrder[0];
+
     globalJobs = {};
     Object.entries(pickupData).forEach(([k, v]) => {
         globalJobs[k] = { ...v, jobType: 'pickup' };
@@ -1078,6 +1080,8 @@ document.addEventListener('keypress', (e) => {
         globalJobs[k] = { ...v, jobType: 'delivery' };
     });
     
+    const topGone = prevTop && (!globalJobs[prevTop] || globalJobs[prevTop].status !== 'pending' || globalJobs[prevTop].assigned_to !== currentDriver);
+
     // Auto-Start Route Logic
     const currentPending = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver).length;
     
@@ -1085,6 +1089,9 @@ document.addEventListener('keypress', (e) => {
          if (currentPending > lastPendingCount) lastAnnouncedId = null;
          if (!routeActive) updateRoute();
     }
+    
+    if (routeActive && topGone) lastAnnouncedId = null;
+
     lastPendingCount = currentPending;
 
     renderUnifiedFeed(); // RENDER IMMEDIATELY ON LOAD
