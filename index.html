@@ -97,6 +97,7 @@
         background: rgba(0,0,0,0.8); padding: 6px; border-radius: 8px;
         overflow-y: auto; z-index: 40;
         border: 1px solid #444; display: none;
+        cursor: move;
     }
     .mini-list-item { font-size: 10px; color: #fff; margin-bottom: 8px; display: flex; align-items: flex-start; line-height: 1.2; padding-right: 6px; }
     .mini-num { font-weight: 900; color: #000; background: #fff; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; margin-right: 6px; font-size: 10px; flex-shrink: 0; margin-top: 1px; }
@@ -1323,7 +1324,7 @@ document.addEventListener('keypress', (e) => {
       routeBtn.classList.add('glow-max');
       routeBtn.innerText = "MAX ROUTE";
     } else if(pendingCount > 1) {
-      routeBtn.classList.remove('glow-max');
+      routeBtn.classList.remove('glow-active');
       routeBtn.classList.add('glow-active');
       routeBtn.innerText = "ROUTE NAV";
     } else {
@@ -1369,6 +1370,52 @@ document.addEventListener('keypress', (e) => {
           }
       } 
   });
+
+  const dragger = document.getElementById("mini-map-list");
+  let isDown = false;
+  let offset = [0,0];
+
+  dragger.addEventListener('mousedown', function(e) {
+      isDown = true;
+      offset = [
+          dragger.offsetLeft - e.clientX,
+          dragger.offsetTop - e.clientY
+      ];
+  }, true);
+
+  document.addEventListener('mouseup', function() {
+      isDown = false;
+  }, true);
+
+  document.addEventListener('mousemove', function(e) {
+      if (isDown) {
+          e.preventDefault();
+          dragger.style.left = (e.clientX + offset[0]) + 'px';
+          dragger.style.top  = (e.clientY + offset[1]) + 'px';
+      }
+  }, true);
+  
+  dragger.addEventListener('touchstart', function(e) {
+      isDown = true;
+      const touch = e.touches[0];
+      offset = [
+          dragger.offsetLeft - touch.clientX,
+          dragger.offsetTop - touch.clientY
+      ];
+  }, {passive: false});
+
+  document.addEventListener('touchend', function() {
+      isDown = false;
+  }, true);
+
+  document.addEventListener('touchmove', function(e) {
+      if (isDown) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          dragger.style.left = (touch.clientX + offset[0]) + 'px';
+          dragger.style.top  = (touch.clientY + offset[1]) + 'px';
+      }
+  }, {passive: false});
 </script>
 </body>
 </html>
