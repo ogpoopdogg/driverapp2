@@ -23,6 +23,12 @@
     /* MAP CONTAINER STYLES */
     #map-container { height: 40vh; width: 100%; position: relative; background: #222; z-index: 10; border-bottom: 2px solid var(--accent); }
     #map { height: 100%; width: 100%; }
+
+    /* CUSTOM MAP LABELS (No Bubble) */
+    .gm-style-iw-c { background: none !important; box-shadow: none !important; padding: 0 !important; max-width: none !important; max-height: none !important; }
+    .gm-style-iw-d { overflow: visible !important; background: none !important; color: #00ff41 !important; font-weight: 900 !important; font-size: 14px !important; text-shadow: 0 0 4px #000; text-transform: uppercase; }
+    .gm-style-iw-t::after { display: none !important; }
+    .gm-ui-hover-effect { display: none !important; }
     
     #recenter-btn {
         position: absolute; bottom: 20px; right: 20px;
@@ -363,6 +369,8 @@
   let map, directionsService, directionsRenderer;
   let driverMarker = null;
   let mapMarkers = [];
+  let mapLabels = [];
+  let mapPolyline = null;
   let isNavigating = false;
   let autoCenter = true;
   let lastGps = null;
@@ -470,60 +478,100 @@
   }
 
   /* --- ROUTING LOGIC --- */
-  function updateRoute() {
-    if(Object.keys(globalJobs).length === 0) return;
+  async function updateRoute() {
+    const jobs = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver);
     
-    // Sort jobs by time (simple) or use Optimize
-    const jobs = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver)
-                 .sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
-                 
     if(jobs.length === 0) {
-        directionsRenderer.setDirections({routes: []});
+        if(mapPolyline) mapPolyline.setMap(null);
+        mapMarkers.forEach(m => m.setMap(null));
+        mapLabels.forEach(l => l.close());
+        mapMarkers = []; mapLabels = [];
         return;
     }
-    
-    // Announce first job if count changed
-    if(jobs.length > lastPendingCount) {
-        const first = jobs[0];
-        const destName = first.jobType === 'pickup' ? first.name : first.delivery_name;
-        announceStop("Heading to " + destName);
-        autoCenter = true; // Snap back to driver on new job
-    }
-    lastPendingCount = jobs.length;
-    isNavigating = true;
 
-    // Build Route
-    const waypoints = jobs.map(j => {
+    // Optimization Logic
+    const GOOGLE_KEY = "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ"; 
+    
+    const origin = lastGps ? 
+        { location: { latLng: { latitude: lastGps.lat, longitude: lastGps.lng } } } :
+        { address: "1604 Moreland Ave, Brandon MB" };
+
+    const intermediates = jobs.map(j => {
         const addr = j.jobType === 'pickup' ? j.pickup_location : j.destination;
-        return { location: `${addr}, ${j.city||'Brandon'}`, stopover: true };
+        return { address: `${addr}, ${j.city||'Brandon'}` };
     });
 
-    const request = {
-        origin: lastGps ? { lat: lastGps.lat, lng: lastGps.lng } : "1604 Moreland Ave, Brandon MB",
-        destination: "1604 Moreland Ave, Brandon MB", // Loop home
-        waypoints: waypoints,
-        optimizeWaypoints: false, // Keep list order for now
-        travelMode: 'DRIVING'
-    };
+    try {
+        const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": GOOGLE_KEY,
+                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs"
+            },
+            body: JSON.stringify({
+                origin: origin,
+                destination: { address: "1604 Moreland Ave, Brandon MB" }, 
+                intermediates: intermediates,
+                travelMode: "DRIVE",
+                optimizeWaypointOrder: true
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.routes && result.routes[0]) {
+            // Save Polyline for Command Center
+            if(result.routes[0].polyline) {
+                 db.ref(`driver_locations/${currentDriver}`).update({
+                    active_route: result.routes[0].polyline.encodedPolyline,
+                    route_timestamp: Date.now()
+                });
+                
+                // Draw Line
+                const path = google.maps.geometry.encoding.decodePath(result.routes[0].polyline.encodedPolyline);
+                if(mapPolyline) mapPolyline.setMap(null);
+                mapPolyline = new google.maps.Polyline({
+                    path: path,
+                    geodesic: true,
+                    strokeColor: "#00d4ff",
+                    strokeOpacity: 0.8,
+                    strokeWeight: 6,
+                    map: map
+                });
+            }
 
-    directionsService.route(request, (result, status) => {
-        if (status === 'OK') {
-            directionsRenderer.setDirections(result);
+            // Order Jobs
+            const order = result.routes[0].optimizedIntermediateWaypointIndex;
+            let orderedJobs = [];
+            if(order) {
+                order.forEach(idx => orderedJobs.push(jobs[idx]));
+            } else {
+                orderedJobs = jobs; 
+            }
             
-            // Draw Business Names on Map
+            // Update Global Order
+            optimizedOrder = orderedJobs.map(j => Object.keys(globalJobs).find(key => globalJobs[key] === j));
+            
+            // Draw Markers
             mapMarkers.forEach(m => m.setMap(null));
-            mapMarkers = [];
+            mapLabels.forEach(l => l.close());
+            mapMarkers = []; mapLabels = [];
             
             const legs = result.routes[0].legs;
-            legs.forEach((leg, i) => {
-                if(i < jobs.length) {
-                   const job = jobs[i];
+            // Leg 0 end is Stop 1
+            orderedJobs.forEach((job, i) => {
+                if(i < legs.length) {
+                   const loc = legs[i].endLocation ? legs[i].endLocation.latLng : null;
+                   if(!loc) return;
+                   
                    const isPickup = job.jobType === 'pickup';
                    const color = isPickup ? "FE9800" : "4CAF50";
                    const bizName = isPickup ? job.name : job.delivery_name;
                    
+                   // Pin
                    const marker = new google.maps.Marker({
-                       position: leg.end_location,
+                       position: { lat: loc.latitude, lng: loc.longitude },
                        map: map,
                        label: { text: (i+1).toString(), color: "white", fontWeight: "bold" },
                        icon: {
@@ -534,28 +582,32 @@
                            strokeColor: "white",
                            strokeWeight: 2
                        },
-                       zIndex: 100,
-                       title: bizName // Hover text
+                       zIndex: 100
                    });
-                   
-                   // InfoWindow permanently open for Name
-                   const info = new google.maps.InfoWindow({
-                       content: `<div style="color:black; font-weight:800; font-size:11px; padding:2px;">${bizName}</div>`,
-                       disableAutoPan: true
-                   });
-                   info.open(map, marker);
-                   
                    mapMarkers.push(marker);
+                   
+                   // Text Label (No Bubble)
+                   const info = new google.maps.InfoWindow({
+                       content: `<div>${bizName}</div>`,
+                       disableAutoPan: true,
+                       position: { lat: loc.latitude, lng: loc.longitude },
+                       pixelOffset: new google.maps.Size(0, -25)
+                   });
+                   info.open(map);
+                   mapLabels.push(info);
                 }
             });
             
+            isNavigating = true;
             if(autoCenter) {
                 map.setZoom(17);
                 map.setTilt(45);
             }
-
+            renderUnifiedFeed(); // Refresh numbers in list
         }
-    });
+    } catch(e) {
+        console.error("Routing Error", e);
+    }
   }
 
   if(currentDriver) {
@@ -881,8 +933,7 @@ document.addEventListener('keypress', (e) => {
         globalJobs[k] = { ...v, jobType: 'delivery' };
     });
     
-    renderUnifiedFeed();
-    if(map) updateRoute(); // Update Map Logic
+    updateRoute();
   }
 
   function renderUnifiedFeed() {
@@ -900,8 +951,20 @@ document.addEventListener('keypress', (e) => {
     const lastDoneId = sessionStorage.getItem('last_completed_job');
     let pendingCount = 0;
 
-    const sortedEntries = Object.entries(globalJobs).sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+    let sortedEntries;
+    if (optimizedOrder.length > 0) {
+      // Use optimized order, append any non-optimized jobs at end
+      const optimizedIds = new Set(optimizedOrder);
+      const ordered = optimizedOrder.map(id => [id, globalJobs[id]]).filter(e => e[1]);
+      const remaining = Object.entries(globalJobs)
+          .filter(([id, val]) => !optimizedIds.has(id))
+          .sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+      sortedEntries = [...ordered, ...remaining];
+    } else {
+      sortedEntries = Object.entries(globalJobs).sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+    }
 
+    let seqIndex = 0;
     sortedEntries.forEach(([id, p]) => {
       if (p.assigned_to !== currentDriver) return;
       if (p.status === 'completed' && (p.completed_at || 0) < startOfToday) return;
@@ -1003,6 +1066,7 @@ document.addEventListener('keypress', (e) => {
         rLog.appendChild(item);
       } else {
         pendingCount++;
+        seqIndex++;
         item.onclick = () => scrollToCard(id); 
         qLog.appendChild(item);
 
@@ -1031,6 +1095,7 @@ document.addEventListener('keypress', (e) => {
 
         card.innerHTML = `
           <div class="card-date-badge">
+            <div style="background:#fff; color:#000; font-weight:900; padding:2px 6px; border-radius:50%; font-size:14px; border:2px solid ${badgeColor}; width:24px; height:24px; display:flex; align-items:center; justify-content:center; margin-right:6px;">${seqIndex}</div>
             <div style="background:${badgeColor}; color:#000; font-weight:900; padding:2px 6px; border-radius:4px; font-size:11px;">${badgeText}</div>
             ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
           </div>
