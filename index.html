@@ -21,8 +21,12 @@
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
     
     /* MAP CONTAINER STYLES */
-    #map-container { height: 40vh; width: 100%; position: relative; background: #222; z-index: 10; border-bottom: 2px solid var(--accent); }
+    #map-container { height: 70vh; width: 100%; position: relative; background: #222; z-index: 10; border-bottom: 2px solid var(--accent); transition: height 0.3s ease; }
     #map { height: 100%; width: 100%; }
+
+    /* FULL SCREEN MODE */
+    body.fullscreen-mode #map-container { height: 100vh !important; position: fixed; top: 0; left: 0; z-index: 9999; border: none; }
+    body.fullscreen-mode header, body.fullscreen-mode #main-container { display: none !important; }
 
     /* CUSTOM MAP LABELS (No Bubble) */
     .gm-style-iw-c { background: none !important; box-shadow: none !important; padding: 0 !important; max-width: none !important; max-height: none !important; }
@@ -39,6 +43,28 @@
         box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
     
+    #fs-btn {
+      position: absolute; top: 10px; right: 10px; padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #777;
+      border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer;
+      z-index: 50; backdrop-filter: blur(4px);
+    }
+
+    #back-btn {
+      position: absolute; top: 10px; left: 10px; padding: 8px 16px;
+      background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #777;
+      border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer;
+      z-index: 50; backdrop-filter: blur(4px); display: none;
+    }
+
+    #route-toggle-btn {
+      position: absolute; bottom: 20px; left: 20px; padding: 10px 16px;
+      background: #222; color: #fff; border: 1px solid #fff;
+      border-radius: 30px; font-weight: 900; font-size: 13px; cursor: pointer;
+      z-index: 50; box-shadow: 0 4px 10px rgba(0,0,0,0.5); letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+    }
+
     /* NEW INFO ANIMATIONS */
     .has-update {
       border: 2px solid var(--update-blue) !important;
@@ -165,7 +191,7 @@
     h1 { margin: 0; color: var(--accent); font-size: 18px; font-weight: 800; display: flex; align-items: center; letter-spacing: 0.5px; }
     #clock { font-size: 14px; color: var(--accent); font-weight: 600; opacity: 0.9; }
 
-    #main-container { display: flex; flex-direction: column; height: 60vh; width: 100%; overflow: hidden; background: #050505; }
+    #main-container { display: flex; flex-direction: column; height: 30vh; width: 100%; overflow: hidden; background: #050505; }
     
     #history-sidebar { display: none; } /* Hidden in Driver Mode */
     
@@ -330,6 +356,9 @@
 <div id="map-container">
     <div id="map"></div>
     <div id="recenter-btn" onclick="enableAutoCenter()">⌖</div>
+    <div id="fs-btn" onclick="toggleFullScreen()">FULL SCREEN</div>
+    <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
+    <button id="route-toggle-btn" onclick="toggleRoute()">START ROUTE</button>
 </div>
 
 <div id="main-container">
@@ -376,6 +405,7 @@
   let lastGps = null;
   let optimizedOrder = [];
   let lastPendingCount = 0;
+  let routeActive = false;
 
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
@@ -430,6 +460,37 @@
       }
   }
 
+  function toggleFullScreen() {
+    document.body.classList.toggle('fullscreen-mode');
+    const isFs = document.body.classList.contains('fullscreen-mode');
+    document.getElementById('fs-btn').style.display = isFs ? 'none' : 'block';
+    document.getElementById('back-btn').style.display = isFs ? 'block' : 'none';
+    if(map) google.maps.event.trigger(map, "resize");
+  }
+
+  function toggleRoute() {
+    const btn = document.getElementById('route-toggle-btn');
+    if(!routeActive) {
+        routeActive = true;
+        btn.innerText = "STOP ROUTE";
+        btn.style.background = "var(--decline-red)";
+        btn.style.borderColor = "var(--decline-red)";
+        updateRoute();
+    } else {
+        routeActive = false;
+        btn.innerText = "START ROUTE";
+        btn.style.background = "#222";
+        btn.style.borderColor = "#fff";
+        
+        if(mapPolyline) mapPolyline.setMap(null);
+        mapMarkers.forEach(m => m.setMap(null));
+        mapLabels.forEach(l => l.close());
+        mapMarkers = []; mapLabels = [];
+        optimizedOrder = [];
+        renderUnifiedFeed();
+    }
+  }
+
   /* --- TRACKING & AUDIO --- */
   async function startContinuousTracking() {
     if ("Notification" in window) Notification.requestPermission();
@@ -479,6 +540,8 @@
 
   /* --- ROUTING LOGIC --- */
   async function updateRoute() {
+    if(!routeActive) return;
+
     const jobs = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver);
     
     if(jobs.length === 0) {
@@ -603,6 +666,14 @@
                 map.setZoom(17);
                 map.setTilt(45);
             }
+
+            // Voice Announce First Stop
+            if(orderedJobs.length > 0) {
+                const nextJob = orderedJobs[0];
+                const dest = nextJob.jobType === 'pickup' ? nextJob.pickup_location : nextJob.destination;
+                announceStop(dest);
+            }
+
             renderUnifiedFeed(); // Refresh numbers in list
         }
     } catch(e) {
