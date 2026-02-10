@@ -75,6 +75,16 @@
       transition: all 0.3s ease;
     }
 
+    /* MINI MAP LIST */
+    #mini-map-list {
+        position: absolute; top: 60px; left: 10px;
+        background: rgba(0,0,0,0.8); padding: 8px; border-radius: 8px;
+        max-height: 40%; overflow-y: auto; z-index: 40;
+        border: 1px solid #444; display: none;
+    }
+    .mini-list-item { font-size: 11px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; }
+    .mini-num { font-weight: 900; color: #000; background: #fff; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; margin-right: 6px; font-size: 10px; }
+
     /* NEW INFO ANIMATIONS */
     .has-update {
       border: 2px solid var(--update-blue) !important;
@@ -161,13 +171,12 @@
       display: none;
       vertical-align: middle;
       box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
-      animation: explosion 1s infinite;
+      animation: static-glow 2s infinite alternate;
     }
 
-    @keyframes explosion {
-      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
-      70% { transform: scale(1.2); box-shadow: 0 0 20px 20px rgba(255, 0, 0, 0); }
-      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+    @keyframes static-glow {
+      from { box-shadow: 0 0 5px rgba(255, 0, 0, 0.5); }
+      to { box-shadow: 0 0 15px rgba(255, 0, 0, 1); }
     }
 
     @keyframes pro-pulse-blue {
@@ -361,6 +370,7 @@
 
 <div id="map-container">
     <div id="map"></div>
+    <div id="mini-map-list"></div>
     <div id="recenter-btn" onclick="enableAutoCenter()">⌖</div>
     <div id="zoom-btn" onclick="zoomToFit()">-</div>
     <div id="fs-btn" onclick="toggleFullScreen()">FULL SCREEN</div>
@@ -502,16 +512,13 @@
         btn.innerText = "STOP ROUTE";
         btn.style.background = "var(--decline-red)";
         btn.style.borderColor = "var(--decline-red)";
-        updateRoute();
+        // announce immediate target if desired, or let updateRoute handle it
     } else {
         routeActive = false;
         btn.innerText = "START ROUTE";
         btn.style.background = "#222";
         btn.style.borderColor = "#fff";
-        
-        // Do not clear map overlays so they stay highlighted
-        optimizedOrder = [];
-        renderUnifiedFeed();
+        if('speechSynthesis' in window) window.speechSynthesis.cancel();
     }
   }
 
@@ -536,7 +543,7 @@
         }
       }
 
-      if(autoCenter && isNavigating && map) {
+      if(autoCenter && routeActive && map) {
           map.setCenter(latLng);
           map.setHeading(pos.coords.heading || 0);
       }
@@ -564,17 +571,18 @@
 
   /* --- ROUTING LOGIC --- */
   async function updateRoute() {
-    if(!routeActive) return;
-
+    // Route calculation runs regardless of routeActive state (for visualization)
     const jobs = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver);
     
-    if(jobs.length === 0) {
-        if(mapPolyline) mapPolyline.setMap(null);
-        mapMarkers.forEach(m => m.setMap(null));
-        mapLabels.forEach(l => l.close());
-        mapMarkers = []; mapLabels = [];
-        return;
-    }
+    // Clear visualization start
+    if(mapPolyline) mapPolyline.setMap(null);
+    mapMarkers.forEach(m => m.setMap(null));
+    mapLabels.forEach(l => l.close());
+    mapMarkers = []; mapLabels = [];
+    document.getElementById('mini-map-list').innerHTML = "";
+    document.getElementById('mini-map-list').style.display = 'none';
+
+    if(jobs.length === 0) return;
 
     // Optimization Logic
     const GOOGLE_KEY = "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ"; 
@@ -640,12 +648,9 @@
             // Update Global Order
             optimizedOrder = orderedJobs.map(j => Object.keys(globalJobs).find(key => globalJobs[key] === j));
             
-            // Draw Markers
-            mapMarkers.forEach(m => m.setMap(null));
-            mapLabels.forEach(l => l.close());
-            mapMarkers = []; mapLabels = [];
-            
             const legs = result.routes[0].legs;
+            let listHtml = "";
+
             // Leg 0 end is Stop 1
             orderedJobs.forEach((job, i) => {
                 if(i < legs.length) {
@@ -653,7 +658,7 @@
                    if(!loc) return;
                    
                    const isPickup = job.jobType === 'pickup';
-                   const color = isPickup ? "FE9800" : "4CAF50";
+                   const colorHex = isPickup ? "#FE9800" : "#4CAF50";
                    const bizName = isPickup ? job.name : job.delivery_name;
                    
                    // Pin
@@ -664,7 +669,7 @@
                        icon: {
                            path: google.maps.SymbolPath.CIRCLE,
                            scale: 14,
-                           fillColor: "#"+color,
+                           fillColor: colorHex,
                            fillOpacity: 1,
                            strokeColor: "white",
                            strokeWeight: 2
@@ -682,17 +687,24 @@
                    });
                    info.open(map);
                    mapLabels.push(info);
+
+                   // Mini List Item
+                   listHtml += `<div class="mini-list-item"><div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div><span>${bizName}</span></div>`;
                 }
             });
             
+            document.getElementById('mini-map-list').innerHTML = listHtml;
+            document.getElementById('mini-map-list').style.display = listHtml ? 'block' : 'none';
+
             isNavigating = true;
             if(autoCenter) {
-                map.setZoom(17);
-                map.setTilt(45);
+                // Only zoom to fit if we just calculated fresh
+                // map.setZoom(17);
+                // map.setTilt(45);
             }
 
-            // Voice Announce First Stop (Once Only)
-            if(orderedJobs.length > 0) {
+            // Voice Announce First Stop (Once Only) - Gated by routeActive
+            if(orderedJobs.length > 0 && routeActive) {
                 const nextJob = orderedJobs[0];
                 const dest = nextJob.jobType === 'pickup' ? nextJob.pickup_location : nextJob.destination;
                 
@@ -1032,7 +1044,7 @@ document.addEventListener('keypress', (e) => {
     });
     
     renderUnifiedFeed(); // RENDER IMMEDIATELY ON LOAD
-    if(routeActive) updateRoute(); // RE-OPTIMIZE ONLY IF ACTIVE
+    updateRoute(); // RE-OPTIMIZE ONLY IF ACTIVE
   }
 
   function renderUnifiedFeed() {
