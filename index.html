@@ -537,6 +537,7 @@
       autoCenter = true;
       if(lastGps) {
           map.setCenter({lat: lastGps.lat, lng: lastGps.lng});
+          map.setHeading(lastGps.heading || 0);
           map.setZoom(17);
           map.setTilt(45);
       }
@@ -625,7 +626,7 @@
 
     if (!navigator.geolocation) return;
     navigator.geolocation.watchPosition((pos) => {
-      lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude, heading: pos.coords.heading };
       const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
       
       if(driverMarker) {
