@@ -24,6 +24,27 @@
     #map-container { height: 70vh; width: 100%; position: relative; background: #222; z-index: 10; border-bottom: 2px solid var(--accent); transition: height 0.3s ease; }
     #map { height: 100%; width: 100%; }
 
+    /* NAVIGATION HUD */
+    #nav-hud {
+      position: absolute; top: 0; left: 0; right: 0;
+      background: rgba(15, 15, 15, 0.95);
+      padding: 15px; z-index: 100;
+      display: none; flex-direction: row; align-items: center;
+      border-bottom: 2px solid var(--accent);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    body.nav-active #nav-hud { display: flex; }
+    body.nav-active header { display: none; }
+    
+    #nav-arrow {
+      font-size: 42px; color: var(--accent); margin-right: 15px;
+      width: 50px; text-align: center; text-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+    }
+    #nav-info { flex: 1; display: flex; flex-direction: column; }
+    #nav-dist { font-size: 26px; font-weight: 900; color: #fff; line-height: 1; margin-bottom: 4px; }
+    #nav-instr { font-size: 16px; color: #ddd; font-weight: 600; line-height: 1.2; }
+    #nav-next { font-size: 12px; color: #777; margin-top: 4px; font-weight: 700; text-transform: uppercase; }
+
     /* FULL SCREEN MODE */
     body.fullscreen-mode #map-container { height: 100vh !important; position: fixed; top: 0; left: 0; z-index: 9999; border: none; }
     body.fullscreen-mode header, body.fullscreen-mode #main-container { display: none !important; }
@@ -401,6 +422,14 @@
 
 <div id="map-container">
     <div id="map"></div>
+    <div id="nav-hud">
+        <div id="nav-arrow">↑</div>
+        <div id="nav-info">
+            <div id="nav-dist">0 m</div>
+            <div id="nav-instr">Calculating...</div>
+            <div id="nav-next"></div>
+        </div>
+    </div>
     <div id="mini-map-list"></div>
     <div id="recenter-btn" onclick="enableAutoCenter()">⌖</div>
     <div id="zoom-btn" onclick="zoomToFit()">-</div>
@@ -458,6 +487,13 @@
   let routeActive = false;
   let lastAnnouncedId = null;
 
+  // NAVIGATION ENGINE VARIABLES
+  let navSteps = [];
+  let currentStepIndex = 0;
+  let lastNavDistance = 99999;
+  let lastVoiceAlertLevel = 0; // 0=none, 1=early, 2=main, 3=final
+  let isSpeaking = false;
+
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
   let wakeLock = null;
@@ -468,18 +504,8 @@
       zoom: 13,
       center: { lat: 49.8485, lng: -99.9501 },
       disableDefaultUI: true,
-      gestureHandling: "greedy",
-      mapId: "DEMO_MAP_ID",
-      heading: 0,
-      tilt: 0,
-      styles: [
-        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-      ]
+      rotateControl: true,
+      tiltControl: true
     });
 
     directionsService = new google.maps.DirectionsService();
@@ -510,7 +536,7 @@
       autoCenter = true;
       if(lastGps) {
           map.setCenter({lat: lastGps.lat, lng: lastGps.lng});
-          map.setZoom(17);
+          map.setZoom(18);
           map.setTilt(45);
       }
   }
@@ -555,13 +581,19 @@
         btn.innerText = "STOP ROUTE";
         btn.style.background = "var(--decline-red)";
         btn.style.borderColor = "var(--decline-red)";
-        lastAnnouncedId = null; updateRoute();
+        document.body.classList.add('nav-active');
+        lastAnnouncedId = null; 
+        updateRoute();
     } else {
         routeActive = false;
+        isNavigating = false;
         btn.innerText = "START ROUTE";
         btn.style.background = "#222";
         btn.style.borderColor = "#fff";
+        document.body.classList.remove('nav-active');
         if('speechSynthesis' in window) window.speechSynthesis.cancel();
+        // Reset View
+        map.setTilt(0);
     }
   }
 
@@ -576,19 +608,30 @@
     navigator.geolocation.watchPosition((pos) => {
       lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
-      
+      const speed = pos.coords.speed || 0; // m/s
+      const heading = pos.coords.heading || 0;
+
       if(driverMarker) {
         driverMarker.setPosition(latLng);
         const icon = driverMarker.getIcon();
         if(pos.coords.heading) {
-            icon.rotation = pos.coords.heading;
+            icon.rotation = heading;
             driverMarker.setIcon(icon);
         }
       }
 
+      // NAVIGATION ENGINE TICK
+      if(routeActive && navSteps.length > 0) {
+          processNavigationTick(latLng, speed, heading);
+      }
+
       if(autoCenter && routeActive && map) {
-          map.setCenter(latLng);
-          map.setHeading(pos.coords.heading || 0);
+          map.moveCamera({
+            center: latLng,
+            heading: heading,
+            tilt: 45,
+            zoom: 18
+          });
       }
 
       const now = Date.now();
@@ -608,9 +651,131 @@
   function announceStop(text) {
       if('speechSynthesis' in window) {
           window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance("New destination. " + text);
+          const u = new SpeechSynthesisUtterance(text);
           window.speechSynthesis.speak(u);
       }
+  }
+
+  /* --- NAVIGATION ENGINE LOGIC --- */
+  function startNavigation(legs) {
+      if(!legs || legs.length === 0) return;
+      // Focus on the immediate leg (Current -> Next Stop)
+      // Decode the steps for the first leg
+      navSteps = legs[0].steps || [];
+      currentStepIndex = 0;
+      lastVoiceAlertLevel = 0;
+      isNavigating = true;
+      if(navSteps.length > 0) {
+          updateNavHUD(navSteps[0], 0);
+          speakInstruction(navSteps[0].navigationInstruction?.instructions || "Start route");
+      }
+  }
+
+  function processNavigationTick(userLatLng, speedMs, heading) {
+      if(currentStepIndex >= navSteps.length) {
+          document.getElementById('nav-instr').innerText = "Arrived at destination";
+          return;
+      }
+
+      const step = navSteps[currentStepIndex];
+      const stepEnd = new google.maps.LatLng(step.endLocation.latLng.latitude, step.endLocation.latLng.longitude);
+      const distToTurn = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, stepEnd);
+
+      updateNavHUD(step, distToTurn);
+
+      // STEP ADVANCEMENT LOGIC
+      // If we are very close to the turn, or passed it
+      if(distToTurn < 25) {
+          currentStepIndex++;
+          lastVoiceAlertLevel = 0;
+          if(currentStepIndex < navSteps.length) {
+              const next = navSteps[currentStepIndex];
+              speakInstruction(next.navigationInstruction?.instructions);
+          } else {
+              announceStop("You have arrived.");
+          }
+          return;
+      }
+
+      // WARNING SYSTEM
+      const speedKmh = speedMs * 3.6;
+      let earlyDist, mainDist, finalDist;
+      
+      if(speedKmh > 80) {
+          earlyDist = 800; mainDist = 300; finalDist = 80;
+      } else {
+          earlyDist = 300; mainDist = 120; finalDist = 40;
+      }
+
+      // Throttle speech to prevent overlapping
+      if(!window.speechSynthesis.speaking) {
+           const instr = step.navigationInstruction?.instructions || "Continue";
+           const cleanInstr = instr.replace(/<[^>]*>?/gm, '');
+
+           if(distToTurn <= earlyDist && lastVoiceAlertLevel < 1) {
+               announceStop(`In ${Math.round(distToTurn)} meters, ${cleanInstr}`);
+               lastVoiceAlertLevel = 1;
+           } else if (distToTurn <= mainDist && lastVoiceAlertLevel < 2) {
+               announceStop(`${cleanInstr}`);
+               lastVoiceAlertLevel = 2;
+           } else if (distToTurn <= finalDist && lastVoiceAlertLevel < 3) {
+               announceStop(`${cleanInstr} now`);
+               lastVoiceAlertLevel = 3;
+           }
+      }
+  }
+
+  function updateNavHUD(step, distance) {
+      const distEl = document.getElementById('nav-dist');
+      const instrEl = document.getElementById('nav-instr');
+      const arrowEl = document.getElementById('nav-arrow');
+      const nextEl = document.getElementById('nav-next');
+
+      const distStr = distance > 1000 ? (distance/1000).toFixed(1) + " km" : Math.round(distance) + " m";
+      distEl.innerText = distStr;
+      
+      const rawInstr = step.navigationInstruction?.instructions || "Proceed to route";
+      instrEl.innerText = rawInstr.replace(/<[^>]*>?/gm, '');
+      
+      const maneuver = step.navigationInstruction?.maneuver || "straight";
+      arrowEl.innerHTML = getManeuverIcon(maneuver);
+      
+      // Peek next step
+      if(currentStepIndex + 1 < navSteps.length) {
+          const next = navSteps[currentStepIndex+1];
+          const nextManeuver = next.navigationInstruction?.maneuver || "";
+          nextEl.innerText = "THEN " + nextManeuver.replace(/-/g, " ");
+      } else {
+          nextEl.innerText = "THEN ARRIVE";
+      }
+  }
+
+  function getManeuverIcon(m) {
+      m = m.toLowerCase();
+      if(m.includes("left")) {
+          if(m.includes("u-turn") || m.includes("uturn")) return "↶";
+          if(m.includes("sharp")) return "↰";
+          if(m.includes("slight")) return "↖";
+          return "←";
+      }
+      if(m.includes("right")) {
+          if(m.includes("u-turn") || m.includes("uturn")) return "↷";
+          if(m.includes("sharp")) return "↱";
+          if(m.includes("slight")) return "↗";
+          return "→";
+      }
+      if(m.includes("uturn")) return "↶";
+      if(m.includes("merge")) return "↙";
+      if(m.includes("ramp")) return "↱";
+      if(m.includes("fork")) return "Y";
+      if(m.includes("roundabout")) return "↺";
+      return "↑";
+  }
+
+  function speakInstruction(text) {
+      if(!text) return;
+      const clean = text.replace(/<[^>]*>?/gm, '');
+      announceStop(clean);
   }
 
   /* --- ROUTING LOGIC --- */
@@ -646,7 +811,7 @@
             headers: {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": GOOGLE_KEY,
-                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs"
+                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs.steps.navigationInstruction,routes.legs.steps.startLocation,routes.legs.steps.endLocation,routes.legs.steps.maneuver,routes.legs.endLocation"
             },
             body: JSON.stringify({
                 origin: origin,
@@ -678,6 +843,11 @@
                     strokeWeight: 6,
                     map: map
                 });
+            }
+
+            // START NAVIGATION ENGINE IF ACTIVE
+            if(routeActive) {
+                startNavigation(result.routes[0].legs);
             }
 
             // Order Jobs
@@ -748,18 +918,6 @@
                 // Only zoom to fit if we just calculated fresh
                 // map.setZoom(17);
                 // map.setTilt(45);
-            }
-
-            // Voice Announce First Stop (Once Only) - Gated by routeActive
-            if(orderedJobs.length > 0 && routeActive) {
-                const nextJob = orderedJobs[0];
-                const dest = nextJob.jobType === 'pickup' ? nextJob.pickup_location : nextJob.destination;
-                
-                // Only speak if it's a new job ID
-                if(nextJob.id !== lastAnnouncedId) {
-                   announceStop(dest);
-                   lastAnnouncedId = nextJob.id;
-                }
             }
 
             renderUnifiedFeed(); // Refresh numbers in list
@@ -1066,6 +1224,7 @@ document.addEventListener('keypress', (e) => {
   async function routeOptimized() {
       // Replaces external nav with Internal Map Focus
       enableAutoCenter();
+      toggleRoute();
   }
 
   let pickupData = {};
