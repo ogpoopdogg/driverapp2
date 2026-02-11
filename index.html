@@ -378,6 +378,18 @@
 
     @keyframes pulseOrange { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
     @keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* NAV INSTRUCTION BANNER */
+    #nav-panel {
+      position: absolute; top: 10px; left: 5%; width: 90%;
+      background: #007bfb; /* Google Blue */
+      color: white; padding: 15px; border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 1000;
+      display: none; flex-direction: column;
+      font-family: sans-serif; border: 2px solid white;
+    }
+    #nav-action { font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; }
+    #nav-distance { font-size: 18px; font-weight: 600; opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -401,6 +413,10 @@
 
 <div id="map-container">
     <div id="map"></div>
+    <div id="nav-panel">
+        <div id="nav-action">Start Driving</div>
+        <div id="nav-distance">Calculating...</div>
+    </div>
     <div id="mini-map-list"></div>
     <div id="recenter-btn" onclick="enableAutoCenter()">⌖</div>
     <div id="zoom-btn" onclick="zoomToFit()">-</div>
@@ -457,6 +473,8 @@
   let lastPendingCount = 0;
   let routeActive = false;
   let lastAnnouncedId = null;
+  let currentRouteSteps = []; 
+  let nextStepIndex = 0;      
 
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
@@ -572,19 +590,23 @@
     navigator.geolocation.watchPosition((pos) => {
       lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
-      
+      const heading = pos.coords.heading || 0; 
+
       if(driverMarker) {
         driverMarker.setPosition(latLng);
         const icon = driverMarker.getIcon();
-        if(pos.coords.heading) {
-            icon.rotation = pos.coords.heading;
-            driverMarker.setIcon(icon);
-        }
+        icon.rotation = heading;
+        driverMarker.setIcon(icon);
       }
 
       if(autoCenter && routeActive && map) {
-          map.setCenter(latLng);
-          map.setHeading(pos.coords.heading || 0);
+          map.moveCamera({
+              center: latLng,
+              heading: heading, 
+              tilt: 45,         
+              zoom: 18
+          });
+          checkNextStep(lastGps);
       }
 
       const now = Date.now();
@@ -642,7 +664,7 @@
             headers: {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": GOOGLE_KEY,
-                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs"
+                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs,routes.legs.steps"
             },
             body: JSON.stringify({
                 origin: origin,
@@ -656,6 +678,24 @@
         const result = await response.json();
         
         if (result.routes && result.routes[0]) {
+            currentRouteSteps = [];
+            result.routes[0].legs.forEach(leg => {
+                if(leg.steps) {
+                    leg.steps.forEach(step => {
+                        currentRouteSteps.push({
+                            lat: step.startLocation.latLng.latitude,
+                            lng: step.startLocation.latLng.longitude,
+                            instruction: step.navigationInstruction ? step.navigationInstruction.maneuver : "Continue",
+                            text: step.navigationInstruction ? step.navigationInstruction.instructions : "Proceed to route"
+                        });
+                    });
+                }
+            });
+            nextStepIndex = 0;
+            if(routeActive) {
+                document.getElementById('nav-panel').style.display = 'flex';
+                updateNavPanel(0);
+            }
             // Save Polyline for Command Center
             if(result.routes[0].polyline) {
                  db.ref(`driver_locations/${currentDriver}`).update({
@@ -1416,6 +1456,45 @@ document.addEventListener('keypress', (e) => {
           dragger.style.top  = (touch.clientY + offset[1]) + 'px';
       }
   }, {passive: false});
+
+function updateNavPanel(index) {
+    if(!currentRouteSteps[index]) return;
+    const step = currentRouteSteps[index];
+    
+    // Clean up basic HTML tags usually sent by Google
+    // (Google sends "Turn <b>Left</b>", we want just text)
+    const cleanText = step.text ? step.text.replace(/<[^>]*>?/gm, '') : "Continue";
+    
+    document.getElementById('nav-action').innerText = cleanText;
+    document.getElementById('nav-distance').innerText = "In 200 meters"; // Placeholder, real calc is complex
+}
+
+function checkNextStep(currentPos) {
+    if(!currentRouteSteps[nextStepIndex]) return;
+    
+    const target = currentRouteSteps[nextStepIndex];
+    // Simple distance formula (Haversine is better, but this works for short distances)
+    const dist = Math.sqrt(
+        Math.pow(target.lat - currentPos.lat, 2) + 
+        Math.pow(target.lng - currentPos.lng, 2)
+    ) * 111000; // Convert degrees to meters approx
+
+    // If we are within 40 meters of the turn, announce it and switch to next
+    if(dist < 40) {
+        speak(target.text); // Speak the instruction
+        nextStepIndex++;
+        updateNavPanel(nextStepIndex);
+    }
+}
+
+function speak(text) {
+    if('speechSynthesis' in window) {
+        // Remove HTML tags for speech
+        const clean = text.replace(/<[^>]*>?/gm, '');
+        const u = new SpeechSynthesisUtterance(clean);
+        window.speechSynthesis.speak(u);
+    }
+}
 </script>
 </body>
 </html>
