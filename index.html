@@ -381,18 +381,21 @@
 
     /* NAV INSTRUCTION BANNER */
     #nav-panel {
-      position: absolute; top: 10px; left: 5%; width: 90%;
-      background: #007bfb; /* Google Blue */
-      color: white; padding: 15px; border-radius: 12px;
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(0, 123, 251, 0.7); /* Google Blue with transparency */
+      color: white; padding: 20px; border-radius: 12px; width: 80%;
       box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 1000;
-      display: none; flex-direction: column;
-      font-family: sans-serif; border: 2px solid white;
+      display: none; flex-direction: column; text-align: center;
+      font-family: sans-serif; border: 2px solid rgba(255,255,255,0.8);
+      backdrop-filter: blur(4px);
     }
     #nav-action { font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; }
     #nav-distance { font-size: 18px; font-weight: 600; opacity: 0.9; }
   </style>
 </head>
 <body>
+
+<audio id="silent-audio" loop style="display:none" src="data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"></audio>
 
 <div id="login-overlay">
     <div class="login-box">
@@ -475,8 +478,10 @@
   let lastAnnouncedId = null;
   let currentRouteSteps = []; 
   let nextStepIndex = 0;      
+  let navTimeout = null;
 
   let lastGpsUpdate = 0;
+  let lastRouteUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
   let wakeLock = null;
   
@@ -570,6 +575,7 @@
         btn.style.background = "var(--decline-red)";
         btn.style.borderColor = "var(--decline-red)";
         lastAnnouncedId = null; updateRoute();
+        document.getElementById('silent-audio').play().catch(() => {});
     } else {
         routeActive = false;
         btn.innerText = "START ROUTE";
@@ -585,28 +591,35 @@
     if ('wakeLock' in navigator) {
       try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
     }
+    
+    document.getElementById('silent-audio').play().catch(() => {});
 
     if (!navigator.geolocation) return;
     navigator.geolocation.watchPosition((pos) => {
       lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
-      const heading = pos.coords.heading || 0; 
+      const heading = pos.coords.heading; 
+      const speed = pos.coords.speed || 0; // m/s
 
       if(driverMarker) {
         driverMarker.setPosition(latLng);
         const icon = driverMarker.getIcon();
-        icon.rotation = heading;
+        if(speed > 1 && heading !== null) icon.rotation = heading; // Anti-Spin
         driverMarker.setIcon(icon);
       }
 
       if(autoCenter && routeActive && map) {
-          map.moveCamera({
+          const camOptions = {
               center: latLng,
-              heading: heading, 
               tilt: 45,         
               zoom: 18
-          });
-          checkNextStep(lastGps);
+          };
+          // Anti-Spin: Only rotate if moving
+          if(speed > 1 && heading !== null) camOptions.heading = heading;
+          
+          map.moveCamera(camOptions);
+          checkNextStep(lastGps, speed);
+          checkOffRoute(lastGps);
       }
 
       const now = Date.now();
@@ -633,6 +646,7 @@
 
   /* --- ROUTING LOGIC --- */
   async function updateRoute() {
+    lastRouteUpdate = Date.now();
     // Route calculation runs regardless of routeActive state (for visualization)
     const jobs = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver);
     
@@ -693,7 +707,7 @@
             });
             nextStepIndex = 0;
             if(routeActive) {
-                document.getElementById('nav-panel').style.display = 'flex';
+                // document.getElementById('nav-panel').style.display = 'flex'; // Wait for turn to show
                 updateNavPanel(0);
             }
             // Save Polyline for Command Center
@@ -1460,36 +1474,55 @@ document.addEventListener('keypress', (e) => {
 function updateNavPanel(index) {
     if(!currentRouteSteps[index]) return;
     const step = currentRouteSteps[index];
-    
-    // Clean up basic HTML tags usually sent by Google
-    // (Google sends "Turn <b>Left</b>", we want just text)
     const cleanText = step.text ? step.text.replace(/<[^>]*>?/gm, '') : "Continue";
     
     document.getElementById('nav-action').innerText = cleanText;
-    document.getElementById('nav-distance').innerText = "In 200 meters"; // Placeholder, real calc is complex
+    document.getElementById('nav-distance').innerText = "Upcoming Turn";
 }
 
-function checkNextStep(currentPos) {
+function checkNextStep(currentPos, currentSpeed) {
     if(!currentRouteSteps[nextStepIndex]) return;
     
     const target = currentRouteSteps[nextStepIndex];
-    // Simple distance formula (Haversine is better, but this works for short distances)
     const dist = Math.sqrt(
         Math.pow(target.lat - currentPos.lat, 2) + 
         Math.pow(target.lng - currentPos.lng, 2)
-    ) * 111000; // Convert degrees to meters approx
+    ) * 111000; 
 
-    // If we are within 40 meters of the turn, announce it and switch to next
-    if(dist < 40) {
-        speak(target.text); // Speak the instruction
+    // Dynamic Lookahead: 3x speed (min 15m)
+    const triggerDist = Math.max(15, (currentSpeed || 0) * 3);
+
+    if(dist < triggerDist) {
+        speak(target.text); 
+        
+        // UI Pop-up
+        const p = document.getElementById('nav-panel');
+        p.style.display = 'flex';
+        clearTimeout(navTimeout);
+        navTimeout = setTimeout(() => { p.style.display = 'none'; }, 5000);
+
         nextStepIndex++;
         updateNavPanel(nextStepIndex);
     }
 }
 
+function checkOffRoute(pos) {
+    if(!routeActive || !mapPolyline || !isNavigating) return;
+    // Don't spam reroute (wait 10s between updates)
+    if(Date.now() - lastRouteUpdate < 10000) return;
+
+    const latLng = new google.maps.LatLng(pos.lat, pos.lng);
+    // Tolerance 40e-5 is roughly 30-40 meters
+    const onPath = google.maps.geometry.poly.isLocationOnEdge(latLng, mapPolyline, 40e-5);
+    
+    if(!onPath) {
+        console.log("Off route detected. Recalculating...");
+        updateRoute();
+    }
+}
+
 function speak(text) {
     if('speechSynthesis' in window) {
-        // Remove HTML tags for speech
         const clean = text.replace(/<[^>]*>?/gm, '');
         const u = new SpeechSynthesisUtterance(clean);
         window.speechSynthesis.speak(u);
