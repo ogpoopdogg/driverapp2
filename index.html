@@ -461,6 +461,7 @@
   let currentStepIndex = 0;
 
   let lastGpsUpdate = 0;
+  let lastRerouteTime = 0;
   const gpsInterval = 10000; // Faster updates for Nav
   let wakeLock = null;
   
@@ -587,6 +588,18 @@
       if(autoCenter && routeActive && map) {
           map.setCenter(latLng);
           map.setHeading(pos.coords.heading || 0);
+      }
+
+      // AUTO-REROUTE LOGIC
+      if (routeActive && isNavigating && mapPolyline) {
+        const now = Date.now();
+        if (now - lastRerouteTime > 15000) { 
+           // ~150 meters tolerance (0.0015 degrees)
+           if (!google.maps.geometry.poly.isLocationOnEdge(latLng, mapPolyline, 0.0015)) {
+              lastRerouteTime = now;
+              updateRoute(); 
+           }
+        }
       }
 
       // AUDIO NAVIGATION LOGIC
