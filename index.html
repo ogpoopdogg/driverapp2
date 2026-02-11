@@ -468,8 +468,15 @@
       zoom: 13,
       center: { lat: 49.8485, lng: -99.9501 },
       disableDefaultUI: true,
-      rotateControl: true,
-      tiltControl: true
+      gestureHandling: "greedy",
+      styles: [
+        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+      ]
     });
 
     directionsService = new google.maps.DirectionsService();
@@ -577,12 +584,8 @@
       }
 
       if(autoCenter && routeActive && map) {
-          map.moveCamera({
-            center: latLng,
-            heading: pos.coords.heading || 0,
-            tilt: 45,
-            zoom: 18
-          });
+          map.setCenter(latLng);
+          map.setHeading(pos.coords.heading || 0);
       }
 
       const now = Date.now();
