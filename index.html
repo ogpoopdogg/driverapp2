@@ -379,13 +379,13 @@
     @keyframes pulseOrange { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
     @keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-    #nav-caption-box {
-      position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%);
-      width: 90%; max-width: 400px;
-      background: #0F9D58; color: #fff; padding: 12px 16px; border-radius: 12px;
-      font-size: 18px; font-weight: 700; text-align: center;
-      display: none; z-index: 45; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-      text-transform: uppercase; letter-spacing: 0.5px;
+    /* NAV CAPTION STYLE */
+    #nav-caption {
+        position: absolute; bottom: 130px; left: 50%; transform: translateX(-50%);
+        width: 90%; text-align: center; font-size: 24px; font-weight: 900;
+        color: #fff; text-shadow: 0 2px 4px #000, 0 0 10px #000;
+        z-index: 1000; pointer-events: none; display: none;
+        font-family: 'Roboto', sans-serif; letter-spacing: 0.5px;
     }
   </style>
 </head>
@@ -417,8 +417,8 @@
     <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
-    <div id="nav-caption-box"></div>
     <button id="route-toggle-btn" onclick="toggleRoute()">START ROUTE</button>
+    <div id="nav-caption"></div>
 </div>
 
 <div id="main-container">
@@ -474,6 +474,8 @@
   let lastRerouteTime = 0;
   const gpsInterval = 10000; // Faster updates for Nav
   let wakeLock = null;
+  let captionTimer = null;
+  let captionInterval = null;
   
   /* --- MAP FUNCTIONS --- */
   function initMap() {
@@ -571,7 +573,6 @@
         btn.style.background = "#222";
         btn.style.borderColor = "#fff";
         if('speechSynthesis' in window) window.speechSynthesis.cancel();
-        document.getElementById('nav-caption-box').style.display = 'none';
     }
   }
 
@@ -623,7 +624,9 @@
              if(dist < 40) { // 40 meters threshold
                  if(step.navigationInstruction && step.navigationInstruction.instructions) {
                      const cleanText = step.navigationInstruction.instructions.replace(/<[^>]*>/g, "");
-                     speakWithCaption(cleanText);
+                     const utter = new SpeechSynthesisUtterance(cleanText);
+                     window.speechSynthesis.speak(utter);
+                     typeWriter(cleanText);
                  }
                  currentStepIndex++;
              }
@@ -644,30 +647,38 @@
     { enableHighAccuracy: true, maximumAge: 0 });
   }
 
-  function speakWithCaption(text) {
-    if(!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const box = document.getElementById('nav-caption-box');
-    box.style.display = 'flex';
-    box.innerText = "";
-    
-    const u = new SpeechSynthesisUtterance(text);
-    u.onboundary = (event) => {
-      if (event.name === 'word') {
-         const nextSpace = text.indexOf(' ', event.charIndex);
-         const end = nextSpace === -1 ? text.length : nextSpace;
-         box.innerText = text.substring(0, end);
-      }
-    };
-    u.onend = () => {
-      box.innerText = text;
-      setTimeout(() => { if(box.innerText === text) box.style.display = 'none'; }, 4000);
-    };
-    window.speechSynthesis.speak(u);
+  function typeWriter(text) {
+      const el = document.getElementById('nav-caption');
+      if(!el) return;
+      el.style.display = 'block';
+      el.innerText = "";
+      
+      if(captionInterval) clearInterval(captionInterval);
+      if(captionTimer) clearTimeout(captionTimer);
+      
+      let i = 0;
+      captionInterval = setInterval(() => {
+          if (i < text.length) {
+              el.innerText += text.charAt(i);
+              i++;
+          } else {
+              clearInterval(captionInterval);
+              captionTimer = setTimeout(() => {
+                  el.style.display = 'none';
+                  el.innerText = "";
+              }, 5000);
+          }
+      }, 40);
   }
 
   function announceStop(text) {
-      speakWithCaption("New destination. " + text);
+      if('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const msg = "New destination. " + text;
+          const u = new SpeechSynthesisUtterance(msg);
+          window.speechSynthesis.speak(u);
+          typeWriter(msg);
+      }
   }
 
   /* --- ROUTING LOGIC --- */
