@@ -81,7 +81,9 @@
     }
 
     /* Hide this button when in full screen (since there is already one there) */
-    body.fullscreen-mode #main-list-btn { display: none !important; }    #route-toggle-btn {
+    body.fullscreen-mode #main-list-btn { display: none !important; }    
+    
+    #optimize-btn {
       position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); 
       padding: 12px 24px; width: 60%; text-align: center;
       background: #222; color: #fff; border: 1px solid #fff;
@@ -379,23 +381,11 @@
     @keyframes pulseOrange { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
     @keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-    /* NAV INSTRUCTION BANNER */
-    #nav-panel {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(0, 123, 251, 0.7); /* Google Blue with transparency */
-      color: white; padding: 20px; border-radius: 12px; width: 80%;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 1000;
-      display: none; flex-direction: column; text-align: center;
-      font-family: sans-serif; border: 2px solid rgba(255,255,255,0.8);
-      backdrop-filter: blur(4px);
-    }
-    #nav-action { font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; }
-    #nav-distance { font-size: 18px; font-weight: 600; opacity: 0.9; }
   </style>
 </head>
 <body>
 
-<audio id="silent-audio" loop style="display:none" src="data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"></audio>
+<audio id="silent-audio" loop style="display:none" src="data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"></audio>
 
 <div id="login-overlay">
     <div class="login-box">
@@ -416,10 +406,6 @@
 
 <div id="map-container">
     <div id="map"></div>
-    <div id="nav-panel">
-        <div id="nav-action">Start Driving</div>
-        <div id="nav-distance">Calculating...</div>
-    </div>
     <div id="mini-map-list"></div>
     <div id="recenter-btn" onclick="enableAutoCenter()">⌖</div>
     <div id="zoom-btn" onclick="zoomToFit()">-</div>
@@ -427,7 +413,7 @@
     <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
-    <button id="route-toggle-btn" onclick="toggleRoute()">START ROUTE</button>
+    <button id="optimize-btn" onclick="updateRoute()">OPTIMIZE ROUTE</button>
 </div>
 
 <div id="main-container">
@@ -469,16 +455,10 @@
   let mapMarkers = [];
   let mapLabels = [];
   let mapPolyline = null;
-  let isNavigating = false;
   let autoCenter = true;
   let lastGps = null;
   let optimizedOrder = [];
   let lastPendingCount = 0;
-  let routeActive = false;
-  let lastAnnouncedId = null;
-  let currentRouteSteps = []; 
-  let nextStepIndex = 0;      
-  let navTimeout = null;
 
   let lastGpsUpdate = 0;
   let lastRouteUpdate = 0;
@@ -567,24 +547,6 @@
     list.style.display = (list.style.display === 'none' || list.style.display === '') ? 'block' : 'none';
   }
 
-  function toggleRoute() {
-    const btn = document.getElementById('route-toggle-btn');
-    if(!routeActive) {
-        routeActive = true;
-        btn.innerText = "STOP ROUTE";
-        btn.style.background = "var(--decline-red)";
-        btn.style.borderColor = "var(--decline-red)";
-        lastAnnouncedId = null; updateRoute();
-        document.getElementById('silent-audio').play().catch(() => {});
-    } else {
-        routeActive = false;
-        btn.innerText = "START ROUTE";
-        btn.style.background = "#222";
-        btn.style.borderColor = "#fff";
-        if('speechSynthesis' in window) window.speechSynthesis.cancel();
-    }
-  }
-
   /* --- TRACKING & AUDIO --- */
   async function startContinuousTracking() {
     if ("Notification" in window) Notification.requestPermission();
@@ -608,7 +570,7 @@
         driverMarker.setIcon(icon);
       }
 
-      if(autoCenter && routeActive && map) {
+      if(autoCenter && map) {
           const camOptions = {
               center: latLng,
               tilt: 45,         
@@ -618,8 +580,6 @@
           if(speed > 1 && heading !== null) camOptions.heading = heading;
           
           map.moveCamera(camOptions);
-          checkNextStep(lastGps, speed);
-          checkOffRoute(lastGps);
       }
 
       const now = Date.now();
@@ -634,14 +594,6 @@
       }
     }, (err) => console.warn("GPS Error:", err.message), 
     { enableHighAccuracy: true, maximumAge: 0 });
-  }
-
-  function announceStop(text) {
-      if('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance("New destination. " + text);
-          window.speechSynthesis.speak(u);
-      }
   }
 
   /* --- ROUTING LOGIC --- */
@@ -678,7 +630,7 @@
             headers: {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": GOOGLE_KEY,
-                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs,routes.legs.steps"
+                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs"
             },
             body: JSON.stringify({
                 origin: origin,
@@ -692,24 +644,6 @@
         const result = await response.json();
         
         if (result.routes && result.routes[0]) {
-            currentRouteSteps = [];
-            result.routes[0].legs.forEach(leg => {
-                if(leg.steps) {
-                    leg.steps.forEach(step => {
-                        currentRouteSteps.push({
-                            lat: step.startLocation.latLng.latitude,
-                            lng: step.startLocation.latLng.longitude,
-                            instruction: step.navigationInstruction ? step.navigationInstruction.maneuver : "Continue",
-                            text: step.navigationInstruction ? step.navigationInstruction.instructions : "Proceed to route"
-                        });
-                    });
-                }
-            });
-            nextStepIndex = 0;
-            if(routeActive) {
-                // document.getElementById('nav-panel').style.display = 'flex'; // Wait for turn to show
-                updateNavPanel(0);
-            }
             // Save Polyline for Command Center
             if(result.routes[0].polyline) {
                  db.ref(`driver_locations/${currentDriver}`).update({
@@ -793,23 +727,10 @@
             document.getElementById('mini-map-list').innerHTML = listHtml;
             document.getElementById('mini-map-list').style.display = listHtml ? 'block' : 'none';
 
-            isNavigating = true;
             if(autoCenter) {
                 // Only zoom to fit if we just calculated fresh
                 // map.setZoom(17);
                 // map.setTilt(45);
-            }
-
-            // Voice Announce First Stop (Once Only) - Gated by routeActive
-            if(orderedJobs.length > 0 && routeActive) {
-                const nextJob = orderedJobs[0];
-                const dest = nextJob.jobType === 'pickup' ? nextJob.pickup_location : nextJob.destination;
-                
-                // Only speak if it's a new job ID
-                if(nextJob.id !== lastAnnouncedId) {
-                   announceStop(dest);
-                   lastAnnouncedId = nextJob.id;
-                }
             }
 
             renderUnifiedFeed(); // Refresh numbers in list
@@ -1150,16 +1071,12 @@ document.addEventListener('keypress', (e) => {
     const currentPending = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver).length;
     
     if (currentPending !== lastPendingCount) {
-         if (currentPending > lastPendingCount) lastAnnouncedId = null;
-         if (!routeActive) updateRoute();
+         updateRoute();
     }
     
-    if (routeActive && topGone) lastAnnouncedId = null;
-
     lastPendingCount = currentPending;
 
     renderUnifiedFeed(); // RENDER IMMEDIATELY ON LOAD
-    if(routeActive) updateRoute(); // RE-OPTIMIZE ONLY IF ACTIVE
   }
 
   function renderUnifiedFeed() {
@@ -1178,7 +1095,7 @@ document.addEventListener('keypress', (e) => {
     let pendingCount = 0;
 
     let sortedEntries;
-    if (optimizedOrder.length > 0 && routeActive) {
+    if (optimizedOrder.length > 0) {
       // Use optimized order, append any non-optimized jobs at end
       const optimizedIds = new Set(optimizedOrder);
       const ordered = optimizedOrder.map(id => [id, globalJobs[id]]).filter(e => e[1]);
@@ -1471,63 +1388,6 @@ document.addEventListener('keypress', (e) => {
       }
   }, {passive: false});
 
-function updateNavPanel(index) {
-    if(!currentRouteSteps[index]) return;
-    const step = currentRouteSteps[index];
-    const cleanText = step.text ? step.text.replace(/<[^>]*>?/gm, '') : "Continue";
-    
-    document.getElementById('nav-action').innerText = cleanText;
-    document.getElementById('nav-distance').innerText = "Upcoming Turn";
-}
-
-function checkNextStep(currentPos, currentSpeed) {
-    if(!currentRouteSteps[nextStepIndex]) return;
-    
-    const target = currentRouteSteps[nextStepIndex];
-    const dist = Math.sqrt(
-        Math.pow(target.lat - currentPos.lat, 2) + 
-        Math.pow(target.lng - currentPos.lng, 2)
-    ) * 111000; 
-
-    // Dynamic Lookahead: 3x speed (min 15m)
-    const triggerDist = Math.max(15, (currentSpeed || 0) * 3);
-
-    if(dist < triggerDist) {
-        speak(target.text); 
-        
-        // UI Pop-up
-        const p = document.getElementById('nav-panel');
-        p.style.display = 'flex';
-        clearTimeout(navTimeout);
-        navTimeout = setTimeout(() => { p.style.display = 'none'; }, 5000);
-
-        nextStepIndex++;
-        updateNavPanel(nextStepIndex);
-    }
-}
-
-function checkOffRoute(pos) {
-    if(!routeActive || !mapPolyline || !isNavigating) return;
-    // Don't spam reroute (wait 10s between updates)
-    if(Date.now() - lastRouteUpdate < 10000) return;
-
-    const latLng = new google.maps.LatLng(pos.lat, pos.lng);
-    // Tolerance 40e-5 is roughly 30-40 meters
-    const onPath = google.maps.geometry.poly.isLocationOnEdge(latLng, mapPolyline, 40e-5);
-    
-    if(!onPath) {
-        console.log("Off route detected. Recalculating...");
-        updateRoute();
-    }
-}
-
-function speak(text) {
-    if('speechSynthesis' in window) {
-        const clean = text.replace(/<[^>]*>?/gm, '');
-        const u = new SpeechSynthesisUtterance(clean);
-        window.speechSynthesis.speak(u);
-    }
-}
 </script>
 </body>
 </html>
