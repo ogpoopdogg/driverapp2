@@ -93,37 +93,22 @@
     /* NAV CAPTION STYLES */
     .nav-caption {
       position: absolute;
+      background: rgba(0, 0, 0, 0.7);
       color: #fff;
-      font-family: Roboto, Arial, sans-serif;
-      font-weight: 900;
-      font-size: 20px;
-      text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-      z-index: 800;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+      z-index: 60;
       pointer-events: none;
-      background: transparent;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      text-align: center;
+      max-width: 80%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      backdrop-filter: blur(2px);
+      white-space: nowrap;
+      overflow: hidden;
       display: none;
     }
-
-    #caption-std {
-      bottom: 85px; /* Above Start Route button */
-      left: 50%;
-      transform: translateX(-50%);
-      width: 90%;
-      text-align: center;
-    }
-
-    #caption-fs {
-      bottom: 125px; /* Above zoom buttons */
-      right: 20px;
-      width: 300px;
-      text-align: right;
-    }
-
-    /* Show appropriate caption based on mode */
-    body:not(.fullscreen-mode) #caption-std { display: block; }
-    body.fullscreen-mode #caption-fs { display: block; }
 
     /* MINI MAP LIST */
     #mini-map-list {
@@ -436,8 +421,6 @@
 
 <div id="map-container">
     <div id="map"></div>
-    <div id="caption-std" class="nav-caption"></div>
-    <div id="caption-fs" class="nav-caption"></div>
     <div id="mini-map-list"></div>
     <div id="recenter-btn" onclick="enableAutoCenter()">⌖</div>
     <div id="zoom-btn" onclick="zoomToFit()">-</div>
@@ -445,6 +428,8 @@
     <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
+    <div id="caption-zoom" class="nav-caption" style="bottom: 120px; right: 10px; align-items: flex-end;"></div>
+    <div id="caption-route" class="nav-caption" style="bottom: 70px; left: 50%; transform: translateX(-50%);"></div>
     <button id="route-toggle-btn" onclick="toggleRoute()">START ROUTE</button>
 </div>
 
@@ -502,9 +487,6 @@
   const gpsInterval = 10000; // Faster updates for Nav
   let wakeLock = null;
   
-  let captionTimer = null;
-  let typeTimer = null;
-
   /* --- MAP FUNCTIONS --- */
   function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
@@ -652,9 +634,9 @@
              if(dist < 40) { // 40 meters threshold
                  if(step.navigationInstruction && step.navigationInstruction.instructions) {
                      const cleanText = step.navigationInstruction.instructions.replace(/<[^>]*>/g, "");
+                     showNavCaption(cleanText);
                      const utter = new SpeechSynthesisUtterance(cleanText);
                      window.speechSynthesis.speak(utter);
-                     typeCaption(cleanText);
                  }
                  currentStepIndex++;
              }
@@ -675,39 +657,45 @@
     { enableHighAccuracy: true, maximumAge: 0 });
   }
 
-  function announceStop(text) {
-      const msg = "New destination. " + text;
-      if('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(msg);
-          window.speechSynthesis.speak(u);
-      }
-      typeCaption(msg);
-  }
+  let captionTimeout;
+  let typeInterval;
 
-  function typeCaption(text) {
-      const c1 = document.getElementById('caption-std');
-      const c2 = document.getElementById('caption-fs');
-      
-      [c1, c2].forEach(c => { c.innerHTML = ""; c.style.opacity = 1; });
-      clearTimeout(captionTimer);
-      clearInterval(typeTimer);
+  function showNavCaption(text) {
+      const c1 = document.getElementById('caption-zoom');
+      const c2 = document.getElementById('caption-route');
+      if(!c1 || !c2) return;
+
+      clearTimeout(captionTimeout);
+      clearInterval(typeInterval);
+      c1.innerText = "";
+      c2.innerText = "";
+      c1.style.display = 'block';
+      c2.style.display = 'block';
 
       let i = 0;
-      typeTimer = setInterval(() => {
-          if(i < text.length) {
-              [c1, c2].forEach(c => c.innerHTML += text.charAt(i));
+      typeInterval = setInterval(() => {
+          if (i < text.length) {
+              const char = text.charAt(i);
+              c1.innerText += char;
+              c2.innerText += char;
               i++;
           } else {
-              clearInterval(typeTimer);
-              captionTimer = setTimeout(() => {
-                  [c1, c2].forEach(c => {
-                      c.style.transition = "opacity 1s ease";
-                      c.style.opacity = 0;
-                  });
+              clearInterval(typeInterval);
+              captionTimeout = setTimeout(() => {
+                  c1.style.display = 'none';
+                  c2.style.display = 'none';
               }, 5000);
           }
       }, 50);
+  }
+
+  function announceStop(text) {
+      if('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance("New destination. " + text);
+          showNavCaption("New destination. " + text);
+          window.speechSynthesis.speak(u);
+      }
   }
 
   /* --- ROUTING LOGIC --- */
