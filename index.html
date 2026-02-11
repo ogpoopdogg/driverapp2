@@ -495,6 +495,8 @@
   let lastNavDistance = 99999;
   let lastVoiceAlertLevel = 0; // 0=none, 1=early, 2=main, 3=final
   let isSpeaking = false;
+  let isRerouting = false;
+  let lastRerouteTime = 0;
 
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
@@ -667,6 +669,7 @@
       currentStepIndex = 0;
       lastVoiceAlertLevel = 0;
       isNavigating = true;
+      isRerouting = false;
       if(navSteps.length > 0) {
           updateNavHUD(navSteps[0], 0);
           speakInstruction(navSteps[0].navigationInstruction?.instructions || "Start route");
@@ -677,6 +680,28 @@
       if(currentStepIndex >= navSteps.length) {
           document.getElementById('nav-instr').innerText = "Arrived at destination";
           return;
+      }
+
+      // OFF-ROUTE DETECTION
+      if (mapPolyline && !isRerouting) {
+          const speedKmh = speedMs * 3.6;
+          // Dynamic tolerance: High speed = loose (75m), Low speed = strict (30m)
+          const toleranceMeters = speedKmh >= 80 ? 75 : 30;
+          const toleranceDeg = toleranceMeters / 111111; 
+          
+          const onPath = google.maps.geometry.poly.isLocationOnEdge(userLatLng, mapPolyline, toleranceDeg);
+          
+          if (!onPath) {
+             const now = Date.now();
+             if (now - lastRerouteTime > 20000) { // Throttle 20s
+                 lastRerouteTime = now;
+                 isRerouting = true;
+                 announceStop("Recalculating route");
+                 document.getElementById('nav-instr').innerText = "Recalculating...";
+                 updateRoute(); // Recalculate from current GPS
+                 return;
+             }
+          }
       }
 
       const step = navSteps[currentStepIndex];
@@ -827,6 +852,8 @@
         const result = await response.json();
         
         if (result.routes && result.routes[0]) {
+            isRerouting = false;
+
             // Save Polyline for Command Center
             if(result.routes[0].polyline) {
                  db.ref(`driver_locations/${currentDriver}`).update({
