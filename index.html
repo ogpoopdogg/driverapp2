@@ -413,7 +413,7 @@
     <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
-    <button id="optimize-btn" onclick="updateRoute()">OPTIMIZE ROUTE</button>
+    <button id="optimize-btn" onclick="updateRoute()">OPTIMIZE & GO</button>
 </div>
 
 <div id="main-container">
@@ -734,6 +734,16 @@
             }
 
             renderUnifiedFeed(); // Refresh numbers in list
+            
+            // LAUNCH GOOGLE MAPS EXTERNAL
+            const waypoints = orderedJobs.map(j => {
+                const addr = j.jobType === 'pickup' ? j.pickup_location : j.destination;
+                return encodeURIComponent(`${addr}, ${j.city || 'Brandon'}`);
+            }).join('|');
+
+            const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=1604+Moreland+Ave,+Brandon+MB&waypoints=${waypoints}&travelmode=driving&dir_action=navigate`;
+            
+            window.location.href = googleMapsUrl;
         }
     } catch(e) {
         console.error("Routing Error", e);
