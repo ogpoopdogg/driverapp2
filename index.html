@@ -497,6 +497,8 @@
   let isSpeaking = false;
   let isRerouting = false;
   let lastRerouteTime = 0;
+  let navState = 'idle'; // idle, navigating, rerouting, arrived
+  let offRouteStartTime = 0;
 
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
@@ -591,6 +593,7 @@
     } else {
         routeActive = false;
         isNavigating = false;
+        navState = 'idle';
         btn.innerText = "START ROUTE";
         btn.style.background = "#222";
         btn.style.borderColor = "#fff";
@@ -598,6 +601,7 @@
         if('speechSynthesis' in window) window.speechSynthesis.cancel();
         // Reset View
         map.setTilt(0);
+        map.setHeading(0);
     }
   }
 
@@ -610,7 +614,7 @@
 
     if (!navigator.geolocation) return;
     navigator.geolocation.watchPosition((pos) => {
-      lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude, heading: pos.coords.heading || 0 };
       const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
       const speed = pos.coords.speed || 0; // m/s
       const heading = pos.coords.heading || 0;
@@ -629,7 +633,7 @@
           processNavigationTick(latLng, speed, heading);
       }
 
-      if(autoCenter && routeActive && map) {
+      if(autoCenter && routeActive && map && navState === 'navigating') {
           map.moveCamera({
             center: latLng,
             heading: heading,
@@ -652,6 +656,21 @@
     { enableHighAccuracy: true, maximumAge: 0 });
   }
 
+  function cleanTextForSpeech(text) {
+      if (!text) return "";
+      let clean = text.replace(/<[^>]*>?/gm, ' ');
+      const abbrevs = {
+          " MB": " Manitoba", " St": " Street", " Ave": " Avenue", 
+          " Hwy": " Highway", " Rd": " Road", " Blvd": " Boulevard", 
+          " Dr": " Drive", " N ": " North ", " S ": " South ", 
+          " E ": " East ", " W ": " West "
+      };
+      Object.keys(abbrevs).forEach(key => {
+          clean = clean.replace(new RegExp(key, 'g'), abbrevs[key]);
+      });
+      return clean.trim();
+  }
+
   function announceStop(text) {
       if('speechSynthesis' in window) {
           window.speechSynthesis.cancel();
@@ -669,6 +688,7 @@
       currentStepIndex = 0;
       lastVoiceAlertLevel = 0;
       isNavigating = true;
+      navState = 'navigating';
       isRerouting = false;
       if(navSteps.length > 0) {
           updateNavHUD(navSteps[0], 0);
@@ -677,30 +697,39 @@
   }
 
   function processNavigationTick(userLatLng, speedMs, heading) {
+      if(navState !== 'navigating') return;
+
       if(currentStepIndex >= navSteps.length) {
           document.getElementById('nav-instr').innerText = "Arrived at destination";
+          navState = 'arrived';
           return;
       }
 
       // OFF-ROUTE DETECTION
-      if (mapPolyline && !isRerouting) {
+      if (mapPolyline) {
           const speedKmh = speedMs * 3.6;
-          // Dynamic tolerance: High speed = loose (75m), Low speed = strict (30m)
-          const toleranceMeters = speedKmh >= 80 ? 75 : 30;
+          // Dynamic tolerance: High speed = loose (100m), Low speed = strict (30m)
+          const toleranceMeters = speedKmh >= 100 ? 100 : (speedKmh >= 50 ? 50 : 30);
           const toleranceDeg = toleranceMeters / 111111; 
           
           const onPath = google.maps.geometry.poly.isLocationOnEdge(userLatLng, mapPolyline, toleranceDeg);
           
           if (!onPath) {
-             const now = Date.now();
-             if (now - lastRerouteTime > 20000) { // Throttle 20s
-                 lastRerouteTime = now;
-                 isRerouting = true;
-                 announceStop("Recalculating route");
-                 document.getElementById('nav-instr').innerText = "Recalculating...";
-                 updateRoute(); // Recalculate from current GPS
-                 return;
+             if (offRouteStartTime === 0) offRouteStartTime = Date.now();
+             
+             if (Date.now() - offRouteStartTime > 3500) { // Persistence 3.5s
+                 if (Date.now() - lastRerouteTime > 15000) { // Cooldown 15s
+                     navState = 'rerouting';
+                     lastRerouteTime = Date.now();
+                     offRouteStartTime = 0;
+                     announceStop("Recalculating route");
+                     document.getElementById('nav-instr').innerText = "Recalculating...";
+                     updateRoute(); 
+                     return;
+                 }
              }
+          } else {
+             offRouteStartTime = 0;
           }
       }
 
@@ -720,6 +749,7 @@
               speakInstruction(next.navigationInstruction?.instructions);
           } else {
               announceStop("You have arrived.");
+              navState = 'arrived';
           }
           return;
       }
@@ -728,8 +758,8 @@
       const speedKmh = speedMs * 3.6;
       let earlyDist, mainDist, finalDist;
       
-      if(speedKmh > 80) {
-          earlyDist = 800; mainDist = 300; finalDist = 80;
+      if(speedKmh >= 80) {
+          earlyDist = 1200; mainDist = 600; finalDist = 150;
       } else {
           earlyDist = 300; mainDist = 120; finalDist = 40;
       }
@@ -737,16 +767,15 @@
       // Throttle speech to prevent overlapping
       if(!window.speechSynthesis.speaking) {
            const instr = step.navigationInstruction?.instructions || "Continue";
-           const cleanInstr = instr.replace(/<[^>]*>?/gm, '');
-
+           
            if(distToTurn <= earlyDist && lastVoiceAlertLevel < 1) {
-               announceStop(`In ${Math.round(distToTurn)} meters, ${cleanInstr}`);
+               announceStop(`In ${Math.round(distToTurn)} meters, ${cleanTextForSpeech(instr)}`);
                lastVoiceAlertLevel = 1;
            } else if (distToTurn <= mainDist && lastVoiceAlertLevel < 2) {
-               announceStop(`${cleanInstr}`);
+               announceStop(`${cleanTextForSpeech(instr)}`);
                lastVoiceAlertLevel = 2;
            } else if (distToTurn <= finalDist && lastVoiceAlertLevel < 3) {
-               announceStop(`${cleanInstr} now`);
+               announceStop(`${cleanTextForSpeech(instr)} now`);
                lastVoiceAlertLevel = 3;
            }
       }
@@ -801,8 +830,7 @@
 
   function speakInstruction(text) {
       if(!text) return;
-      const clean = text.replace(/<[^>]*>?/gm, '');
-      announceStop(clean);
+      announceStop(cleanTextForSpeech(text));
   }
 
   /* --- ROUTING LOGIC --- */
@@ -824,7 +852,12 @@
     const GOOGLE_KEY = "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ"; 
     
     const origin = lastGps ? 
-        { location: { latLng: { latitude: lastGps.lat, longitude: lastGps.lng } } } :
+        { 
+          location: { 
+            latLng: { latitude: lastGps.lat, longitude: lastGps.lng },
+            heading: lastGps.heading 
+          } 
+        } :
         { address: "1604 Moreland Ave, Brandon MB" };
 
     const intermediates = jobs.map(j => {
