@@ -559,10 +559,12 @@
       if(lastGps) {
           map.panTo({lat: lastGps.lat, lng: lastGps.lng});
           map.setZoom(18);
-          map.setTilt(45);
+          // Apply heading immediately if in HEAD_UP mode
           if (compassMode === 'HEAD_UP') {
+            map.setTilt(45);
             map.setHeading(lastValidHeading || 0);
           } else {
+            map.setTilt(0);
             map.setHeading(0);
           }
       }
@@ -574,13 +576,21 @@
         compassMode = 'NORTH_UP';
         btn.innerText = 'N';
         btn.classList.remove('compass-active');
-        if(map) map.setHeading(0);
+        if(map) {
+          map.setHeading(0);
+          map.setTilt(0);
+        }
     } else {
         compassMode = 'HEAD_UP';
         btn.innerText = '▲';
         btn.classList.add('compass-active');
-        if(map) map.setHeading(lastValidHeading || 0);
+        if(map) {
+          map.setTilt(45);
+          map.setHeading(lastValidHeading || 0);
+        }
     }
+    // Re-engage auto-center when toggling
+    autoCenter = true;
   }
 
   function zoomToFit() {
@@ -630,6 +640,7 @@
         compassMode = 'HEAD_UP';
         document.getElementById('compass-btn').innerText = '▲';
         document.getElementById('compass-btn').classList.add('compass-active');
+        if(map) map.setTilt(45);
         updateRoute();
     } else {
         routeActive = false;
@@ -696,6 +707,7 @@
       if(autoCenter && map) {
           map.panTo(latLng);
           if (compassMode === 'HEAD_UP') {
+              // THIS WAS THE FIX: Continuously update map heading if in HEAD_UP mode
               map.setHeading(displayHeading);
           }
       }
