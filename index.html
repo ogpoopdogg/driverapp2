@@ -671,6 +671,8 @@
     mapMarkers = []; mapLabels = [];
     document.getElementById('mini-map-list').innerHTML = "";
     document.getElementById('mini-map-list').style.display = 'none';
+    
+    optimizedOrder = []; 
 
     if(jobs.length === 0) return;
 
@@ -686,6 +688,8 @@
         return { address: `${addr}, ${j.city||'Brandon'}` };
     });
 
+    const shouldOptimize = jobs.length > 1;
+
     try {
         const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
             method: "POST",
@@ -699,7 +703,7 @@
                 destination: { address: "1604 Moreland Ave, Brandon MB" }, 
                 intermediates: intermediates,
                 travelMode: "DRIVE",
-                optimizeWaypointOrder: true
+                optimizeWaypointOrder: shouldOptimize
             })
         });
         
@@ -1142,9 +1146,11 @@ document.addEventListener('keypress', (e) => {
              lastAnnouncedId = null;
          }
          
-         if (!isFirstLoad) {
+         if (!isFirstLoad && currentPending > 0) {
              // Show Alert Button
              document.getElementById('new-route-alert').style.display = 'block';
+         } else {
+             document.getElementById('new-route-alert').style.display = 'none';
          }
     }
     
