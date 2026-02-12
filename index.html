@@ -636,14 +636,23 @@
         navState = 'idle';
         isRerouting = false;
         offRouteStartTime = 0;
+        
+        // Force UI reset immediately
+        document.getElementById('nav-instr').innerText = "Route Stopped";
+        document.getElementById('nav-dist').innerText = "0 m";
+        
         btn.innerText = "START ROUTE";
         btn.style.background = "#222";
         btn.style.borderColor = "#fff";
         document.body.classList.remove('nav-active');
         if('speechSynthesis' in window) window.speechSynthesis.cancel();
+        
         // Reset View
         map.setTilt(0);
         map.setHeading(0);
+        compassMode = 'NORTH_UP';
+        document.getElementById('compass-btn').innerText = 'N';
+        document.getElementById('compass-btn').classList.remove('compass-active');
     }
   }
 
@@ -663,7 +672,8 @@
 
       // Filter heading jitter when stopped
       if (heading !== null && !isNaN(heading)) {
-         if (speed > 1.0 || lastValidHeading === 0) { // Lower threshold for walking/slow start
+         // LOW SPEED THRESHOLD (0.2 m/s) allows walking tests
+         if (speed > 0.2 || lastValidHeading === 0) { 
             lastValidHeading = heading;
          }
       }
@@ -744,6 +754,7 @@
   }
 
   function processNavigationTick(userLatLng, speedMs, heading) {
+      if(navState === 'rerouting') return; // BLOCK IF ALREADY REROUTING
       if(navState !== 'navigating') return;
 
       if(currentStepIndex >= navSteps.length) {
@@ -935,6 +946,11 @@
             })
         });
         
+        // ABORT IF STOPPED DURING FETCH
+        if (!routeActive) {
+            return;
+        }
+
         const result = await response.json();
         
         if (result.routes && result.routes[0]) {
@@ -1043,6 +1059,8 @@
         // Force unlock if error occurs so user isnt stuck
         navState = 'navigating';
         isRerouting = false;
+        // CLEAR RECALCULATING TEXT
+        if (routeActive) document.getElementById('nav-instr').innerText = "Retry...";
     }
   }
 
