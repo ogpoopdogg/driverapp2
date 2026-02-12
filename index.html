@@ -456,6 +456,8 @@
   let optimizedOrder = [];
   let lastPendingCount = 0;
   let lastAnnouncedId = null;
+  let isFirstLoad = true;
+  let hasRoutedWithGps = false;
 
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
@@ -592,6 +594,11 @@
       if(autoCenter && map) {
           map.setCenter(latLng);
           map.setHeading(pos.coords.heading || 0);
+      }
+      
+      if (!hasRoutedWithGps && Object.keys(globalJobs).length > 0) {
+         hasRoutedWithGps = true;
+         updateRoute();
       }
 
       const now = Date.now();
@@ -1088,9 +1095,10 @@ document.addEventListener('keypress', (e) => {
     if (currentPending !== lastPendingCount) {
          if (currentPending > lastPendingCount) {
              lastAnnouncedId = null;
-             autoRoute = true;
+             if (!isFirstLoad) autoRoute = true;
          }
     }
+    isFirstLoad = false;
     
     if (topGone) lastAnnouncedId = null;
 
