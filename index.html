@@ -714,7 +714,7 @@
             // Update Global Order
             optimizedOrder = orderedJobs.map(j => Object.keys(globalJobs).find(key => globalJobs[key] === j));
             
-            if(autoTrigger) openExternalRoute();
+            if(autoTrigger) setTimeout(openExternalRoute, 3000);
 
             const legs = result.routes[0].legs;
             let listHtml = "";
