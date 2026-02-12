@@ -526,7 +526,9 @@
       disableDefaultUI: true,
       rotateControl: true,
       tiltControl: true,
-      heading: 0
+      heading: 0,
+      mapId: "DEMO_MAP_ID", // Force Vector Map for smoother rotation
+      gestureHandling: "greedy" // Ensure touch doesn't block updates
     });
 
     directionsService = new google.maps.DirectionsService();
@@ -630,6 +632,7 @@
     const btn = document.getElementById('route-toggle-btn');
     if(!routeActive) {
         routeActive = true;
+        autoCenter = true; // FORCE AUTOCENTER
         btn.innerText = "STOP ROUTE";
         btn.style.background = "var(--decline-red)";
         btn.style.borderColor = "var(--decline-red)";
@@ -682,13 +685,28 @@
       const speed = pos.coords.speed || 0; // m/s
       let heading = pos.coords.heading;
 
-      // Filter heading jitter when stopped
-      if (heading !== null && !isNaN(heading)) {
-         // LOW SPEED THRESHOLD (0.2 m/s) allows walking tests
-         if (speed > 0.2 || lastValidHeading === 0) { 
-            lastValidHeading = heading;
-         }
+      // HYBRID HEADING LOGIC
+      // 1. If speed > 1.5m/s (approx 5km/h), trust GPS Heading
+      // 2. If slow/stopped OR GPS heading is null, calculate heading to next route point
+      let bestHeading = heading;
+      
+      if ((!bestHeading && bestHeading !== 0) || speed < 1.5) { 
+          if (routeActive && navSteps[currentStepIndex]) {
+             // Look ahead to next step to align map "Course Up"
+             const nextLoc = navSteps[currentStepIndex].endLocation.latLng;
+             if (nextLoc) {
+               const nextLatLng = new google.maps.LatLng(nextLoc.latitude, nextLoc.longitude);
+               bestHeading = google.maps.geometry.spherical.computeHeading(latLng, nextLatLng);
+             }
+          }
       }
+
+      // Fallback to last valid
+      if (!bestHeading && bestHeading !== 0) {
+         bestHeading = lastValidHeading;
+      }
+      
+      lastValidHeading = bestHeading;
       const displayHeading = lastValidHeading || 0;
 
       if(driverMarker) {
@@ -705,9 +723,9 @@
       }
 
       if(autoCenter && map) {
-          map.panTo(latLng);
+          map.setCenter(latLng); // Using setCenter for smoother tracking than panTo
           if (compassMode === 'HEAD_UP') {
-              // THIS WAS THE FIX: Continuously update map heading if in HEAD_UP mode
+              // Continuously update map heading if in HEAD_UP mode
               map.setHeading(displayHeading);
           }
       }
@@ -969,6 +987,7 @@
         if (result.routes && result.routes[0]) {
             navState = 'navigating';
             isRerouting = false;
+            offRouteStartTime = 0;
 
             // Save Polyline for Command Center
             if(result.routes[0].polyline) {
@@ -1066,6 +1085,9 @@
             }
 
             renderUnifiedFeed(); // Refresh numbers in list
+        } else {
+            // Handle "No Route" returned by API but valid 200 OK
+            throw new Error("No route found in API response");
         }
     } catch(e) {
         console.error("Routing Error", e);
@@ -1073,7 +1095,7 @@
         navState = 'navigating';
         isRerouting = false;
         // CLEAR RECALCULATING TEXT
-        if (routeActive) document.getElementById('nav-instr').innerText = "Retry...";
+        if (routeActive) document.getElementById('nav-instr').innerText = "Route Error (Retry)";
     }
   }
 
