@@ -569,7 +569,7 @@
 
     const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
     
-    window.open(url, '_blank');
+    window.location.href = url;
   }
 
   /* --- TRACKING & AUDIO --- */
