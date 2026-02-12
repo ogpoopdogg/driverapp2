@@ -549,7 +549,7 @@
   function openExternalRoute() {
     hasInitialRoute = true;
     if(optimizedOrder.length === 0) {
-        alert("No stops to route.");
+        // No stops to route.
         return;
     }
     
@@ -564,20 +564,12 @@
         const name = job.jobType === 'pickup' ? job.name : job.delivery_name;
         const addr = job.jobType === 'pickup' ? job.pickup_location : job.destination;
         const city = job.city || "Brandon";
-        return encodeURIComponent(`${name}, ${addr}, ${city}`);
+        return encodeURIComponent(`${addr}, ${city}`);
     }).filter(w => w !== "").join("|");
 
-    // STANDARD GOOGLE MAPS DIRECTORY URL (Universal Link)
-    let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
     
-    // DETECT ANDROID TO FORCE APP
-    const ua = navigator.userAgent.toLowerCase();
-    if(ua.indexOf("android") > -1) {
-       url = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
-    }
-
-    // Force Location Change (Best for Intents)
-    window.location.href = url;
+    window.open(url, '_self');
   }
 
   /* --- TRACKING & AUDIO --- */
@@ -704,8 +696,7 @@
             // Update Global Order
             optimizedOrder = orderedJobs.map(j => Object.keys(globalJobs).find(key => globalJobs[key] === j));
             
-            // REMOVED AUTO TRIGGER - User wants to click manually
-            // if(autoTrigger) openExternalRoute();
+            if(autoTrigger) openExternalRoute();
 
             const legs = result.routes[0].legs;
             let listHtml = "";
@@ -1052,17 +1043,7 @@ document.addEventListener('keypress', (e) => {
   }
 
   function getNavUrl(addr, city) {
-    // FORCE APP LINKS FOR SINGLE DESTINATIONS
-    const ua = navigator.userAgent.toLowerCase();
-    const fullAddr = `${addr}, ${city}`;
-    
-    if (ua.indexOf("android") > -1) {
-        return `google.navigation:q=${encodeURIComponent(fullAddr)}`;
-    } else if (ua.indexOf("iphone") > -1 || ua.indexOf("ipad") > -1 || ua.indexOf("ipod") > -1) {
-        return `comgooglemaps://?daddr=${encodeURIComponent(fullAddr)}&directionsmode=driving`;
-    } else {
-        return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddr)}&travelmode=driving`;
-    }
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr + ', ' + city)}&travelmode=driving`;
   }
 
   function getCurrentPosition() {
@@ -1292,10 +1273,6 @@ document.addEventListener('keypress', (e) => {
           `<div class="${isEdited ? 'notes-edited' : ''} ${needsAlert && changedFields.includes('notes') ? 'field-highlight' : ''}" style="text-align:center; width:100%; margin-top:10px; color:#ddd; font-size:12px; word-wrap:break-word; font-style:italic;">${noteWithTags}</div>` 
           : '';
 
-        // NOTE: REPLACED OLD navUrl with getNavUrl CALL
-        // Actually navUrl is already defined above via getNavUrl(topAddr...), so we just leave href="${navUrl}" as is,
-        // but now getNavUrl returns the strict APP LINK.
-
         card.innerHTML = `
           <div style="position: absolute; top: 12px; right: 12px; cursor: pointer; z-index: 5;" onclick="toggleDriverNoteEdit(event, '${id}')">
             <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));">
@@ -1310,12 +1287,12 @@ document.addEventListener('keypress', (e) => {
                      <div style="background:${badgeColor}; color:#000; font-weight:900; padding:2px 6px; border-radius:4px; font-size:11px;">${badgeText}</div>
                      ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
                   </div>
-                  <a href="${navUrl}" class="nav-link"><div class="city-tag" style="margin:0;">${p.city || '??'}</div></a>
+                  <a href="${navUrl}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${p.city || '??'}</div></a>
                </div>
                
                <div class="card-label" style="margin-top:2px;">${topLabel}</div>
                <div class="tech-info ${needsAlert && changedFields.includes('contact') ? 'field-highlight' : ''}" style="margin-bottom:2px; color: var(--queue-orange); font-size:16px; line-height:1.1;">${topContact || 'N/A'}</div>
-               <a href="${navUrl}" class="nav-link">
+               <a href="${navUrl}" target="_blank" class="nav-link">
                   <div class="pickup-value ${needsAlert && changedFields.includes('addr') ? 'field-highlight' : ''}">${topAddr}</div>
                </a>
                
