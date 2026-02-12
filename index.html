@@ -499,6 +499,7 @@
   let lastRerouteTime = 0;
   let navState = 'idle'; // idle, navigating, rerouting, arrived
   let offRouteStartTime = 0;
+  let lastValidHeading = 0;
 
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
@@ -589,11 +590,14 @@
         btn.style.borderColor = "var(--decline-red)";
         document.body.classList.add('nav-active');
         lastAnnouncedId = null; 
+        navState = 'navigating';
         updateRoute();
     } else {
         routeActive = false;
         isNavigating = false;
         navState = 'idle';
+        isRerouting = false;
+        offRouteStartTime = 0;
         btn.innerText = "START ROUTE";
         btn.style.background = "#222";
         btn.style.borderColor = "#fff";
@@ -617,26 +621,32 @@
       lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude, heading: pos.coords.heading || 0 };
       const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
       const speed = pos.coords.speed || 0; // m/s
-      const heading = pos.coords.heading || 0;
+      let heading = pos.coords.heading;
+
+      // Filter heading jitter when stopped
+      if (heading !== null && !isNaN(heading)) {
+         if (speed > 1.5 || lastValidHeading === 0) {
+            lastValidHeading = heading;
+         }
+      }
+      const displayHeading = lastValidHeading || 0;
 
       if(driverMarker) {
         driverMarker.setPosition(latLng);
         const icon = driverMarker.getIcon();
-        if(pos.coords.heading) {
-            icon.rotation = heading;
-            driverMarker.setIcon(icon);
-        }
+        icon.rotation = displayHeading;
+        driverMarker.setIcon(icon);
       }
 
       // NAVIGATION ENGINE TICK
       if(routeActive && navSteps.length > 0) {
-          processNavigationTick(latLng, speed, heading);
+          processNavigationTick(latLng, speed, displayHeading);
       }
 
-      if(autoCenter && routeActive && map && navState === 'navigating') {
+      if(autoCenter && routeActive && map) {
           map.moveCamera({
             center: latLng,
-            heading: heading,
+            heading: displayHeading,
             tilt: 45,
             zoom: 18
           });
@@ -846,7 +856,13 @@
     document.getElementById('mini-map-list').innerHTML = "";
     document.getElementById('mini-map-list').style.display = 'none';
 
-    if(jobs.length === 0) return;
+    if(jobs.length === 0) {
+        navState = 'idle';
+        isRerouting = false;
+        return;
+    }
+
+    navState = 'rerouting'; // Set lock
 
     // Optimization Logic
     const GOOGLE_KEY = "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ"; 
@@ -885,6 +901,7 @@
         const result = await response.json();
         
         if (result.routes && result.routes[0]) {
+            navState = 'navigating';
             isRerouting = false;
 
             // Save Polyline for Command Center
@@ -986,6 +1003,9 @@
         }
     } catch(e) {
         console.error("Routing Error", e);
+        // Force unlock if error occurs so user isnt stuck
+        navState = 'navigating';
+        isRerouting = false;
     }
   }
 
