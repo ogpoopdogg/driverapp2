@@ -399,6 +399,17 @@
   <div id="clock"></div>
 </header>
 
+<div id="main-container">
+  <div id="history-sidebar" style="display:none;">
+    <div class="section-label-pending">Pending</div>
+    <div id="queue-log"></div>
+    <div class="section-label-done">Done (Today)</div>
+    <div id="recent-log"></div>
+    <button id="multi-route-btn" onclick="routeOptimized()">ROUTE NAV</button>
+  </div>
+  <div id="live-feed"></div>
+</div>
+
 <div id="map-container">
     <div id="map"></div>
     <div id="mini-map-list"></div>
@@ -409,17 +420,6 @@
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
     <button id="route-toggle-btn" onclick="openExternalRoute()">ROUTE</button>
-</div>
-
-<div id="main-container">
-  <div id="history-sidebar" style="display:none;">
-    <div class="section-label-pending">Pending</div>
-    <div id="queue-log"></div>
-    <div class="section-label-done">Done (Today)</div>
-    <div id="recent-log"></div>
-    <button id="multi-route-btn" onclick="routeOptimized()">ROUTE NAV</button>
-  </div>
-  <div id="live-feed"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -557,9 +557,10 @@
     const waypoints = optimizedOrder.map(id => {
         const job = globalJobs[id];
         if(!job) return "";
+        const name = job.jobType === 'pickup' ? job.name : job.delivery_name;
         const addr = job.jobType === 'pickup' ? job.pickup_location : job.destination;
         const city = job.city || "Brandon";
-        return encodeURIComponent(`${addr}, ${city}`);
+        return encodeURIComponent(`${name}, ${addr}, ${city}`);
     }).filter(w => w !== "").join("|");
 
     const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
@@ -608,7 +609,7 @@
   }
 
   /* --- ROUTING LOGIC --- */
-  async function updateRoute() {
+  async function updateRoute(autoTrigger = false) {
     // Route calculation runs regardless of routeActive state (for visualization)
     const jobs = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver);
     
@@ -686,6 +687,8 @@
             // Update Global Order
             optimizedOrder = orderedJobs.map(j => Object.keys(globalJobs).find(key => globalJobs[key] === j));
             
+            if(autoTrigger) openExternalRoute();
+
             const legs = result.routes[0].legs;
             let listHtml = "";
 
@@ -1081,8 +1084,12 @@ document.addEventListener('keypress', (e) => {
     // Auto-Start Route Logic
     const currentPending = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver).length;
     
+    let autoRoute = false;
     if (currentPending !== lastPendingCount) {
-         if (currentPending > lastPendingCount) lastAnnouncedId = null;
+         if (currentPending > lastPendingCount) {
+             lastAnnouncedId = null;
+             autoRoute = true;
+         }
     }
     
     if (topGone) lastAnnouncedId = null;
@@ -1090,7 +1097,7 @@ document.addEventListener('keypress', (e) => {
     lastPendingCount = currentPending;
 
     renderUnifiedFeed(); // RENDER IMMEDIATELY ON LOAD
-    updateRoute(); // RE-OPTIMIZE ONLY IF ACTIVE
+    updateRoute(autoRoute); // RE-OPTIMIZE ONLY IF ACTIVE
   }
 
   function renderUnifiedFeed() {
