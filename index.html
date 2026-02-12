@@ -90,6 +90,24 @@
       transition: all 0.3s ease;
     }
 
+    /* NEW UPDATE ALERT BUTTON */
+    #new-route-alert {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #00d4ff, #0056b3);
+      color: #fff; border: 2px solid #fff;
+      padding: 20px 40px; border-radius: 50px;
+      font-size: 18px; font-weight: 900;
+      box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
+      z-index: 9999; cursor: pointer;
+      text-align: center; display: none;
+      animation: alertPulse 1.5s infinite alternate;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    @keyframes alertPulse {
+      from { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 20px rgba(0, 212, 255, 0.6); }
+      to { transform: translate(-50%, -50%) scale(1.05); box-shadow: 0 0 50px rgba(0, 212, 255, 1); }
+    }
+
     /* MINI MAP LIST */
     #mini-map-list {
         position: absolute; top: 60px; left: 10px;
@@ -420,6 +438,7 @@
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
     <button id="route-toggle-btn" onclick="openExternalRoute()">ROUTE</button>
+    <button id="new-route-alert" onclick="activateNewRoute()">NEW ROUTE AVAILABLE<br><span style="font-size:12px">UPDATE MAP</span></button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -590,6 +609,11 @@
     }
   }
 
+  function activateNewRoute() {
+      document.getElementById('new-route-alert').style.display = 'none';
+      openExternalRoute();
+  }
+
   /* --- TRACKING & AUDIO --- */
   async function startContinuousTracking() {
     if ("Notification" in window) Notification.requestPermission();
@@ -636,7 +660,7 @@
   }
 
   /* --- ROUTING LOGIC --- */
-  async function updateRoute(autoTrigger = false) {
+  async function updateRoute() {
     // Route calculation runs regardless of routeActive state (for visualization)
     const jobs = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver);
     
@@ -714,7 +738,8 @@
             // Update Global Order
             optimizedOrder = orderedJobs.map(j => Object.keys(globalJobs).find(key => globalJobs[key] === j));
             
-            if(autoTrigger) setTimeout(openExternalRoute, 3000);
+            // AUTO ROUTE REMOVED
+            // Now handled via manual button trigger in mergeAndRender
 
             const legs = result.routes[0].legs;
             let listHtml = "";
@@ -1111,8 +1136,6 @@ document.addEventListener('keypress', (e) => {
     // Auto-Start Route Logic
     const currentPending = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver).length;
     
-    let autoRoute = false;
-    
     // Trigger on count change (New job, or Job done/removed)
     if (currentPending !== lastPendingCount) {
          if (currentPending > lastPendingCount) {
@@ -1120,7 +1143,8 @@ document.addEventListener('keypress', (e) => {
          }
          
          if (!isFirstLoad) {
-             autoRoute = true;
+             // Show Alert Button
+             document.getElementById('new-route-alert').style.display = 'block';
          }
     }
     
@@ -1131,7 +1155,7 @@ document.addEventListener('keypress', (e) => {
     lastPendingCount = currentPending;
 
     renderUnifiedFeed(); // RENDER IMMEDIATELY ON LOAD
-    updateRoute(autoRoute); // RE-OPTIMIZE ONLY IF ACTIVE
+    updateRoute(); // RE-OPTIMIZE ONLY IF ACTIVE
   }
 
   function renderUnifiedFeed() {
