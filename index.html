@@ -408,7 +408,7 @@
     <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
-    <button id="route-toggle-btn" onclick="toggleRoute()">START ROUTE</button>
+    <button id="route-toggle-btn" onclick="openExternalRoute()">ROUTE</button>
 </div>
 
 <div id="main-container">
@@ -455,7 +455,6 @@
   let lastGps = null;
   let optimizedOrder = [];
   let lastPendingCount = 0;
-  let routeActive = false;
   let lastAnnouncedId = null;
 
   let lastGpsUpdate = 0;
@@ -544,21 +543,28 @@
     list.style.display = (list.style.display === 'none' || list.style.display === '') ? 'block' : 'none';
   }
 
-  function toggleRoute() {
-    const btn = document.getElementById('route-toggle-btn');
-    if(!routeActive) {
-        routeActive = true;
-        btn.innerText = "STOP ROUTE";
-        btn.style.background = "var(--decline-red)";
-        btn.style.borderColor = "var(--decline-red)";
-        lastAnnouncedId = null; updateRoute();
-    } else {
-        routeActive = false;
-        btn.innerText = "START ROUTE";
-        btn.style.background = "#222";
-        btn.style.borderColor = "#fff";
-        if('speechSynthesis' in window) window.speechSynthesis.cancel();
+  function openExternalRoute() {
+    if(optimizedOrder.length === 0) {
+        alert("No stops to route.");
+        return;
     }
+    
+    // Build URL
+    const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
+    const destination = "1604 Moreland Ave, Brandon MB";
+    
+    // optimizedOrder contains IDs. Map to addresses.
+    const waypoints = optimizedOrder.map(id => {
+        const job = globalJobs[id];
+        if(!job) return "";
+        const addr = job.jobType === 'pickup' ? job.pickup_location : job.destination;
+        const city = job.city || "Brandon";
+        return encodeURIComponent(`${addr}, ${city}`);
+    }).filter(w => w !== "").join("|");
+
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
+    
+    window.open(url, '_blank');
   }
 
   /* --- TRACKING & AUDIO --- */
@@ -582,7 +588,7 @@
         }
       }
 
-      if(autoCenter && routeActive && map) {
+      if(autoCenter && map) {
           map.setCenter(latLng);
           map.setHeading(pos.coords.heading || 0);
       }
@@ -599,14 +605,6 @@
       }
     }, (err) => console.warn("GPS Error:", err.message), 
     { enableHighAccuracy: true, maximumAge: 0 });
-  }
-
-  function announceStop(text) {
-      if('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance("New destination. " + text);
-          window.speechSynthesis.speak(u);
-      }
   }
 
   /* --- ROUTING LOGIC --- */
@@ -744,18 +742,6 @@
                 // Only zoom to fit if we just calculated fresh
                 // map.setZoom(17);
                 // map.setTilt(45);
-            }
-
-            // Voice Announce First Stop (Once Only) - Gated by routeActive
-            if(orderedJobs.length > 0 && routeActive) {
-                const nextJob = orderedJobs[0];
-                const dest = nextJob.jobType === 'pickup' ? nextJob.pickup_location : nextJob.destination;
-                
-                // Only speak if it's a new job ID
-                if(nextJob.id !== lastAnnouncedId) {
-                   announceStop(dest);
-                   lastAnnouncedId = nextJob.id;
-                }
             }
 
             renderUnifiedFeed(); // Refresh numbers in list
@@ -1097,15 +1083,14 @@ document.addEventListener('keypress', (e) => {
     
     if (currentPending !== lastPendingCount) {
          if (currentPending > lastPendingCount) lastAnnouncedId = null;
-         if (!routeActive) updateRoute();
     }
     
-    if (routeActive && topGone) lastAnnouncedId = null;
+    if (topGone) lastAnnouncedId = null;
 
     lastPendingCount = currentPending;
 
     renderUnifiedFeed(); // RENDER IMMEDIATELY ON LOAD
-    if(routeActive) updateRoute(); // RE-OPTIMIZE ONLY IF ACTIVE
+    updateRoute(); // RE-OPTIMIZE ONLY IF ACTIVE
   }
 
   function renderUnifiedFeed() {
@@ -1124,7 +1109,7 @@ document.addEventListener('keypress', (e) => {
     let pendingCount = 0;
 
     let sortedEntries;
-    if (optimizedOrder.length > 0 && routeActive) {
+    if (optimizedOrder.length > 0) {
       // Use optimized order, append any non-optimized jobs at end
       const optimizedIds = new Set(optimizedOrder);
       const ordered = optimizedOrder.map(id => [id, globalJobs[id]]).filter(e => e[1]);
