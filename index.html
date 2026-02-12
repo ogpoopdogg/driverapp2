@@ -549,27 +549,45 @@
   function openExternalRoute() {
     hasInitialRoute = true;
     if(optimizedOrder.length === 0) {
-        // No stops to route.
+        alert("No stops to route.");
         return;
     }
     
-    // Build URL
+    // 1. Build the base addresses
     const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
     const destination = "1604 Moreland Ave, Brandon MB";
     
-    // optimizedOrder contains IDs. Map to addresses.
+    // 2. Build Waypoints
     const waypoints = optimizedOrder.map(id => {
         const job = globalJobs[id];
         if(!job) return "";
-        const name = job.jobType === 'pickup' ? job.name : job.delivery_name;
         const addr = job.jobType === 'pickup' ? job.pickup_location : job.destination;
         const city = job.city || "Brandon";
         return encodeURIComponent(`${addr}, ${city}`);
     }).filter(w => w !== "").join("|");
 
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
-    
-    window.open(url, '_self');
+    // 3. Detect Device
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const isAndroid = /android/i.test(userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+
+    // 4. Force App Logic
+    const webUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
+
+    if (isAndroid) {
+        // Android: Wrap URL in an Intent to strictly target com.google.android.apps.maps
+        const intentUrl = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+        window.location.href = intentUrl;
+    } 
+    else if (isIOS) {
+        // iOS: Use comgooglemapsurl scheme which forces the Google Maps app to handle the URL parameters
+        const iosUrl = `comgooglemapsurl://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
+        window.location.href = iosUrl;
+    } 
+    else {
+        // Desktop/Other: Fallback to standard new window
+        window.open(webUrl, '_blank');
+    }
   }
 
   /* --- TRACKING & AUDIO --- */
