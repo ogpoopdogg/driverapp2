@@ -552,7 +552,11 @@
     
     driverMarker = new google.maps.Marker({ map: map, icon: puckIcon, zIndex: 999 });
 
-    // Allow user to look around
+    // DETECT USER INTERACTION TO PAUSE AUTO-CENTER
+    // This fixes the "Fighting the map" issue
+    const mapDiv = document.getElementById("map");
+    mapDiv.addEventListener("mousedown", () => { autoCenter = false; });
+    mapDiv.addEventListener("touchstart", () => { autoCenter = false; });
     map.addListener('dragstart', () => { autoCenter = false; });
   }
 
@@ -632,7 +636,7 @@
     const btn = document.getElementById('route-toggle-btn');
     if(!routeActive) {
         routeActive = true;
-        autoCenter = true; // FORCE AUTOCENTER
+        autoCenter = true; // FORCE AUTOCENTER ON START
         btn.innerText = "STOP ROUTE";
         btn.style.background = "var(--decline-red)";
         btn.style.borderColor = "var(--decline-red)";
@@ -679,6 +683,8 @@
     }
 
     if (!navigator.geolocation) return;
+    
+    // Increased timeouts to prevent "hanging"
     navigator.geolocation.watchPosition((pos) => {
       lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude, heading: pos.coords.heading || 0 };
       const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
@@ -690,18 +696,18 @@
       // 2. If slow/stopped OR GPS heading is null, calculate heading to next route point
       let bestHeading = heading;
       
+      // If stopped or invalid GPS heading, use Route Heading
       if ((!bestHeading && bestHeading !== 0) || speed < 1.5) { 
-          if (routeActive && navSteps[currentStepIndex]) {
-             // Look ahead to next step to align map "Course Up"
+          if (routeActive && navSteps[currentStepIndex] && navSteps[currentStepIndex].endLocation) {
              const nextLoc = navSteps[currentStepIndex].endLocation.latLng;
-             if (nextLoc) {
-               const nextLatLng = new google.maps.LatLng(nextLoc.latitude, nextLoc.longitude);
-               bestHeading = google.maps.geometry.spherical.computeHeading(latLng, nextLatLng);
+             if(nextLoc) {
+                 const nextLatLng = new google.maps.LatLng(nextLoc.latitude, nextLoc.longitude);
+                 bestHeading = google.maps.geometry.spherical.computeHeading(latLng, nextLatLng);
              }
           }
       }
 
-      // Fallback to last valid
+      // Fallback to last known if everything else fails
       if (!bestHeading && bestHeading !== 0) {
          bestHeading = lastValidHeading;
       }
@@ -723,9 +729,8 @@
       }
 
       if(autoCenter && map) {
-          map.setCenter(latLng); // Using setCenter for smoother tracking than panTo
+          map.setCenter(latLng); // Using setCenter for smoother tracking
           if (compassMode === 'HEAD_UP') {
-              // Continuously update map heading if in HEAD_UP mode
               map.setHeading(displayHeading);
           }
       }
@@ -741,7 +746,7 @@
         lastGpsUpdate = now;
       }
     }, (err) => console.warn("GPS Error:", err.message), 
-    { enableHighAccuracy: true, maximumAge: 0 });
+    { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 });
   }
 
   function cleanTextForSpeech(text) {
@@ -778,7 +783,19 @@
       isNavigating = true;
       navState = 'navigating';
       isRerouting = false;
-      if(navSteps.length > 0) {
+      
+      // Force immediate orientation update based on first step
+      if(navSteps.length > 0 && lastGps) {
+          const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
+          const nextLoc = navSteps[0].endLocation.latLng;
+          if(nextLoc) {
+               const nextLatLng = new google.maps.LatLng(nextLoc.latitude, nextLoc.longitude);
+               lastValidHeading = google.maps.geometry.spherical.computeHeading(latLng, nextLatLng);
+               if(autoCenter && map && compassMode === 'HEAD_UP') {
+                   map.setHeading(lastValidHeading);
+               }
+          }
+          
           updateNavHUD(navSteps[0], 0);
           speakInstruction(navSteps[0].navigationInstruction?.instructions || "Start route");
       }
