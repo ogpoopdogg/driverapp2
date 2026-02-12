@@ -64,8 +64,18 @@
         box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
-    #zoom-btn {
+    #compass-btn {
         position: absolute; bottom: 70px; right: 70px;
+        background: #333; color: #fff; width: 40px; height: 40px;
+        border-radius: 50%; border: 1px solid #555;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; cursor: pointer; z-index: 50;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .compass-active { color: var(--accent) !important; border-color: var(--accent) !important; }
+
+    #zoom-btn {
+        position: absolute; bottom: 70px; right: 120px;
         background: #333; color: #fff; width: 40px; height: 40px;
         border-radius: 50%; border: 1px solid #555;
         display: flex; align-items: center; justify-content: center;
@@ -434,6 +444,7 @@
     </div>
     <div id="mini-map-list"></div>
     <div id="recenter-btn" onclick="enableAutoCenter()">⌖</div>
+    <div id="compass-btn" onclick="toggleCompass()">N</div>
     <div id="zoom-btn" onclick="zoomToFit()">-</div>
     <div id="fs-btn" onclick="toggleFullScreen()">FULL SCREEN</div>
     <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
@@ -500,6 +511,7 @@
   let navState = 'idle'; // idle, navigating, rerouting, arrived
   let offRouteStartTime = 0;
   let lastValidHeading = 0;
+  let compassMode = 'HEAD_UP'; // HEAD_UP or NORTH_UP
 
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
@@ -512,7 +524,8 @@
       center: { lat: 49.8485, lng: -99.9501 },
       disableDefaultUI: true,
       rotateControl: true,
-      tiltControl: true
+      tiltControl: true,
+      heading: 0
     });
 
     directionsService = new google.maps.DirectionsService();
@@ -530,7 +543,8 @@
         fillOpacity: 1,
         strokeWeight: 2,
         strokeColor: "white",
-        rotation: 0
+        rotation: 0,
+        anchor: new google.maps.Point(0, 2.5)
     };
     
     driverMarker = new google.maps.Marker({ map: map, icon: puckIcon, zIndex: 999 });
@@ -542,10 +556,30 @@
   function enableAutoCenter() {
       autoCenter = true;
       if(lastGps) {
-          map.setCenter({lat: lastGps.lat, lng: lastGps.lng});
+          map.panTo({lat: lastGps.lat, lng: lastGps.lng});
           map.setZoom(18);
           map.setTilt(45);
+          if (compassMode === 'HEAD_UP') {
+            map.setHeading(lastValidHeading || 0);
+          } else {
+            map.setHeading(0);
+          }
       }
+  }
+
+  function toggleCompass() {
+    const btn = document.getElementById('compass-btn');
+    if (compassMode === 'HEAD_UP') {
+        compassMode = 'NORTH_UP';
+        btn.innerText = 'N';
+        btn.classList.remove('compass-active');
+        if(map) map.setHeading(0);
+    } else {
+        compassMode = 'HEAD_UP';
+        btn.innerText = '▲';
+        btn.classList.add('compass-active');
+        if(map) map.setHeading(lastValidHeading || 0);
+    }
   }
 
   function zoomToFit() {
@@ -591,6 +625,10 @@
         document.body.classList.add('nav-active');
         lastAnnouncedId = null; 
         navState = 'navigating';
+        // Auto-enable head up
+        compassMode = 'HEAD_UP';
+        document.getElementById('compass-btn').innerText = '▲';
+        document.getElementById('compass-btn').classList.add('compass-active');
         updateRoute();
     } else {
         routeActive = false;
@@ -625,7 +663,7 @@
 
       // Filter heading jitter when stopped
       if (heading !== null && !isNaN(heading)) {
-         if (speed > 1.5 || lastValidHeading === 0) {
+         if (speed > 1.0 || lastValidHeading === 0) { // Lower threshold for walking/slow start
             lastValidHeading = heading;
          }
       }
@@ -634,7 +672,8 @@
       if(driverMarker) {
         driverMarker.setPosition(latLng);
         const icon = driverMarker.getIcon();
-        icon.rotation = displayHeading;
+        // The marker should always point to the heading, relative to North
+        icon.rotation = displayHeading; 
         driverMarker.setIcon(icon);
       }
 
@@ -643,13 +682,11 @@
           processNavigationTick(latLng, speed, displayHeading);
       }
 
-      if(autoCenter && routeActive && map) {
-          map.moveCamera({
-            center: latLng,
-            heading: displayHeading,
-            tilt: 45,
-            zoom: 18
-          });
+      if(autoCenter && map) {
+          map.panTo(latLng);
+          if (compassMode === 'HEAD_UP') {
+              map.setHeading(displayHeading);
+          }
       }
 
       const now = Date.now();
