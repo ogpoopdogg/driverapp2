@@ -456,7 +456,6 @@
   }); 
   firebase.database().setPersistenceEnabled(true);
 
-  // firebase.auth().signInAnonymously();
   const db = firebase.database();
   let currentDriver = localStorage.getItem('ec_driver_name');
 
@@ -823,18 +822,35 @@
     }
   }
 
-  if(currentDriver) {
-    document.getElementById('login-overlay').style.display = 'none';
-    document.getElementById('header-name').innerHTML = `
-      <img src="icon-512.png" class="header-logo">
-      <span style="font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
-      <span style="white-space: nowrap;">
-        <span id="stop-counter" class="stop-badge" style="margin-left: 0;">0 STOPS</span>
-      </span>
-    `;
-    startContinuousTracking();
-    setupIntersectionObserver();
-  }
+  /* --- AUTH LISTENER (The Fix) --- */
+  firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+      // SUCCESS: User is logged in (fresh login OR persistent session)
+      const email = user.email;
+      currentDriver = email.split('@')[0]; // Extract name from email
+      localStorage.setItem('ec_driver_name', currentDriver); // Keep local storage sync
+
+      // Hide Login
+      document.getElementById('login-overlay').style.display = 'none';
+      
+      // Update Header
+      document.getElementById('header-name').innerHTML = `
+        <img src="icon-512.png" class="header-logo">
+        <span style="font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
+        <span style="white-space: nowrap;">
+          <span id="stop-counter" class="stop-badge" style="margin-left: 0;">0 STOPS</span>
+        </span>
+      `;
+
+      // Initialize App
+      startContinuousTracking();
+      setupIntersectionObserver();
+      mergeAndRender(); 
+    } else {
+      // User is logged out
+      document.getElementById('login-overlay').style.display = 'flex';
+    }
+  });
 
   function setupIntersectionObserver() {
     observer = new IntersectionObserver((entries) => {
@@ -919,11 +935,6 @@ function attemptLogin() {
   }
 
   firebase.auth().signInWithEmailAndPassword(emailInput, passwordInput)
-  .then((userCredential) => {
-      const driverName = emailInput.split('@')[0];
-      localStorage.setItem('ec_driver_name', driverName);
-      location.reload();
-  })
   .catch((error) => {
     alert("Login Failed: " + error.code + "\n" + error.message);
   });
@@ -1417,10 +1428,7 @@ document.addEventListener('keypress', (e) => {
   setInterval(updateClock, 1000); updateClock();
 
   window.onload = () => {
-    if(currentDriver) {
-        startContinuousTracking();
-        setupIntersectionObserver();
-    }
+    // Legacy setup code removed as Auth Listener handles init now.
   };
   document.addEventListener('click', e => { 
       if(e.target.id && e.target.id.startsWith('note-display-')) { 
