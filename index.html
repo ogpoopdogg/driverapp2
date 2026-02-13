@@ -911,7 +911,7 @@
 
 function attemptLogin() {
   const emailInput = document.getElementById('login-user').value.trim();
-  const passwordInput = document.getElementById('login-pin').value;
+  const passwordInput = document.getElementById('login-pin').value.trim();
 
   if (!emailInput || !passwordInput) {
     alert("Please enter both Email and Password");
@@ -925,7 +925,7 @@ function attemptLogin() {
       location.reload();
   })
   .catch((error) => {
-    alert("Login Failed: " + error.message);
+    alert("Login Failed: " + error.code + "\n" + error.message);
   });
 }
 
@@ -1235,7 +1235,7 @@ document.addEventListener('keypress', (e) => {
 
       const changedFields = pendingAlerts[id] || [];
       const needsAlert = changedFields.length > 0 && !sessionStorage.getItem(`ack_update_${id}`);
-      const internalChange = changedFields.some(f => f === 'contact' || f === 'dropName' || f === 'po' || f === 'notes');
+      const internalChange = changedFields.some(f => ['contact', 'dropName', 'po', 'notes'].includes(f));
 
       // DYNAMIC CARD LOGIC
       let topLabel, topAddr, topContact;  // The "Target"
