@@ -20,12 +20,28 @@
     html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; background: #050505; color: #e0e0e0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
     
-    /* MAP CONTAINER STYLES - 70% Height */
-    #map-container { height: 70vh; width: 100%; position: relative; background: #222; z-index: 10; border-bottom: 2px solid var(--accent); transition: height 0.3s ease; }
+    /* MAP CONTAINER STYLES */
+    #map-container { height: 70vh; width: 100%; position: relative; background: #222; z-index: 10; border-bottom: 2px solid var(--accent); overflow: hidden; }
     #map { height: 100%; width: 100%; }
+
+    /* RESIZER STYLE */
+    #resizer {
+      height: 12px; width: 100%; background: #111; cursor: ns-resize;
+      display: flex; align-items: center; justify-content: center;
+      border-top: 1px solid #333; border-bottom: 2px solid var(--accent);
+      z-index: 100; flex-shrink: 0;
+    }
+    .resizer-handle { width: 30px; height: 3px; background: #555; border-radius: 2px; position: relative; }
+    .resizer-handle::before, .resizer-handle::after {
+      content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+      width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+    }
+    .resizer-handle::before { border-bottom: 4px solid #555; top: -7px; }
+    .resizer-handle::after { border-top: 4px solid #555; bottom: -7px; }
 
     /* FULL SCREEN MODE */
     body.fullscreen-mode #map-container { height: 100vh !important; position: fixed; top: 0; left: 0; z-index: 9999; border: none; }
+    body.fullscreen-mode #resizer { display: none !important; }
     body.fullscreen-mode header, body.fullscreen-mode #main-container { display: none !important; }
     
     /* CUSTOM MAP LABELS (No Bubble) */
@@ -245,7 +261,7 @@
     h1 { margin: 0; color: var(--accent); font-size: 18px; font-weight: 800; display: flex; align-items: center; letter-spacing: 0.5px; }
     #clock { font-size: 14px; color: var(--accent); font-weight: 600; opacity: 0.9; }
 
-    #main-container { display: flex; flex-direction: column; height: 30vh; width: 100%; overflow: hidden; background: #050505; }
+    #main-container { display: flex; flex-direction: column; flex: 1; width: 100%; overflow: hidden; background: #050505; }
     
     #history-sidebar { display: none; } /* Hidden in Driver Mode */
     
@@ -411,17 +427,6 @@
   <div id="clock"></div>
 </header>
 
-<div id="main-container">
-  <div id="history-sidebar" style="display:none;">
-    <div class="section-label-pending">Pending</div>
-    <div id="queue-log"></div>
-    <div class="section-label-done">Done (Today)</div>
-    <div id="recent-log"></div>
-    <button id="multi-route-btn" onclick="routeOptimized()">ROUTE NAV</button>
-  </div>
-  <div id="live-feed"></div>
-</div>
-
 <div id="map-container">
     <div id="map"></div>
     <div id="mini-map-list"></div>
@@ -432,6 +437,21 @@
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
     <button id="route-toggle-btn" onclick="openExternalRoute()">ROUTE</button>
+</div>
+
+<div id="resizer">
+  <div class="resizer-handle"></div>
+</div>
+
+<div id="main-container">
+  <div id="history-sidebar" style="display:none;">
+    <div class="section-label-pending">Pending</div>
+    <div id="queue-log"></div>
+    <div class="section-label-done">Done (Today)</div>
+    <div id="recent-log"></div>
+    <button id="multi-route-btn" onclick="routeOptimized()">ROUTE NAV</button>
+  </div>
+  <div id="live-feed"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1489,6 +1509,30 @@ document.addEventListener('keypress', (e) => {
           dragger.style.top  = (touch.clientY + offset[1]) + 'px';
       }
   }, {passive: false});
+
+  /* SPLIT SCREEN DRAG LOGIC */
+  const resizer = document.getElementById('resizer');
+  const mapContainer = document.getElementById('map-container');
+  let isResizing = false;
+
+  const startResizing = (e) => { isResizing = true; document.body.style.cursor = 'ns-resize'; };
+  const stopResizing = () => { isResizing = false; document.body.style.cursor = 'default'; if(map) google.maps.event.trigger(map, "resize"); };
+  const resize = (e) => {
+    if (!isResizing) return;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const headerHeight = document.querySelector('header').offsetHeight;
+    const newHeight = ((clientY - headerHeight) / (window.innerHeight - headerHeight)) * 100;
+    if (newHeight > 10 && newHeight < 90) {
+      mapContainer.style.height = `${newHeight}vh`;
+    }
+  };
+
+  resizer.addEventListener('mousedown', startResizing);
+  resizer.addEventListener('touchstart', startResizing, {passive: true});
+  window.addEventListener('mousemove', resize);
+  window.addEventListener('touchmove', resize, {passive: false});
+  window.addEventListener('mouseup', stopResizing);
+  window.addEventListener('touchend', stopResizing);
 </script>
 </body>
 </html>
