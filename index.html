@@ -404,7 +404,7 @@
 <div id="login-overlay">
     <div class="login-box">
         <h2>E&C PORTAL</h2>
-        <input type="text" id="login-user" class="login-input" placeholder="Username" autofocus>
+        <input type="email" id="login-user" class="login-input" placeholder="Email (DriverName@ec.com)" autofocus>
         <input type="password" id="login-pin" class="login-input" placeholder="Password">
         <button class="login-submit" onclick="attemptLogin()">Enter</button>
     </div>
@@ -454,8 +454,11 @@
     databaseURL: "https://eandccourier-36fcc-default-rtdb.firebaseio.com",
     projectId: "eandccourier-36fcc"
   }); 
+  firebase.database().setPersistenceEnabled(true);
 
-  firebase.auth().signInAnonymously();
+  // REMOVED: firebase.auth().signInAnonymously(); 
+  // We now wait for user to explicitly log in below
+
   const db = firebase.database();
   let currentDriver = localStorage.getItem('ec_driver_name');
 
@@ -909,27 +912,26 @@
 
 
 function attemptLogin() {
-  const nameInput = document.getElementById('login-user').value.trim();
-  const pinInput = document.getElementById('login-pin').value;
+  const emailInput = document.getElementById('login-user').value.trim();
+  const passwordInput = document.getElementById('login-pin').value;
 
-  if (!nameInput || !pinInput) {
-    alert("Please enter both Name and PIN");
+  if (!emailInput || !passwordInput) {
+    alert("Please enter both Email and Password");
     return;
   }
 
-  // Connects to your Firebase 'driver_secrets' folder
-  db.ref(`driver_secrets/${nameInput}`).once('value', snapshot => {
-    const dbPin = snapshot.val();
-
-    // Compares database PIN to what you typed
-    if (dbPin && dbPin.toString() === pinInput.toString()) {
-      localStorage.setItem('ec_driver_name', nameInput);
+  // Uses official Firebase Auth
+  firebase.auth().signInWithEmailAndPassword(emailInput, passwordInput)
+  .then((userCredential) => {
+      // Logic: Extracts the name part before the "@" to use as driver ID
+      // Example: "Steve@ec.com" becomes "Steve"
+      const driverName = emailInput.split('@')[0];
+      
+      localStorage.setItem('ec_driver_name', driverName);
       location.reload();
-    } else {
-      alert("Invalid Name or PIN. Check your Firebase data.");
-    }
-  }).catch(err => {
-    alert("Database error. Make sure your Rules are Published.");
+  })
+  .catch((error) => {
+    alert("Login Failed: " + error.message);
   });
 }
 
