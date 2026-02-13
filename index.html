@@ -935,9 +935,6 @@
     }
 
     firebase.auth().signInWithEmailAndPassword(emailInput, passwordInput)
-    .then(() => {
-        location.reload();
-    })
     .catch((error) => {
       alert("Login Failed: " + error.code + "\n" + error.message);
     });
