@@ -925,20 +925,23 @@
   }
 
 
-function attemptLogin() {
-  const emailInput = document.getElementById('login-user').value.trim();
-  const passwordInput = document.getElementById('login-pin').value.trim();
+  function attemptLogin() {
+    const emailInput = document.getElementById('login-user').value.trim();
+    const passwordInput = document.getElementById('login-pin').value.trim();
 
-  if (!emailInput || !passwordInput) {
-    alert("Please enter both Email and Password");
-    return;
+    if (!emailInput || !passwordInput) {
+      alert("Please enter both Email and Password");
+      return;
+    }
+
+    firebase.auth().signInWithEmailAndPassword(emailInput, passwordInput)
+    .then(() => {
+        location.reload();
+    })
+    .catch((error) => {
+      alert("Login Failed: " + error.code + "\n" + error.message);
+    });
   }
-
-  firebase.auth().signInWithEmailAndPassword(emailInput, passwordInput)
-  .catch((error) => {
-    alert("Login Failed: " + error.code + "\n" + error.message);
-  });
-}
 
 // This allows pressing 'Enter' to log in
 document.addEventListener('keypress', (e) => {
