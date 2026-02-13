@@ -672,9 +672,14 @@
     
     // Clear visualization start
     if(mapPolyline) mapPolyline.setMap(null);
-    mapMarkers.forEach(m => m.setMap(null));
+    if (mapMarkers && mapMarkers.length > 0) {
+        for (let i = 0; i < mapMarkers.length; i++) {
+            mapMarkers[i].setMap(null); 
+        }
+        mapMarkers = []; 
+    }
     mapLabels.forEach(l => l.close());
-    mapMarkers = []; mapLabels = [];
+    mapLabels = [];
     document.getElementById('mini-map-list').innerHTML = "";
     document.getElementById('mini-map-list').style.display = 'none';
     
