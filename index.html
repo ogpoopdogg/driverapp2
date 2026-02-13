@@ -92,11 +92,12 @@
 
     /* NEW UPDATE ALERT BUTTON */
     #new-route-alert {
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      position: absolute; bottom: 75px; left: 50%; transform: translateX(-50%);
+      width: 60%;
       background: linear-gradient(135deg, #00d4ff, #0056b3);
-      color: #fff; border: 2px solid #fff;
-      padding: 20px 40px; border-radius: 50px;
-      font-size: 18px; font-weight: 900;
+      color: #fff; border: 1px solid #fff;
+      padding: 12px 24px; border-radius: 30px;
+      font-size: 12px; font-weight: 900;
       box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
       z-index: 9999; cursor: pointer;
       text-align: center; display: none;
@@ -104,8 +105,8 @@
       text-transform: uppercase; letter-spacing: 1px;
     }
     @keyframes alertPulse {
-      from { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 20px rgba(0, 212, 255, 0.6); }
-      to { transform: translate(-50%, -50%) scale(1.05); box-shadow: 0 0 50px rgba(0, 212, 255, 1); }
+      from { transform: translateX(-50%) scale(1); box-shadow: 0 0 20px rgba(0, 212, 255, 0.6); }
+      to { transform: translateX(-50%) scale(1.05); box-shadow: 0 0 50px rgba(0, 212, 255, 1); }
     }
 
     /* MINI MAP LIST */
@@ -438,7 +439,7 @@
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
     <button id="route-toggle-btn" onclick="openExternalRoute()">ROUTE</button>
-    <button id="new-route-alert" onclick="activateNewRoute()">NEW ROUTE AVAILABLE<br><span style="font-size:12px">UPDATE MAP</span></button>
+    <button id="new-route-alert" onclick="activateNewRoute()">New Route - Update Google Map</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -817,7 +818,6 @@
       <span style="font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
       <span style="white-space: nowrap;">
         <span id="stop-counter" class="stop-badge" style="margin-left: 0;">0 STOPS</span>
-        <span id="new-stops-badge" class="new-stops-badge">0 NEW</span>
       </span>
     `;
     startContinuousTracking();
