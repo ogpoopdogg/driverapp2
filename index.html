@@ -454,7 +454,7 @@
     databaseURL: "https://eandccourier-36fcc-default-rtdb.firebaseio.com",
     projectId: "eandccourier-36fcc"
   }); 
-  firebase.database().setPersistenceEnabled(true);
+  
 
   const db = firebase.database();
   let currentDriver = localStorage.getItem('ec_driver_name');
@@ -935,6 +935,9 @@
     }
 
     firebase.auth().signInWithEmailAndPassword(emailInput, passwordInput)
+    .then(() => {
+        location.reload();
+    })
     .catch((error) => {
       alert("Login Failed: " + error.code + "\n" + error.message);
     });
