@@ -18,7 +18,7 @@
     * { box-sizing: border-box; }
     
     html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; background: #050505; color: #e0e0e0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
+    body { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
     
     /* MAP CONTAINER STYLES - Dynamic height based on flex */
     #map-container { height: 70vh; width: 100%; position: relative; background: #222; z-index: 10; border-bottom: 2px solid var(--accent); transition: height 0.1s ease; flex-shrink: 0; }
@@ -422,58 +422,58 @@
 <div id="login-overlay">
     <div class="login-box">
         <h2>E&C PORTAL</h2>
-        <input type="email" id="login-user" class="login-input" placeholder="Email (DriverName@ec.com)" autofocus>
-        <input type="password" id="login-pin" class="login-input" placeholder="Password">
-        <button class="login-submit" onclick="attemptLogin()">Enter</button>
+        <input type="email" id="login-user" class="login-input" placeholder=\"Email (DriverName@ec.com)\" autofocus>
+        <input type="password" id="login-pin" class="login-input" placeholder=\"Password\">
+        <button class=\"login-submit\" onclick=\"attemptLogin()\">Enter</button>
     </div>
 </div>
 
 <header>
-  <h1 id="header-name">
-    <img src="icon-512.png" class="header-logo" alt="Logo">
+  <h1 id=\"header-name\">
+    <img src=\"icon-512.png\" class=\"header-logo\" alt=\"Logo\">
     E&C PORTAL
   </h1>
-  <div id="clock"></div>
+  <div id=\"clock\"></div>
 </header>
 
-<div id="map-container">
-    <div id="map"></div>
-    <div id="mini-map-list"></div>
-    <div id="recenter-btn" onclick="enableAutoCenter()">⌖</div>
-    <div id="zoom-btn" onclick="zoomToFit()">-</div>
-    <div id="fs-btn" onclick="toggleFullScreen()">FULL SCREEN</div>
-    <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
-  <div id="main-list-btn" onclick="toggleList()">LIST</div>    
-  <div id="list-btn" onclick="toggleList()">LIST</div>
-    <button id="route-toggle-btn" onclick="openExternalRoute()">ROUTE</button>
+<div id=\"map-container\">
+    <div id=\"map\"></div>
+    <div id=\"mini-map-list\"></div>
+    <div id=\"recenter-btn\" onclick=\"enableAutoCenter()\">⌖</div>
+    <div id=\"zoom-btn\" onclick=\"zoomToFit()\">-</div>
+    <div id=\"fs-btn\" onclick=\"toggleFullScreen()\">FULL SCREEN</div>
+    <div id=\"back-btn\" onclick=\"toggleFullScreen()\">BACK</div>
+  <div id=\"main-list-btn\" onclick=\"toggleList()\">LIST</div>    
+  <div id=\"list-btn\" onclick=\"toggleList()\">LIST</div>
+    <button id=\"route-toggle-btn\" onclick=\"openExternalRoute()\">ROUTE</button>
 </div>
 
-<div id="drag-resizer">
-  <div class="drag-handle"></div>
+<div id=\"drag-resizer\">
+  <div class=\"drag-handle\"></div>
 </div>
 
-<div id="main-container">
-  <div id="history-sidebar" style="display:none;">
-    <div class="section-label-pending">Pending</div>
-    <div id="queue-log"></div>
-    <div class="section-label-done">Done (Today)</div>
-    <div id="recent-log"></div>
-    <button id="multi-route-btn" onclick="routeOptimized()">ROUTE NAV</button>
+<div id=\"main-container\">
+  <div id=\"history-sidebar\" style=\"display:none;\">
+    <div class=\"section-label-pending\">Pending</div>
+    <div id=\"queue-log\"></div>
+    <div class=\"section-label-done\">Done (Today)</div>
+    <div id=\"recent-log\"></div>
+    <button id=\"multi-route-btn\" onclick=\"routeOptimized()\">ROUTE NAV</button>
   </div>
-  <div id="live-feed"></div>
+  <div id=\"live-feed\"></div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ&libraries=places,geometry&callback=initMap" async defer></script>
+<script src=\"https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js\"></script>
+<script src=\"https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js\"></script>
+<script src=\"https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js\"></script>
+<script src=\"https://maps.googleapis.com/maps/api/js?key=AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ&libraries=places,geometry&callback=initMap\" async defer></script>
 
 <script>
   firebase.initializeApp({
-    apiKey: "AIzaSyAKmgoXA4m3cRTmxJq4aUyva5SVvFbTNqg",
-    authDomain: "eandccourier-36fcc.firebaseapp.com",
-    databaseURL: "https://eandccourier-36fcc-default-rtdb.firebaseio.com",
-    projectId: "eandccourier-36fcc"
+    apiKey: \"AIzaSyAKmgoXA4m3cRTmxJq4aUyva5SVvFbTNqg\",
+    authDomain: \"eandccourier-36fcc.firebaseapp.com\",
+    databaseURL: \"https://eandccourier-36fcc-default-rtdb.firebaseio.com\",
+    projectId: \"eandccourier-36fcc\"
   }); 
   
 
@@ -508,17 +508,17 @@
   
   /* --- MAP FUNCTIONS --- */
   function initMap() {
-    map = new google.maps.Map(document.getElementById("map"), {
+    map = new google.maps.Map(document.getElementById(\"map\"), {
       zoom: 13,
       center: { lat: 49.8485, lng: -99.9501 },
       disableDefaultUI: true,
       styles: [
-        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+        { elementType: \"geometry\", stylers: [{ color: \"#242f3e\" }] },
+        { elementType: \"labels.text.stroke\", stylers: [{ color: \"#242f3e\" }] },
+        { elementType: \"labels.text.fill\", stylers: [{ color: \"#746855\" }] },
+        { featureType: \"road\", elementType: \"geometry\", stylers: [{ color: \"#38414e\" }] },
+        { featureType: \"road\", elementType: \"geometry.stroke\", stylers: [{ color: \"#212a37\" }] },
+        { featureType: \"water\", elementType: \"geometry\", stylers: [{ color: \"#17263c\" }] }
       ]
     });
 
@@ -527,16 +527,16 @@
       map: map,
       suppressMarkers: true,
       preserveViewport: true,
-      polylineOptions: { strokeColor: "#00d4ff", strokeWeight: 6, strokeOpacity: 0.8 }
+      polylineOptions: { strokeColor: \"#00d4ff\", strokeWeight: 6, strokeOpacity: 0.8 }
     });
 
     const puckIcon = {
         path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
         scale: 6,
-        fillColor: "#4285F4",
+        fillColor: \"#4285F4\",
         fillOpacity: 1,
         strokeWeight: 2,
-        strokeColor: "white",
+        strokeColor: \"white\",
         rotation: 0
     };
     
@@ -580,7 +580,7 @@
     document.getElementById('fs-btn').style.display = isFs ? 'none' : 'block';
     document.getElementById('back-btn').style.display = isFs ? 'block' : 'none';
     document.getElementById('list-btn').style.display = isFs ? 'block' : 'none';
-    if(map) google.maps.event.trigger(map, "resize");
+    if(map) google.maps.event.trigger(map, \"resize\");
   }
 
   function toggleList() {
@@ -592,23 +592,23 @@
     hasInitialRoute = true;
     document.getElementById('route-toggle-btn').classList.remove('route-glow-update');
     if(optimizedOrder.length === 0) {
-        alert("No stops to route.");
+        alert(\"No stops to route.\");
         return;
     }
     
     // 1. Build the base addresses
-    const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
-    const destination = "1604 Moreland Ave, Brandon MB";
+    const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : \"1604 Moreland Ave, Brandon MB\";
+    const destination = \"1604 Moreland Ave, Brandon MB\";
     
     // 2. Build Waypoints
     const waypoints = optimizedOrder.map(id => {
         const job = globalJobs[id];
-        if(!job) return "";
+        if(!job) return \"\";
         const addr = job.jobType === 'pickup' ? job.pickup_location : job.destination;
         const name = job.jobType === 'pickup' ? job.name : job.delivery_name;
-        const city = job.city || "Brandon";
+        const city = job.city || \"Brandon\";
         return encodeURIComponent(`${name} ${addr}, ${city}`);
-    }).filter(w => w !== "").join("|");
+    }).filter(w => w !== \"\").join(\"|\");
 
     // 3. Detect Device
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -653,7 +653,7 @@
   }
 
   async function startContinuousTracking() {
-    if ("Notification" in window) Notification.requestPermission();
+    if (\"Notification\" in window) Notification.requestPermission();
     if ('wakeLock' in navigator) {
       try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
     }
@@ -701,7 +701,7 @@
         });
         lastGpsUpdate = now;
       }
-    }, (err) => console.warn("GPS Error:", err.message), 
+    }, (err) => console.warn(\"GPS Error:\", err.message), 
     { enableHighAccuracy: true, maximumAge: 0 });
   }
 
@@ -720,7 +720,7 @@
     }
     mapLabels.forEach(l => l.close());
     mapLabels = [];
-    document.getElementById('mini-map-list').innerHTML = "";
+    document.getElementById('mini-map-list').innerHTML = \"\";
     document.getElementById('mini-map-list').style.display = 'none';
     
     optimizedOrder = []; 
@@ -728,11 +728,11 @@
     if(jobs.length === 0) return;
 
     // Optimization Logic
-    const GOOGLE_KEY = "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ"; 
+    const GOOGLE_KEY = \"AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ\"; 
     
     const origin = lastGps ? 
         { location: { latLng: { latitude: lastGps.lat, longitude: lastGps.lng } } } :
-        { address: "1604 Moreland Ave, Brandon MB" };
+        { address: \"1604 Moreland Ave, Brandon MB\" };
 
     const intermediates = jobs.map(j => {
         const addr = j.jobType === 'pickup' ? j.pickup_location : j.destination;
@@ -743,18 +743,18 @@
     const shouldOptimize = jobs.length > 1;
 
     try {
-        const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-            method: "POST",
+        const response = await fetch(\"https://routes.googleapis.com/directions/v2:computeRoutes\", {
+            method: \"POST\",
             headers: {
-                "Content-Type": "application/json",
-                "X-Goog-Api-Key": GOOGLE_KEY,
-                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs"
+                \"Content-Type\": \"application/json\",
+                \"X-Goog-Api-Key\": GOOGLE_KEY,
+                \"X-Goog-FieldMask\": \"routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs\"
             },
             body: JSON.stringify({
                 origin: origin,
-                destination: { address: "1604 Moreland Ave, Brandon MB" }, 
+                destination: { address: \"1604 Moreland Ave, Brandon MB\" }, 
                 intermediates: intermediates,
-                travelMode: "DRIVE",
+                travelMode: \"DRIVE\",
                 optimizeWaypointOrder: shouldOptimize
             })
         });
@@ -775,7 +775,7 @@
                 mapPolyline = new google.maps.Polyline({
                     path: path,
                     geodesic: true,
-                    strokeColor: "#00d4ff",
+                    strokeColor: \"#00d4ff\",
                     strokeOpacity: 0.8,
                     strokeWeight: 6,
                     map: map
@@ -798,7 +798,7 @@
             // Now handled via manual button trigger in mergeAndRender
 
             const legs = result.routes[0].legs;
-            let listHtml = "";
+            let listHtml = \"\";
 
             // Leg 0 end is Stop 1
             orderedJobs.forEach((job, i) => {
@@ -808,20 +808,20 @@
                    
                    job.lat = loc.latitude; job.lng = loc.longitude;
                    const isPickup = job.jobType === 'pickup';
-                   const colorHex = isPickup ? "#FE9800" : "#4CAF50";
+                   const colorHex = isPickup ? \"#FE9800\" : \"#4CAF50\";
                    const bizName = isPickup ? job.name : job.delivery_name;
                    
                    // Pin
                    const marker = new google.maps.Marker({
                        position: { lat: loc.latitude, lng: loc.longitude },
                        map: map,
-                       label: { text: (i+1).toString(), color: "white", fontWeight: "bold" },
+                       label: { text: (i+1).toString(), color: \"white\", fontWeight: \"bold\" },
                        icon: {
                            path: google.maps.SymbolPath.CIRCLE,
                            scale: 14,
                            fillColor: colorHex,
                            fillOpacity: 1,
-                           strokeColor: "white",
+                           strokeColor: \"white\",
                            strokeWeight: 2
                        },
                        zIndex: 100
@@ -842,7 +842,7 @@
                    const isUnseen = job.timestamp > lastRouteClick;
                    const animClass = isUnseen ? 'mini-flash' : '';
                    
-                   listHtml += `<div class="mini-list-item ${animClass}"><div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div><div style="flex:1; line-height:1.1;">${bizName}</div></div>`;
+                   listHtml += `<div class=\"mini-list-item ${animClass}\"><div class=\"mini-num\" style=\"background:${colorHex}; color:#000;\">${i+1}</div><div style=\"flex:1; line-height:1.1;\">${bizName}</div></div>`;
                 }
             });
             
@@ -859,7 +859,7 @@
             renderUnifiedFeed(); // Refresh numbers in list
         }
     } catch(e) {
-        console.error("Routing Error", e);
+        console.error(\"Routing Error\", e);
     }
   }
 
@@ -869,7 +869,7 @@
       // SUCCESS: User is logged in (fresh login OR persistent session)
       const email = user.email;
       const rawName = email.split('@')[0];
-      // FIX: Capitalize the name so it matches "Alysha" in the database
+      // FIX: Capitalize the name so it matches \"Alysha\" in the database
       currentDriver = rawName.charAt(0).toUpperCase() + rawName.slice(1);
       
       localStorage.setItem('ec_driver_name', currentDriver); // Keep local storage sync
@@ -879,10 +879,10 @@
       
       // Update Header
       document.getElementById('header-name').innerHTML = `
-        <img src="icon-512.png" class="header-logo">
-        <span style="font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
-        <span style="white-space: nowrap;">
-          <span id="stop-counter" class="stop-badge" style="margin-left: 0;">0 STOPS</span>
+        <img src=\"icon-512.png\" class=\"header-logo\">
+        <span style=\"font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;\">${currentDriver}</span>
+        <span style=\"white-space: nowrap;\">
+          <span id=\"stop-counter\" class=\"stop-badge\" style=\"margin-left: 0;\">0 STOPS</span>
         </span>
       `;
 
@@ -976,7 +976,7 @@
     const passwordInput = document.getElementById('login-pin').value.trim();
 
     if (!emailInput || !passwordInput) {
-      alert("Please enter both Email and Password");
+      alert(\"Please enter both Email and Password\");
       return;
     }
 
@@ -985,7 +985,7 @@
         location.reload();
     })
     .catch((error) => {
-      alert("Login Failed: " + error.code + "\n" + error.message);
+      alert(\"Login Failed: \" + error.code + \"\\n\" + error.message);
     });
   }
 
@@ -1007,9 +1007,9 @@ document.addEventListener('keypress', (e) => {
 
   function toggleDetails(btn, id) {
     const box = btn.closest('.active-card').querySelector('.details-box');
-    const isOpening = box.style.display !== "block";
-    box.style.display = isOpening ? "block" : "none";
-    btn.innerText = isOpening ? "HIDE" : "INFO";
+    const isOpening = box.style.display !== \"block\";
+    box.style.display = isOpening ? \"block\" : \"none\";
+    btn.innerText = isOpening ? \"HIDE\" : \"INFO\";
     acknowledgeUpdate(id);
   }
 
@@ -1018,7 +1018,7 @@ document.addEventListener('keypress', (e) => {
     if(!job) return;
     const refPath = job.jobType === 'pickup' ? 'pickups' : 'dropoffs';
     
-    if(confirm("Restore this job back to the active list?")) {
+    if(confirm(\"Restore this job back to the active list?\")) {
       db.ref(refPath).child(id).update({ 
         status: 'pending',
         completed_at: null 
@@ -1031,11 +1031,11 @@ document.addEventListener('keypress', (e) => {
     if(!job) return;
     const refPath = job.jobType === 'pickup' ? 'pickups' : 'dropoffs';
     
-    if(confirm("Are you sure you want to decline this job?")) {
+    if(confirm(\"Are you sure you want to decline this job?\")) {
       db.ref(refPath).child(id).update({ 
-        assigned_to: "",
-        status: "pending"
-      }).catch(err => alert("Error declining job: " + err.message));
+        assigned_to: \"\",
+        status: \"pending\"
+      }).catch(err => alert(\"Error declining job: \" + err.message));
     }
   }
 
@@ -1044,14 +1044,14 @@ document.addEventListener('keypress', (e) => {
     const job = globalJobs[id];
     if(!job) return;
     const refPath = job.jobType === 'pickup' ? 'pickups' : 'dropoffs';
-    const reasonText = job.jobType === 'pickup' ? "Reason for DNP:" : "Reason for DND:";
-    const tag = job.jobType === 'pickup' ? "DNP" : "DND";
+    const reasonText = job.jobType === 'pickup' ? \"Reason for DNP:\" : \"Reason for DND:\";
+    const tag = job.jobType === 'pickup' ? \"DNP\" : \"DND\";
     
     const reason = prompt(reasonText);
     if (reason === null) return; // Cancelled
     
     if (!reason.trim()) {
-      alert("Please provide a reason.");
+      alert(\"Please provide a reason.\");
       return;
     }
 
@@ -1059,16 +1059,16 @@ document.addEventListener('keypress', (e) => {
     const updatedNotes = existingNotes ? `${existingNotes} | ${tag} (${currentDriver}): ${reason}` : `${tag} (${currentDriver}): ${reason}`;
     
     db.ref(refPath).child(id).update({ 
-      assigned_to: "",
-      status: "pending",
+      assigned_to: \"\",
+      status: \"pending\",
       other_info: updatedNotes
-    }).catch(err => alert("Error processing: " + err.message));
+    }).catch(err => alert(\"Error processing: \" + err.message));
 
     // --- START EMAIL TRIGGER ---
     if (job.customer_email) {
-        fetch("https://script.google.com/macros/s/AKfycbyQDC4eq3YiiDLuY42Y7rBpWa1FBkPTaCUMQJTSw8qAEzW5sfBA4hR4WNNwzdxMFLij/exec", {
-            method: "POST",
-            mode: "no-cors",
+        fetch(\"https://script.google.com/macros/s/AKfycbyQDC4eq3YiiDLuY42Y7rBpWa1FBkPTaCUMQJTSw8qAEzW5sfBA4hR4WNNwzdxMFLij/exec\", {
+            method: \"POST\",
+            mode: \"no-cors\",
             body: JSON.stringify({
                 email: job.customer_email,
                 notes: reason,
@@ -1083,10 +1083,10 @@ document.addEventListener('keypress', (e) => {
   function enterNoteEdit(id, currentNotes) {
     if (event) event.stopPropagation();
     const container = document.getElementById(`note-display-${id}`);
-    const safeNotes = currentNotes.replace(/\\'/g, "'");
+    const safeNotes = currentNotes.replace(/\\\\'/g, \"'\");
     container.innerHTML = `
-      <textarea id="edit-input-${id}" class="edit-note-input" onclick="event.stopPropagation()">${safeNotes}</textarea>
-      <button class="save-note-btn" onclick="event.stopPropagation(); saveNoteEdit('${id}')">SAVE</button>
+      <textarea id=\"edit-input-${id}\" class=\"edit-note-input\" onclick=\"event.stopPropagation()\">${safeNotes}</textarea>
+      <button class=\"save-note-btn\" onclick=\"event.stopPropagation(); saveNoteEdit('${id}')\">SAVE</button>
     `;
   }
 
@@ -1099,7 +1099,7 @@ document.addEventListener('keypress', (e) => {
     const taggedNote = `${newText} (Edited by ${currentDriver})`;
     selfEdited.add(`${id}_notes`);
     db.ref(refPath).child(id).update({ other_info: taggedNote })
-      .catch(err => alert("Save failed: " + err.message));
+      .catch(err => alert(\"Save failed: \" + err.message));
   }
 
   function toggleDriverNoteEdit(e, id) {
@@ -1107,19 +1107,19 @@ document.addEventListener('keypress', (e) => {
     const container = document.getElementById(`driver-note-display-${id}`);
     
     // Check if container has content (is open)
-    if(container.innerHTML.trim() !== "") {
-        container.innerHTML = "";
+    if(container.innerHTML.trim() !== \"\") {
+        container.innerHTML = \"\";
     } else {
         container.innerHTML = `
-          <div style="position: fixed; bottom: 0; left: 0; width: 100%; background: #151515; padding: 15px; border-top: 2px solid var(--accent); z-index: 10000; box-shadow: 0 -5px 30px rgba(0,0,0,0.9);">
-             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <span style="color:var(--accent); font-weight:900;">DRIVER NOTE</span>
+          <div style=\"position: fixed; bottom: 0; left: 0; width: 100%; background: #151515; padding: 15px; border-top: 2px solid var(--accent); z-index: 10000; box-shadow: 0 -5px 30px rgba(0,0,0,0.9);\">
+             <div style=\"display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;\">
+                <span style=\"color:var(--accent); font-weight:900;\">DRIVER NOTE</span>
              </div>
-             <div style="position:relative;">
-                 <textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" style="height:100px; margin-bottom:10px; padding-bottom: 30px;" onclick="event.stopPropagation()"></textarea>
-                 <button onclick="toggleDriverNoteEdit(event, '${id}')" class="cancel-note-btn">CANCEL</button>
+             <div style=\"position:relative;\">
+                 <textarea id=\"driver-edit-input-${id}\" class=\"edit-note-input glow-yellow\" style=\"height:100px; margin-bottom:10px; padding-bottom: 30px;\" onclick=\"event.stopPropagation()\"></textarea>
+                 <button onclick=\"toggleDriverNoteEdit(event, '${id}')\" class=\"cancel-note-btn\">CANCEL</button>
              </div>
-             <button class="save-note-btn" style="width: 100%; padding: 12px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND NOTE</button>
+             <button class=\"save-note-btn\" style=\"width: 100%; padding: 12px;\" onclick=\"event.stopPropagation(); saveDriverNote('${id}')\">SEND NOTE</button>
           </div>
         `;
         setTimeout(() => document.getElementById(`driver-edit-input-${id}`).focus(), 100);
@@ -1132,24 +1132,24 @@ document.addEventListener('keypress', (e) => {
     const refPath = job.jobType === 'pickup' ? 'pickups' : 'dropoffs';
     
     const newText = document.getElementById(`driver-edit-input-${id}`).value;
-    db.ref(refPath).child(id).child("other_info").once("value", s => {
-      const existing = s.val() || "";
+    db.ref(refPath).child(id).child(\"other_info\").once(\"value\", s => {
+      const existing = s.val() || \"\";
       const taggedNote = existing ? `${existing} | Driver Note (${currentDriver}): ${newText}` : `Driver Note (${currentDriver}): ${newText}`;
       selfEdited.add(`${id}_notes`);
       db.ref(refPath).child(id).update({ other_info: taggedNote })
-        .catch(err => alert("Save failed: " + err.message));
+        .catch(err => alert(\"Save failed: \" + err.message));
     });
   }
 
   function enterPoEdit(e, id, currentVal) {
     e.stopPropagation();
     const container = document.getElementById(`po-container-${id}`);
-    const safeVal = currentVal.replace(/"/g, "");
+    const safeVal = currentVal.replace(/\"/g, \"\");
     container.innerHTML = `
-        <div style="display:flex; gap:5px; justify-content:flex-end; align-items:center; margin-top:5px;">
-          <input type="text" id="po-input-${id}" class="login-input glow-yellow" style="width: 120px; padding: 6px; margin: 0; font-size:13px;" value="${safeVal}" onclick="event.stopPropagation()">
-          <button class="save-note-btn" style="margin:0;" onclick="savePoEdit(event, '${id}')">SAVE</button>
-          <button class="save-note-btn" style="background:#555; margin:0;" onclick="cancelPoEdit(event, '${id}', '${safeVal}')">X</button>
+        <div style=\"display:flex; gap:5px; justify-content:flex-end; align-items:center; margin-top:5px;\">
+          <input type=\"text\" id=\"po-input-${id}\" class=\"login-input glow-yellow\" style=\"width: 120px; padding: 6px; margin: 0; font-size:13px;\" value=\"${safeVal}\" onclick=\"event.stopPropagation()\">
+          <button class=\"save-note-btn\" style=\"margin:0;\" onclick=\"savePoEdit(event, '${id}')\">SAVE</button>
+          <button class=\"save-note-btn\" style=\"background:#555; margin:0;\" onclick=\"cancelPoEdit(event, '${id}', '${safeVal}')\">X</button>
         </div>
     `;
   }
@@ -1167,7 +1167,7 @@ document.addEventListener('keypress', (e) => {
 
   function cancelPoEdit(e, id, original) {
     e.stopPropagation();
-    document.getElementById(`po-container-${id}`).innerHTML = `PO: <span style="color:var(--accent);">${original}</span>`;
+    document.getElementById(`po-container-${id}`).innerHTML = `PO: <span style=\"color:var(--accent);\">${original}</span>`;
   }
 
   function getNavUrl(addr, city) {
@@ -1176,7 +1176,7 @@ document.addEventListener('keypress', (e) => {
 
   function getCurrentPosition() {
     return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) return reject("Geolocation not supported");
+      if (!navigator.geolocation) return reject(\"Geolocation not supported\");
       navigator.geolocation.getCurrentPosition(
         pos => resolve(`${pos.coords.latitude},${pos.coords.longitude}`),
         err => reject(err),
@@ -1194,12 +1194,12 @@ document.addEventListener('keypress', (e) => {
   let dropoffData = {};
 
   function startDataListeners() {
-    db.ref("pickups").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => {
+    db.ref(\"pickups\").orderByChild(\"assigned_to\").equalTo(currentDriver).on(\"value\", snap => {
       pickupData = snap.val() || {};
       mergeAndRender();
     });
 
-    db.ref("dropoffs").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => {
+    db.ref(\"dropoffs\").orderByChild(\"assigned_to\").equalTo(currentDriver).on(\"value\", snap => {
       dropoffData = snap.val() || {};
       mergeAndRender();
     });
@@ -1246,16 +1246,16 @@ document.addEventListener('keypress', (e) => {
   }
 
   function renderUnifiedFeed() {
-    const feed = document.getElementById("live-feed"); 
-    const rLog = document.getElementById("recent-log"); 
-    const qLog = document.getElementById("queue-log");
-    const routeBtn = document.getElementById("multi-route-btn");
-    const stopCounter = document.getElementById("stop-counter");
+    const feed = document.getElementById(\"live-feed\"); 
+    const rLog = document.getElementById(\"recent-log\"); 
+    const qLog = document.getElementById(\"queue-log\");
+    const routeBtn = document.getElementById(\"multi-route-btn\");
+    const stopCounter = document.getElementById(\"stop-counter\");
     
     // CAPTURE EXISTING IDs BEFORE CLEARING
     const existingQueueIds = Array.from(qLog.querySelectorAll('.history-item')).map(el => el.id.replace('mini-', ''));
 
-    feed.innerHTML = ""; rLog.innerHTML = ""; qLog.innerHTML = "";
+    feed.innerHTML = \"\"; rLog.innerHTML = \"\"; qLog.innerHTML = \"\";
     const startOfToday = new Date().setHours(0,0,0,0);
     const lastDoneId = sessionStorage.getItem('last_completed_job');
     let pendingCount = 0;
@@ -1314,42 +1314,42 @@ document.addEventListener('keypress', (e) => {
       const internalChange = changedFields.some(f => ['contact', 'dropName', 'po', 'notes'].includes(f));
 
       // DYNAMIC CARD LOGIC
-      let topLabel, topAddr, topContact;  // The "Target"
-      let botLabel, botAddr, botContact;  // The "Secondary"
+      let topLabel, topAddr, topContact;  // The \"Target\"
+      let botLabel, botAddr, botContact;  // The \"Secondary\"
       let badgeColor, badgeText;
       let dndButtonText;
 
       if (p.jobType === 'pickup') {
-            badgeColor = "#ff9800"; // Orange
-            badgeText = "PICK UP";
-            dndButtonText = "DNP";
+            badgeColor = \"#ff9800\"; // Orange
+            badgeText = \"PICK UP\";
+            dndButtonText = \"DNP\";
             
-            topLabel = "PICKUP AT";
+            topLabel = \"PICKUP AT\";
             topAddr = p.pickup_location;
             topContact = p.name; 
             
-            botLabel = "DELIVER TO";
+            botLabel = \"DELIVER TO\";
             botAddr = p.destination;
             botContact = p.delivery_name;
       } else {
-            badgeColor = "#00ff41"; // Green
-            badgeText = "DELIVERY";
-            dndButtonText = "DND";
+            badgeColor = \"#00ff41\"; // Green
+            badgeText = \"DELIVERY\";
+            dndButtonText = \"DND\";
             
-            topLabel = "DELIVER TO";
+            topLabel = \"DELIVER TO\";
             topAddr = p.destination;
             topContact = p.delivery_name;
             
-            botLabel = "FROM";
+            botLabel = \"FROM\";
             botAddr = p.pickup_location;
             botContact = p.name; 
       }
 
-      const shortAddr = topAddr || "No Address";
+      const shortAddr = topAddr || \"No Address\";
       const contactName = topContact || 'No Name';
       
-      const item = document.createElement("div"); 
-      item.className = "history-item";
+      const item = document.createElement(\"div\"); 
+      item.className = \"history-item\";
       item.id = `mini-${id}`;
       
       // ANIMATE IF NEW TO PENDING LIST
@@ -1365,10 +1365,10 @@ document.addEventListener('keypress', (e) => {
       if(needsAlert) item.classList.add('has-update');
 
       item.innerHTML = `
-        <div style="background:${badgeColor}; width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px;"></div>
-        <span class="history-contact" style="font-size:12px; margin-bottom:1px; display:inline;">${contactName}</span>
-        <div style="font-weight:700; font-size:11px; line-height:1.2; color:#ccc;">${shortAddr}</div>
-        <span class="history-package">${(p.package_details || '').replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</span>
+        <div style=\"background:${badgeColor}; width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px;\"></div>
+        <span class=\"history-contact\" style=\"font-size:12px; margin-bottom:1px; display:inline;\">${contactName}</span>
+        <div style=\"font-weight:700; font-size:11px; line-height:1.2; color:#ccc;\">${shortAddr}</div>
+        <span class=\"history-package\">${(p.package_details || '').replace(/\\b(skid|pallet)\\b/gi, '<span class=\"heavy-word\">$&</span>')}</span>
       `;
 
       if (p.status === 'completed') {
@@ -1382,8 +1382,8 @@ document.addEventListener('keypress', (e) => {
         qLog.appendChild(item);
 
         const navUrl = getNavUrl(topAddr, p.city || '');
-        const card = document.createElement("div"); 
-        card.className = "active-card";
+        const card = document.createElement(\"div\"); 
+        card.className = \"active-card\";
         card.onclick = () => acknowledgeUpdate(id);
         
         if (!p.seen_by || !p.seen_by[currentDriver]) {
@@ -1393,63 +1393,63 @@ document.addEventListener('keypress', (e) => {
         if(needsAlert) card.classList.add('has-update');
 
         // ESCAPE QUOTES FOR DND FUNCTION STRING
-        const escapedNotes = (p.other_info || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-        const isEdited = (p.other_info || "").includes("(Edited by") || (p.other_info || "").includes("DND (") || (p.other_info || "").includes("DNP (") || (p.other_info || "").includes("Driver Note (");
+        const escapedNotes = (p.other_info || \"\").replace(/\\\\/g, \"\\\\\\\\\").replace(/'/g, \"\\\\'\");
+        const isEdited = (p.other_info || \"\").includes(\"(Edited by\") || (p.other_info || \"\").includes(\"DND (\") || (p.other_info || \"\").includes(\"DNP (\") || (p.other_info || \"\").includes(\"Driver Note (\");
 
         card.id = `card-${id}`;
         
-        const noteWithTags = (p.other_info || "").replace(/\[([^\]]+)\]:/g, '<span style="color:var(--update-blue); font-weight:900; text-shadow:0 0 5px rgba(0,212,255,0.3);">[$1]:</span>');
+        const noteWithTags = (p.other_info || \"\").replace(/\\[([^\\]]+)\\]:/g, '<span style=\"color:var(--update-blue); font-weight:900; text-shadow:0 0 5px rgba(0,212,255,0.3);\">[$1]:</span>');
 
-        const notesDisplay = (p.other_info && p.other_info.trim() !== "") ? 
-          `<div class="${isEdited ? 'notes-edited' : ''} ${needsAlert && changedFields.includes('notes') ? 'field-highlight' : ''}" style="text-align:center; width:100%; margin-top:10px; color:#ddd; font-size:12px; word-wrap:break-word; font-style:italic;">${noteWithTags}</div>` 
+        const notesDisplay = (p.other_info && p.other_info.trim() !== \"\") ? 
+          `<div class=\"${isEdited ? 'notes-edited' : ''} ${needsAlert && changedFields.includes('notes') ? 'field-highlight' : ''}\" style=\"text-align:center; width:100%; margin-top:10px; color:#ddd; font-size:12px; word-wrap:break-word; font-style:italic;\">${noteWithTags}</div>` 
           : '';
 
         card.innerHTML = `
-          <div style="position: absolute; top: 12px; right: 12px; cursor: pointer; z-index: 5;" onclick="toggleDriverNoteEdit(event, '${id}')">
-            <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));">
-              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          <div style=\"position: absolute; top: 12px; right: 12px; cursor: pointer; z-index: 5;\" onclick=\"toggleDriverNoteEdit(event, '${id}')\">
+            <svg viewBox=\"0 0 24 24\" style=\"width: 26px; height: 26px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));\">
+              <path d=\"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z\"/>
             </svg>
           </div>
 
-          <div style="display:flex; gap:10px;">
-            <div style="flex:1; min-width:0;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; margin-right:30px;">
-                  <div class="card-date-badge">
-                     <div style="background:#fff; color:#000; font-weight:900; padding:2px 6px; border-radius:50%; font-size:14px; border:2px solid ${badgeColor}; width:24px; height:24px; display:flex; align-items:center; justify-content:center; margin-right:6px;">${seqIndex}</div>
-                     <div style="background:${badgeColor}; color:#000; font-weight:900; padding:2px 6px; border-radius:4px; font-size:11px;">${badgeText}</div>
-                     ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
+          <div style=\"display:flex; gap:10px;\">
+            <div style=\"flex:1; min-width:0;\"> <div style=\"display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; margin-right:30px;\">
+                  <div class=\"card-date-badge\">
+                     <div style=\"background:#fff; color:#000; font-weight:900; padding:2px 6px; border-radius:50%; font-size:14px; border:2px solid ${badgeColor}; width:24px; height:24px; display:flex; align-items:center; justify-content:center; margin-right:6px;\">${seqIndex}</div>
+                     <div style=\"background:${badgeColor}; color:#000; font-weight:900; padding:2px 6px; border-radius:4px; font-size:11px;\">${badgeText}</div>
+                     ${needsAlert ? `<span id=\"badge-${id}\" class=\"update-badge\">NEW INFO</span>` : ''}
                   </div>
-                  <a href="${navUrl}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${p.city || '??'}</div></a>
+                  <a href=\"${navUrl}\" target=\"_blank\" class=\"nav-link\"><div class=\"city-tag\" style=\"margin:0;\">${p.city || '??'}</div></a>
                </div>
                
-               <div class="card-label" style="margin-top:2px;">${topLabel}</div>
-               <div class="tech-info ${needsAlert && changedFields.includes('contact') ? 'field-highlight' : ''}" style="margin-bottom:2px; color: var(--queue-orange); font-size:16px; line-height:1.1;">${topContact || 'N/A'}</div>
-               <a href="${navUrl}" target="_blank" class="nav-link">
-                  <div class="pickup-value ${needsAlert && changedFields.includes('addr') ? 'field-highlight' : ''}">${topAddr}</div>
+               <div class=\"card-label\" style=\"margin-top:2px;\">${topLabel}</div>
+               <div class=\"tech-info ${needsAlert && changedFields.includes('contact') ? 'field-highlight' : ''}\" style=\"margin-bottom:2px; color: var(--queue-orange); font-size:16px; line-height:1.1;\">${topContact || 'N/A'}</div>
+               <a href=\"${navUrl}\" target=\"_blank\" class=\"nav-link\">
+                  <div class=\"pickup-value ${needsAlert && changedFields.includes('addr') ? 'field-highlight' : ''}\">${topAddr}</div>
                </a>
                
-               <div style="background:rgba(255,255,255,0.05); padding:4px 6px; border-radius:4px; margin: 6px 0; border-left:2px solid #555;">
-                   <div class="tech-info ${needsAlert && changedFields.includes('details') ? 'field-highlight' : ''}" style="font-size:12px; color:#ddd; text-transform:uppercase;">${(p.package_details || "-").replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</div>
+               <div style=\"background:rgba(255,255,255,0.05); padding:4px 6px; border-radius:4px; margin: 6px 0; border-left:2px solid #555;\">
+                   <div class=\"tech-info ${needsAlert && changedFields.includes('details') ? 'field-highlight' : ''}\" style=\"font-size:12px; color:#ddd; text-transform:uppercase;\">${(p.package_details || \"-\").replace(/\\b(skid|pallet)\\b/gi, '<span class=\"heavy-word\">$&</span>')}</div>
                </div>
 
-               <div class="card-label" style="margin-top:4px;">${botLabel}</div>
-               <div class="tech-info ${needsAlert && changedFields.includes('dropName') ? 'field-highlight' : ''}" style="color: #bbb; font-size:13px;">${botContact || 'N/A'}</div>
-               <div class="drop-value ${needsAlert && changedFields.includes('dest') ? 'field-highlight' : ''}" style="font-size:13px; color:#999;">${botAddr}</div>
+               <div class=\"card-label\" style=\"margin-top:4px;\">${botLabel}</div>
+               <div class=\"tech-info ${needsAlert && changedFields.includes('dropName') ? 'field-highlight' : ''}\" style=\"color: #bbb; font-size:13px;\">${botContact || 'N/A'}</div>
+               <div class=\"drop-value ${needsAlert && changedFields.includes('dest') ? 'field-highlight' : ''}\" style=\"font-size:13px; color:#999;\">${botAddr}</div>
                
-               ${(p.po_number && p.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" style="font-weight:bold; color:#aaa; font-size:13px; cursor:pointer; margin-top:4px;">PO: <span class="${needsAlert && changedFields.includes('po') ? 'field-highlight' : ''}" style="color:var(--accent);">${p.po_number}</span></div>` : ''}
+               ${(p.po_number && p.po_number.trim() !== \"\") ? `<div id=\"po-container-${id}\" onclick=\"enterPoEdit(event, '${id}', '${(p.po_number||\"\").replace(/'/g, \"\\\\'\")}')\" style=\"font-weight:bold; color:#aaa; font-size:13px; cursor:pointer; margin-top:4px;\">PO: <span class=\"${needsAlert && changedFields.includes('po') ? 'field-highlight' : ''}\" style=\"color:var(--accent);\">${p.po_number}</span></div>` : ''}
                
                ${notesDisplay}
             </div>
 
-            <div style="width:75px; display:flex; flex-direction:column; gap:6px; justify-content:center;"> <div class="time-stack">
-                 <div class="job-time-stamp">${formatTime12(p.timestamp)}</div>
-                 <div class="job-date-stamp">${formatDateShort(p.timestamp)}</div>
+            <div style=\"width:75px; display:flex; flex-direction:column; gap:6px; justify-content:center;\"> <div class=\"time-stack\">
+                 <div class=\"job-time-stamp\">${formatTime12(p.timestamp)}</div>
+                 <div class=\"job-date-stamp\">${formatDateShort(p.timestamp)}</div>
                </div>
-               <button class="info-btn" onclick="dndJob('${id}', '${escapedNotes}')">${dndButtonText}</button>
-               <button class="done-btn" onclick="markDone('${id}')">DONE</button>
+               <button class=\"info-btn\" onclick=\"dndJob('${id}', '${escapedNotes}')\">${dndButtonText}</button>
+               <button class=\"done-btn\" onclick=\"markDone('${id}')\">DONE</button>
             </div>
           </div>
           
-          <div id="driver-note-display-${id}"></div>
+          <div id=\"driver-note-display-${id}\"></div>
         `;
         feed.appendChild(card);
         if (observer) observer.observe(card);
@@ -1461,19 +1461,19 @@ document.addEventListener('keypress', (e) => {
 
     if(pendingCount >= 20) {
       routeBtn.classList.add('glow-max');
-      routeBtn.innerText = "MAX ROUTE";
+      routeBtn.innerText = \"MAX ROUTE\";
     } else if(pendingCount > 1) {
       routeBtn.classList.remove('glow-active');
       routeBtn.classList.add('glow-active');
-      routeBtn.innerText = "ROUTE NAV";
+      routeBtn.innerText = \"ROUTE NAV\";
     } else {
       routeBtn.classList.remove('glow-active', 'glow-max');
-      routeBtn.innerText = "ROUTE NAV";
+      routeBtn.innerText = \"ROUTE NAV\";
     }
   }
 
   function markDone(id) {
-    if(!confirm("Complete?")) return;
+    if(!confirm(\"Complete?\")) return;
     const card = document.getElementById(`card-${id}`);
     if(card) card.classList.add('card-exit-success');
     
@@ -1502,12 +1502,12 @@ document.addEventListener('keypress', (e) => {
           const job = globalJobs[id];
           if(job) {
              const refPath = job.jobType === 'pickup' ? 'pickups' : 'dropoffs';
-             db.ref(`${refPath}/${id}/other_info`).once('value', s => enterNoteEdit(id, (s.val() || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'"))); 
+             db.ref(`${refPath}/${id}/other_info`).once('value', s => enterNoteEdit(id, (s.val() || \"\").replace(/\\\\/g, \"\\\\\\\\\").replace(/'/g, \"\\\\'\"))); 
           }
       } 
   });
 
-  const dragger = document.getElementById("mini-map-list");
+  const dragger = document.getElementById(\"mini-map-list\");
   let isDown = false;
   let offset = [0,0];
 
