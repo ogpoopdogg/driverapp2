@@ -748,7 +748,7 @@
             headers: {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": GOOGLE_KEY,
-                "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs"
+                "X-Goog-FieldMask": "routes.duration,routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs"
             },
             body: JSON.stringify({
                 origin: origin,
@@ -764,8 +764,12 @@
         if (result.routes && result.routes[0]) {
             // Save Polyline for Command Center
             if(result.routes[0].polyline) {
+                 let dur = result.routes[0].duration ? parseInt(result.routes[0].duration) : 0;
+                 let durStr = dur > 3600 ? `${Math.floor(dur/3600)} hr ${Math.floor((dur%3600)/60)} min` : `${Math.floor(dur/60)} min`;
+                 
                  db.ref(`driver_locations/${currentDriver}`).update({
                     active_route: result.routes[0].polyline.encodedPolyline,
+                    total_duration: durStr,
                     route_timestamp: Date.now()
                 });
                 
