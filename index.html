@@ -354,6 +354,16 @@
     .info-btn:active { background: rgba(33, 150, 243, 0.1); }
     .done-btn { width: 100%; padding: 12px 0; border: none; border-radius: 6px; color: #fff; font-weight: 800; cursor: pointer; text-transform: uppercase; background: linear-gradient(135deg, var(--active-green), #388e3c); font-size: 14px; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3); transition: transform 0.1s; letter-spacing: 1px; flex: 1; }
     .done-btn:active { transform: scale(0.98); }
+
+    .arrival-highlight .done-btn {
+      animation: arrival-glow 0.8s infinite alternate !important;
+      border: 3px solid #fff !important;
+      box-shadow: 0 0 25px var(--active-green) !important;
+    }
+    @keyframes arrival-glow {
+      from { transform: scale(1); filter: brightness(1); }
+      to { transform: scale(1.08); filter: brightness(1.3); }
+    }
     
     .details-box { display: none; background: #111; padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid var(--review-blue); font-size: 15px; color: #ddd; line-height: 1.5; overflow-wrap: anywhere; pointer-events: auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
     
@@ -633,6 +643,15 @@
   }
 
   /* --- TRACKING & AUDIO --- */
+  function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
   async function startContinuousTracking() {
     if ("Notification" in window) Notification.requestPermission();
     if ('wakeLock' in navigator) {
@@ -644,6 +663,15 @@
       lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
       
+      Object.keys(globalJobs).forEach(jid => {
+        const job = globalJobs[jid];
+        if (job.status === 'pending' && job.lat && job.lng && job.assigned_to === currentDriver) {
+          if (getDistance(pos.coords.latitude, pos.coords.longitude, job.lat, job.lng) < 50) {
+            document.getElementById('card-' + jid)?.classList.add('arrival-highlight');
+          }
+        }
+      });
+
       if(driverMarker) {
         driverMarker.setPosition(latLng);
         const icon = driverMarker.getIcon();
@@ -778,6 +806,7 @@
                    const loc = legs[i].endLocation ? legs[i].endLocation.latLng : null;
                    if(!loc) return;
                    
+                   job.lat = loc.latitude; job.lng = loc.longitude;
                    const isPickup = job.jobType === 'pickup';
                    const colorHex = isPickup ? "#FE9800" : "#4CAF50";
                    const bizName = isPickup ? job.name : job.delivery_name;
@@ -910,6 +939,7 @@
       
       if(card) {
         card.classList.remove('has-update');
+        card.classList.remove('arrival-highlight');
         card.querySelectorAll('.field-highlight').forEach(el => el.classList.remove('field-highlight'));
         const infoBtn = card.querySelector('.info-btn');
         if(infoBtn) infoBtn.classList.remove('info-btn-animate');
