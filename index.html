@@ -90,23 +90,16 @@
       transition: all 0.3s ease;
     }
 
-    /* NEW UPDATE ALERT BUTTON */
-    #new-route-alert {
-      position: absolute; bottom: 75px; left: 50%; transform: translateX(-50%);
-      width: 60%;
-      background: linear-gradient(135deg, #00d4ff, #0056b3);
-      color: #fff; border: 1px solid #fff;
-      padding: 12px 24px; border-radius: 30px;
-      font-size: 12px; font-weight: 900;
-      box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
-      z-index: 9999; cursor: pointer;
-      text-align: center; display: none;
-      animation: alertPulse 1.5s infinite alternate;
-      text-transform: uppercase; letter-spacing: 1px;
+    .route-glow-update {
+      animation: proUpdatePulse 2s infinite ease-in-out !important;
+      border-color: var(--update-blue) !important;
+      background: linear-gradient(135deg, #222 0%, #004455 100%) !important;
     }
-    @keyframes alertPulse {
-      from { transform: translateX(-50%) scale(1); box-shadow: 0 0 20px rgba(0, 212, 255, 0.6); }
-      to { transform: translateX(-50%) scale(1.05); box-shadow: 0 0 50px rgba(0, 212, 255, 1); }
+
+    @keyframes proUpdatePulse {
+      0% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.2); border-color: #777; }
+      50% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.6); border-color: var(--update-blue); }
+      100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.2); border-color: #777; }
     }
 
     /* MINI MAP LIST */
@@ -439,7 +432,6 @@
   <div id="main-list-btn" onclick="toggleList()">LIST</div>    
   <div id="list-btn" onclick="toggleList()">LIST</div>
     <button id="route-toggle-btn" onclick="openExternalRoute()">ROUTE</button>
-    <button id="new-route-alert" onclick="activateNewRoute()">New Route - Update Google Map</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -569,6 +561,7 @@
 
   function openExternalRoute() {
     hasInitialRoute = true;
+    document.getElementById('route-toggle-btn').classList.remove('route-glow-update');
     if(optimizedOrder.length === 0) {
         alert("No stops to route.");
         return;
@@ -1173,11 +1166,9 @@ document.addEventListener('keypress', (e) => {
              lastAnnouncedId = null;
          }
          
-         if (!isFirstLoad && currentPending > 0) {
-             // Show Alert Button
-             document.getElementById('new-route-alert').style.display = 'block';
-         } else {
-             document.getElementById('new-route-alert').style.display = 'none';
+         if (!isFirstLoad) {
+             // Subtle Pro Glow on Route Button
+             document.getElementById('route-toggle-btn').classList.add('route-glow-update');
          }
     }
     
