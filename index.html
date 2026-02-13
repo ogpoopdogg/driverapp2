@@ -1118,12 +1118,12 @@ document.addEventListener('keypress', (e) => {
   let pickupData = {};
   let dropoffData = {};
 
-  db.ref("pickups").on("value", snap => {
+  db.ref("pickups").orderByChild("status").equalTo("pending").on("value", snap => {
     pickupData = snap.val() || {};
     mergeAndRender();
   });
 
-  db.ref("dropoffs").on("value", snap => {
+  db.ref("dropoffs").orderByChild("status").equalTo("pending").on("value", snap => {
     dropoffData = snap.val() || {};
     mergeAndRender();
   });
