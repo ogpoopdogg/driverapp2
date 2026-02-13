@@ -456,9 +456,7 @@
   }); 
   firebase.database().setPersistenceEnabled(true);
 
-  // REMOVED: firebase.auth().signInAnonymously(); 
-  // We now wait for user to explicitly log in below
-
+  // firebase.auth().signInAnonymously();
   const db = firebase.database();
   let currentDriver = localStorage.getItem('ec_driver_name');
 
@@ -920,13 +918,9 @@ function attemptLogin() {
     return;
   }
 
-  // Uses official Firebase Auth
   firebase.auth().signInWithEmailAndPassword(emailInput, passwordInput)
   .then((userCredential) => {
-      // Logic: Extracts the name part before the "@" to use as driver ID
-      // Example: "Steve@ec.com" becomes "Steve"
       const driverName = emailInput.split('@')[0];
-      
       localStorage.setItem('ec_driver_name', driverName);
       location.reload();
   })
@@ -1241,7 +1235,7 @@ document.addEventListener('keypress', (e) => {
 
       const changedFields = pendingAlerts[id] || [];
       const needsAlert = changedFields.length > 0 && !sessionStorage.getItem(`ack_update_${id}`);
-      const internalChange = changedFields.some(f => ['contact', 'dropName', 'po', 'notes'].includes(f));
+      const internalChange = changedFields.some(f => f === 'contact' || f === 'dropName' || f === 'po' || f === 'notes');
 
       // DYNAMIC CARD LOGIC
       let topLabel, topAddr, topContact;  // The "Target"
