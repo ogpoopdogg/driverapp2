@@ -827,7 +827,10 @@
     if (user) {
       // SUCCESS: User is logged in (fresh login OR persistent session)
       const email = user.email;
-      currentDriver = email.split('@')[0]; // Extract name from email
+      const rawName = email.split('@')[0];
+      // FIX: Capitalize the name so it matches "Alysha" in the database
+      currentDriver = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+      
       localStorage.setItem('ec_driver_name', currentDriver); // Keep local storage sync
 
       // Hide Login
@@ -1215,7 +1218,9 @@ document.addEventListener('keypress', (e) => {
 
     let seqIndex = 0;
     sortedEntries.forEach(([id, p]) => {
+      // KEEPING THE FILTER AS REQUESTED:
       if (p.assigned_to !== currentDriver) return;
+      
       if (p.status === 'completed' && (p.completed_at || 0) < startOfToday) return;
 
       const currentFields = {
