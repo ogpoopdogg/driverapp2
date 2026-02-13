@@ -44,7 +44,7 @@
     }
 
     #zoom-btn {
-        position: absolute; bottom: 70px; right: 70px;
+        position: absolute; bottom: 120px; right: 20px;
         background: #333; color: #fff; width: 40px; height: 40px;
         border-radius: 50%; border: 1px solid #555;
         display: flex; align-items: center; justify-content: center;
@@ -483,6 +483,7 @@
   let lastGpsUpdate = 0;
   const gpsInterval = 10000; // Faster updates for Nav
   let wakeLock = null;
+  let lastRouteClick = Date.now();
   
   /* --- MAP FUNCTIONS --- */
   function initMap() {
@@ -582,14 +583,18 @@
         const job = globalJobs[id];
         if(!job) return "";
         const addr = job.jobType === 'pickup' ? job.pickup_location : job.destination;
+        const name = job.jobType === 'pickup' ? job.name : job.delivery_name;
         const city = job.city || "Brandon";
-        return encodeURIComponent(`${addr}, ${city}`);
+        return encodeURIComponent(`${name} ${addr}, ${city}`);
     }).filter(w => w !== "").join("|");
 
     // 3. Detect Device
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     const isAndroid = /android/i.test(userAgent);
     const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+
+    lastRouteClick = Date.now();
+    updateRoute();
 
     // 4. Force App Logic
     const webUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
@@ -686,7 +691,8 @@
 
     const intermediates = jobs.map(j => {
         const addr = j.jobType === 'pickup' ? j.pickup_location : j.destination;
-        return { address: `${addr}, ${j.city||'Brandon'}` };
+        const name = j.jobType === 'pickup' ? j.name : j.delivery_name;
+        return { address: `${name} ${addr}, ${j.city||'Brandon'}` };
     });
 
     const shouldOptimize = jobs.length > 1;
@@ -787,7 +793,7 @@
                    mapLabels.push(info);
 
                    // Mini List Item & Animation Logic
-                   const isUnseen = !job.seen_by || !job.seen_by[currentDriver];
+                   const isUnseen = job.timestamp > lastRouteClick;
                    const animClass = isUnseen ? 'mini-flash' : '';
                    
                    listHtml += `<div class="mini-list-item ${animClass}"><div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div><div style="flex:1; line-height:1.1;">${bizName}</div></div>`;
