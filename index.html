@@ -1058,8 +1058,20 @@ document.addEventListener('keypress', (e) => {
     // TAG DRIVER AND MARK AS EDITED
     const updatedNotes = existingNotes ? `${existingNotes} | ${tag} (${currentDriver}): ${reason}` : `${tag} (${currentDriver}): ${reason}`;
     
-    db.ref(refPath).child(id).update({ 
-      assigned_to: "",
+    db.ref(refPath).child(id).update({
+      // --- START EMAIL TRIGGER ---
+if (job.customer_email) {
+    fetch("https://script.google.com/macros/s/AKfycbxUDHdIBbU1qWsT1T9-TPCXp1mhr1ygvcKq3_xr3cjkO26d08ud3ens5wzh_YeveQGgGw/exec", {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify({
+            email: job.customer_email,
+            notes: reason,
+            type: job.jobType
+        })
+    });
+}
+// --- END EMAIL TRIGGER ---      assigned_to: "",
       status: "pending",
       other_info: updatedNotes
     }).catch(err => alert("Error processing: " + err.message));
