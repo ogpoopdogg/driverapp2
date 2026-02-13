@@ -848,6 +848,7 @@
       // Initialize App
       startContinuousTracking();
       setupIntersectionObserver();
+      startDataListeners();
       mergeAndRender(); 
     } else {
       // User is logged out
@@ -1136,15 +1137,17 @@ document.addEventListener('keypress', (e) => {
   let pickupData = {};
   let dropoffData = {};
 
-  db.ref("pickups").orderByChild("status").equalTo("pending").on("value", snap => {
-    pickupData = snap.val() || {};
-    mergeAndRender();
-  });
+  function startDataListeners() {
+    db.ref("pickups").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => {
+      pickupData = snap.val() || {};
+      mergeAndRender();
+    });
 
-  db.ref("dropoffs").orderByChild("status").equalTo("pending").on("value", snap => {
-    dropoffData = snap.val() || {};
-    mergeAndRender();
-  });
+    db.ref("dropoffs").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => {
+      dropoffData = snap.val() || {};
+      mergeAndRender();
+    });
+  }
 
   function mergeAndRender() {
     if(!currentDriver) return;
