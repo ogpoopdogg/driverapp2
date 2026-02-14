@@ -542,7 +542,17 @@
   
 
   const db = firebase.database();
-  const messaging = firebase.messaging();
+  let messaging = null;
+
+  // SAFETY CHECK: Messaging only works on HTTPS or Localhost
+  try {
+    if (firebase.messaging.isSupported()) {
+      messaging = firebase.messaging();
+    }
+  } catch(e) {
+    console.warn("Messaging not supported in this environment");
+  }
+
   let currentDriver = localStorage.getItem('ec_driver_name');
 
   let observer = null;
@@ -733,17 +743,18 @@
   }
 
   async function startContinuousTracking() {
-    if ("Notification" in window && "serviceWorker" in navigator) {
+    if ("Notification" in window && "serviceWorker" in navigator && messaging) {
       Notification.requestPermission().then(perm => {
         if (perm === 'granted') {
           navigator.serviceWorker.ready.then(reg => {
             messaging.getToken({ serviceWorkerRegistration: reg }).then(token => {
               if (token) db.ref(`driver_locations/${currentDriver}/fcm_token`).set(token);
-            });
+            }).catch(e => console.log("Token error", e));
           });
         }
       });
     }
+
     if ('wakeLock' in navigator) {
       try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
     }
@@ -1074,10 +1085,8 @@
       return;
     }
 
+    // FIXED: REMOVED RELOAD TO PREVENT LOOP
     firebase.auth().signInWithEmailAndPassword(emailInput, passwordInput)
-    .then(() => {
-        location.reload();
-    })
     .catch((error) => {
       alert("Login Failed: " + error.code + "\n" + error.message);
     });
@@ -1733,7 +1742,7 @@ document.addEventListener('keypress', (e) => {
   // 3. Register Service Worker (Required for PWA)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
+      navigator.serviceWorker.register('./firebase-messaging-sw.js')
         .then(reg => console.log('SW Registered'))
         .catch(err => console.log('SW Error', err));
     });
