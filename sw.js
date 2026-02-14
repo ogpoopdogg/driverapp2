@@ -11,12 +11,27 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Basic PWA Caching
-const CACHE_NAME = 'ec-driver-v1';
-self.addEventListener('install', (e) => {
-    e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./', './index.html', './manifest.json'])));
+// Simplified Caching to prevent "Evaluation Failed" errors
+const CACHE_NAME = 'ec-driver-v2';
+const ASSETS = [
+    './',
+    './index.html',
+    './manifest.json'
+];
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => {
+            // we use 'addAll' but wrap it so one missing file doesn't crash the whole SW
+            return Promise.allSettled(ASSETS.map(asset => cache.add(asset)));
+        })
+    );
 });
 
-self.addEventListener('fetch', (e) => {
-    e.respondWith(caches.match(e.request).then(response => response || fetch(e.request)));
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        caches.match(event.request).then((response) => {
+            return response || fetch(event.request);
+        })
+    );
 });
