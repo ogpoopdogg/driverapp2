@@ -221,8 +221,8 @@
     .tech-info { font-size: 14px; font-weight: 700; color: var(--text-main); text-transform: uppercase; line-height: 1.2; }
     .dim-x { color: var(--text-sec); font-weight: 400; padding: 0 1px; }
     .time-stack { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding-right: 60px; }
-    .job-time-stamp { font-size: 13px; font-weight: 700; color: #FFB020; }
-    .job-date-stamp { font-size: 9px; font-weight: 600; color: #666; text-transform: uppercase; }
+    .job-time-stamp { font-size: 13px; font-weight: 700; color: #FFB020; white-space: nowrap; }
+    .job-date-stamp { font-size: 9px; font-weight: 600; color: #666; text-transform: uppercase; white-space: nowrap; }
     .info-btn { width: 100%; background: transparent; color: var(--review-blue); border: 1px solid var(--review-blue); padding: 8px 0; font-size: 11px; font-weight: 800; border-radius: 6px; cursor: pointer; transition: background 0.2s; margin-bottom: 6px; }
     .info-btn:active { background: rgba(33, 150, 243, 0.1); }
     .done-btn { width: 100%; padding: 12px 0; border: none; border-radius: 6px; color: #fff; font-weight: 800; cursor: pointer; text-transform: uppercase; background: linear-gradient(135deg, var(--active-green), #388e3c); font-size: 14px; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3); transition: transform 0.1s; letter-spacing: 1px; flex: 1; }
@@ -705,6 +705,7 @@
                    const colorHex = isPickup ? "#FE9800" : "#4CAF50";
                    const bizName = isPickup ? job.name : job.delivery_name;
                    const addrText = isPickup ? job.pickup_location : job.destination;
+                   const city = job.city || "Brandon";
                    
                    // Pin
                    const marker = new google.maps.Marker({
@@ -745,8 +746,11 @@
                         <div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div>
                         <div style="flex:1; overflow:hidden;">
                             <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${bizName} ${countBadge}</div>
+                            <div style="border:1px solid #333; border-radius:6px; padding:6px; margin-top:5px; background:rgba(0,0,0,0.2);">
+                                <div class="mini-address" style="text-align:left; margin:0; -webkit-line-clamp:1;">${addrText}</div>
+                                <div style="font-size:10px; color:#666; margin-top:2px;">${city}</div>
+                            </div>
                         </div>
-                        <div class="mini-address">${addrText}</div>
                     </div>`;
                 }
             });
@@ -1175,7 +1179,8 @@ document.addEventListener('keypress', (e) => {
     // CAPTURE EXISTING IDs BEFORE CLEARING
     const existingQueueIds = Array.from(qLog.querySelectorAll('.history-item')).map(el => el.id.replace('mini-', ''));
 
-    feed.innerHTML = ""; rLog.innerHTML = ""; qLog.innerHTML = "";
+    feed.innerHTML = "<div style='width:100%; text-align:center; color:#555; font-size:10px; padding:10px; opacity:0.7; letter-spacing:1px;'>&lt;&lt; SWIPE RIGHT TO GO BACK</div>"; 
+    rLog.innerHTML = ""; qLog.innerHTML = "";
     const startOfToday = new Date().setHours(0,0,0,0);
     const lastDoneId = sessionStorage.getItem('last_completed_job');
     let pendingCount = 0;
@@ -1301,7 +1306,7 @@ document.addEventListener('keypress', (e) => {
         item.onclick = () => scrollToCard(id); 
         qLog.appendChild(item);
 
-        const navUrl = getNavUrl(topAddr, p.city || '');
+        const navUrl = getNavUrl((topContact ? topContact + ' ' : '') + topAddr, p.city || '');
         const card = document.createElement("div"); 
         card.className = "active-card";
         card.onclick = () => acknowledgeUpdate(id);
@@ -1465,6 +1470,16 @@ document.addEventListener('keypress', (e) => {
         .catch(err => console.log('SW Error', err));
     });
   }
+  
+  // GESTURE NAVIGATION FOR JOB CARDS
+  let touchStart = 0;
+  const feedUi = document.getElementById('live-feed');
+  feedUi.addEventListener('touchstart', e => touchStart = e.changedTouches[0].screenX, {passive: true});
+  feedUi.addEventListener('touchend', e => {
+      // 75px threshold for right swipe
+      if(e.changedTouches[0].screenX > touchStart + 75) closeJobCard();
+  }, {passive: true});
+  
 </script>
 </body>
 </html>
