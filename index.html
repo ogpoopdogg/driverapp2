@@ -8,27 +8,48 @@
     :root {
       --accent: #ffcc00;
       --queue-orange: #ff9800;
-      --card-bg: #1e1e1e;
       --active-green: #4caf50;
       --review-blue: #2196f3;
       --decline-red: #f44336;
-      --text-main: #ffffff;
       --update-blue: #00d4ff;
+      
+      /* Default Dark Mode Variables */
+      --bg-core: #050505;
+      --bg-panel: #1e1e1e;
+      --bg-header: #0a0a0a;
+      --bg-input: #222;
+      --text-main: #ffffff;
+      --text-sec: #bbb;
+      --border-soft: #333;
+      --card-bg: #1e1e1e;
     }
+
+    [data-theme="light"] {
+      --accent: #d6a400;
+      --bg-core: #f0f2f5;
+      --bg-panel: #ffffff;
+      --bg-header: #ffffff;
+      --bg-input: #eef;
+      --text-main: #111111;
+      --text-sec: #555555;
+      --border-soft: #ccc;
+      --card-bg: #ffffff;
+    }
+
     * { box-sizing: border-box; }
     
-    html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; background: #050505; color: #e0e0e0; }
+    html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg-core); color: var(--text-main); }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
     
     /* MAP CONTAINER STYLES - Dynamic height based on flex */
-    #map-container { height: 70vh; width: 100%; position: relative; background: #222; z-index: 10; border-bottom: 2px solid var(--accent); transition: height 0.1s ease; flex-shrink: 0; }
+    #map-container { height: 70vh; width: 100%; position: relative; background: var(--bg-input); z-index: 10; border-bottom: 2px solid var(--accent); transition: height 0.1s ease; flex-shrink: 0; }
     #map { height: 100%; width: 100%; }
 
     /* RESIZER BAR */
     #drag-resizer {
-        height: 14px; width: 100%; background: #111; cursor: ns-resize;
+        height: 14px; width: 100%; background: var(--bg-header); cursor: ns-resize;
         display: flex; align-items: center; justify-content: center;
-        border-top: 1px solid #333; z-index: 60; flex-shrink: 0;
+        border-top: 1px solid var(--border-soft); z-index: 60; flex-shrink: 0;
     }
     .drag-handle { width: 30px; height: 3px; background: #555; border-radius: 2px; position: relative; }
     .drag-handle::before, .drag-handle::after {
@@ -185,6 +206,7 @@
       vertical-align: middle;
       filter: drop-shadow(0 0 5px var(--accent));
       animation: logo-glow 2s infinite alternate;
+      cursor: pointer;
     }
 
     @keyframes logo-glow {
@@ -240,14 +262,14 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;
     }
     .login-box {
-      width: 100%; max-width: 350px; background: #111; padding: 30px; 
-      border-radius: 16px; border: 1px solid #333; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+      width: 100%; max-width: 350px; background: var(--bg-panel); padding: 30px; 
+      border-radius: 16px; border: 1px solid var(--border-soft); box-shadow: 0 20px 50px rgba(0,0,0,0.7);
       text-align: center;
     }
     .login-box h2 { color: var(--accent); margin-top: 0; font-weight: 800; letter-spacing: 1px; }
     .login-input {
-      width: 100%; padding: 15px; margin: 10px 0; background: #222; border: 1px solid #444;
-      color: #fff; border-radius: 8px; font-size: 16px; outline: none; transition: 0.3s;
+      width: 100%; padding: 15px; margin: 10px 0; background: var(--bg-input); border: 1px solid var(--border-soft);
+      color: var(--text-main); border-radius: 8px; font-size: 16px; outline: none; transition: 0.3s;
     }
     .login-input:focus { border-color: var(--accent); background: #2a2a2a; }
     .login-submit {
@@ -256,11 +278,11 @@
       text-transform: uppercase; box-shadow: 0 4px 15px rgba(255, 204, 0, 0.3);
     }
 
-    header { padding: 12px 16px; background: #0a0a0a; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 10; }
+    header { padding: 12px 16px; background: var(--bg-header); border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; }
     h1 { margin: 0; color: var(--accent); font-size: 18px; font-weight: 800; display: flex; align-items: center; letter-spacing: 0.5px; }
     #clock { font-size: 14px; color: var(--accent); font-weight: 600; opacity: 0.9; }
 
-    #main-container { display: flex; flex-direction: column; flex: 1; width: 100%; overflow: hidden; background: #050505; }
+    #main-container { display: flex; flex-direction: column; flex: 1; width: 100%; overflow: hidden; background: var(--bg-core); }
     
     #history-sidebar { display: none; } /* Hidden in Driver Mode */
     
@@ -300,7 +322,7 @@
     .section-label-pending { font-size: 13px; font-weight: 800; text-transform: uppercase; margin: 10px 0 6px 0; color: var(--queue-orange); border-bottom: 1px solid #333; animation: pulseOrange 3s infinite ease-in-out; letter-spacing: 0.5px; }
     .section-label-done { font-size: 12px; font-weight: 800; text-transform: uppercase; margin: 15px 0 6px 0; color: var(--active-green); border-bottom: 1px solid #333; opacity: 0.8; }
     
-    .history-item { background: #181818; padding: 10px 8px; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid var(--active-green); font-size: 12px; cursor: pointer; overflow: hidden; white-space: normal; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .history-item { background: var(--bg-panel); padding: 10px 8px; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid var(--active-green); font-size: 12px; cursor: pointer; overflow: hidden; white-space: normal; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .just-archived { animation: proArchivePop 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; z-index: 10; border-left-width: 6px; }
 
     @keyframes proArchivePop {
@@ -320,7 +342,7 @@
     .history-package { color: #777; font-size: 12px; display: block; text-transform: uppercase; font-weight: 700; margin-top: 3px; }
 
     #live-feed { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
-    .active-card { background: var(--card-bg); padding: 10px; border-radius: 12px; border: 1px solid #333; width: 100%; display: flex; flex-direction: column; animation: slideInRight 0.4s both; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; }
+    .active-card { background: var(--card-bg); padding: 10px; border-radius: 12px; border: 1px solid var(--border-soft); width: 100%; display: flex; flex-direction: column; animation: slideInRight 0.4s both; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; }
 
     .new-job-highlight {
       border: 2px solid var(--active-green) !important;
@@ -340,11 +362,11 @@
     .card-date-badge { font-size: 10px; font-weight: 800; color: #555; text-transform: uppercase; margin-right: 8px; display: flex; align-items: center; letter-spacing: 0.5px; }
     .card-label { color: var(--accent); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; margin-bottom: 1px; margin-top: 4px; }
     .nav-link { text-decoration: none; color: inherit; }
-    .city-tag { display: inline-block; font-size: 10px; background: #2a2a2a; color: #fff; padding: 2px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; border: 1px solid #444; letter-spacing: 0.5px; }
-    .pickup-value { font-size: 15px; font-weight: 700; line-height: 1.25; color: #fff; text-transform: uppercase; margin-bottom: 2px; word-wrap: break-word; }
-    .drop-value { font-size: 13px; font-weight: 500; line-height: 1.3; color: #bbb; text-transform: uppercase; word-wrap: break-word; }
-    .tech-info { font-size: 14px; font-weight: 700; color: #eee; text-transform: uppercase; line-height: 1.2; }
-    .dim-x { color: #666; font-weight: 400; padding: 0 1px; }
+    .city-tag { display: inline-block; font-size: 10px; background: var(--bg-input); color: var(--text-main); padding: 2px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; border: 1px solid var(--border-soft); letter-spacing: 0.5px; }
+    .pickup-value { font-size: 15px; font-weight: 700; line-height: 1.25; color: var(--text-main); text-transform: uppercase; margin-bottom: 2px; word-wrap: break-word; }
+    .drop-value { font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--text-sec); text-transform: uppercase; word-wrap: break-word; }
+    .tech-info { font-size: 14px; font-weight: 700; color: var(--text-main); text-transform: uppercase; line-height: 1.2; }
+    .dim-x { color: var(--text-sec); font-weight: 400; padding: 0 1px; }
     
     .time-stack { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding-right: 60px; }
     .job-time-stamp { font-size: 13px; font-weight: 700; color: #FFB020; }
@@ -430,7 +452,7 @@
 
 <header>
   <h1 id="header-name">
-    <img src="icon-512.png" class="header-logo" alt="Logo">
+    <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
     E&C PORTAL
   </h1>
   <div id="clock"></div>
@@ -469,6 +491,21 @@
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ&libraries=places,geometry&callback=initMap" async defer></script>
 
 <script>
+  // LOAD SETTINGS IMMEDIATELY
+  const savedTheme = localStorage.getItem('ec_theme') || 'dark';
+  document.body.setAttribute('data-theme', savedTheme);
+  
+  const savedMapHeight = localStorage.getItem('ec_map_height');
+  if(savedMapHeight) document.getElementById('map-container').style.height = savedMapHeight;
+
+  const savedListPos = localStorage.getItem('ec_list_pos');
+  if(savedListPos) {
+      const pos = JSON.parse(savedListPos);
+      const el = document.getElementById('mini-map-list');
+      el.style.top = pos.top;
+      el.style.left = pos.left;
+  }
+
   firebase.initializeApp({
     apiKey: "AIzaSyAKmgoXA4m3cRTmxJq4aUyva5SVvFbTNqg",
     authDomain: "eandccourier-36fcc.firebaseapp.com",
@@ -505,21 +542,36 @@
   const gpsInterval = 10000; // Faster updates for Nav
   let wakeLock = null;
   let lastRouteClick = Date.now();
+
+  // DARK MODE STYLES
+  const darkMapStyles = [
+    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+  ];
+  
+  function toggleTheme() {
+    const isLight = document.body.getAttribute('data-theme') === 'light';
+    const newTheme = isLight ? 'dark' : 'light';
+    document.body.setAttribute('data-theme', newTheme);
+    localStorage.setItem('ec_theme', newTheme);
+    
+    if(map) {
+        map.setOptions({ styles: newTheme === 'light' ? [] : darkMapStyles });
+    }
+  }
   
   /* --- MAP FUNCTIONS --- */
   function initMap() {
+    const isLight = document.body.getAttribute('data-theme') === 'light';
     map = new google.maps.Map(document.getElementById("map"), {
       zoom: 13,
       center: { lat: 49.8485, lng: -99.9501 },
       disableDefaultUI: true,
-      styles: [
-        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-      ]
+      styles: isLight ? [] : darkMapStyles
     });
 
     directionsService = new google.maps.DirectionsService();
@@ -883,7 +935,7 @@
       
       // Update Header
       document.getElementById('header-name').innerHTML = `
-        <img src="icon-512.png" class="header-logo">
+        <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
         <span style="font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
         <span style="white-space: nowrap;">
           <span id="stop-counter" class="stop-badge" style="margin-left: 0;">0 STOPS</span>
@@ -1524,7 +1576,14 @@ document.addEventListener('keypress', (e) => {
   }, true);
 
   document.addEventListener('mouseup', function() {
-      isDown = false;
+      if(isDown) {
+          isDown = false;
+          // SAVE MINI LIST POSITION
+          localStorage.setItem('ec_list_pos', JSON.stringify({
+              top: dragger.style.top,
+              left: dragger.style.left
+          }));
+      }
   }, true);
 
   document.addEventListener('mousemove', function(e) {
@@ -1545,7 +1604,14 @@ document.addEventListener('keypress', (e) => {
   }, {passive: false});
 
   document.addEventListener('touchend', function() {
-      isDown = false;
+      if(isDown) {
+          isDown = false;
+          // SAVE MINI LIST POSITION (MOBILE)
+          localStorage.setItem('ec_list_pos', JSON.stringify({
+              top: dragger.style.top,
+              left: dragger.style.left
+          }));
+      }
   }, true);
 
   document.addEventListener('touchmove', function(e) {
@@ -1574,6 +1640,9 @@ document.addEventListener('keypress', (e) => {
       document.body.style.cursor = 'default';
       document.body.style.userSelect = 'auto';
       if(map) google.maps.event.trigger(map, 'resize');
+      
+      // SAVE SPLIT SCREEN HEIGHT
+      localStorage.setItem('ec_map_height', mapContainer.style.height);
   };
 
   const handleResize = (e) => {
