@@ -513,6 +513,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ&libraries=places,geometry&callback=initMap" async defer></script>
 
 <script>
@@ -535,11 +536,13 @@
     apiKey: "AIzaSyAKmgoXA4m3cRTmxJq4aUyva5SVvFbTNqg",
     authDomain: "eandccourier-36fcc.firebaseapp.com",
     databaseURL: "https://eandccourier-36fcc-default-rtdb.firebaseio.com",
-    projectId: "eandccourier-36fcc"
+    projectId: "eandccourier-36fcc",
+    messagingSenderId: "931221081541"
   }); 
   
 
   const db = firebase.database();
+  const messaging = firebase.messaging();
   let currentDriver = localStorage.getItem('ec_driver_name');
 
   let observer = null;
@@ -730,7 +733,17 @@
   }
 
   async function startContinuousTracking() {
-    if ("Notification" in window) Notification.requestPermission();
+    if ("Notification" in window && "serviceWorker" in navigator) {
+      Notification.requestPermission().then(perm => {
+        if (perm === 'granted') {
+          navigator.serviceWorker.ready.then(reg => {
+            messaging.getToken({ serviceWorkerRegistration: reg }).then(token => {
+              if (token) db.ref(`driver_locations/${currentDriver}/fcm_token`).set(token);
+            });
+          });
+        }
+      });
+    }
     if ('wakeLock' in navigator) {
       try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
     }
