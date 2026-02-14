@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>E&C Dispatch | Driver Portal</title>
+  <link rel="manifest" href="manifest.json">
   <style>
     :root {
       --accent: #ffcc00;
@@ -282,6 +283,29 @@
     h1 { margin: 0; color: var(--accent); font-size: 18px; font-weight: 800; display: flex; align-items: center; letter-spacing: 0.5px; }
     #clock { font-size: 14px; color: var(--accent); font-weight: 600; opacity: 0.9; }
 
+    /* --- NEW INSTALL BUTTON STYLE --- */
+    .install-btn {
+      display: none; /* Hidden by default */
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 800;
+      font-size: 11px;
+      cursor: pointer;
+      margin: 0 10px;
+      animation: pulse-blue 2s infinite;
+      text-transform: uppercase;
+      box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+    }
+    @keyframes pulse-blue {
+      0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); transform: scale(1); }
+      50% { transform: scale(1.05); }
+      70% { box-shadow: 0 0 0 8px rgba(33, 150, 243, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); transform: scale(1); }
+    }
+
     #main-container { display: flex; flex-direction: column; flex: 1; width: 100%; overflow: hidden; background: var(--bg-core); }
     
     #history-sidebar { display: none; } /* Hidden in Driver Mode */
@@ -455,6 +479,7 @@
     <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
     E&C PORTAL
   </h1>
+  <button id="install-btn" class="install-btn" onclick="installPWA()">Install App</button>
   <div id="clock"></div>
 </header>
 
@@ -1668,6 +1693,38 @@ document.addEventListener('keypress', (e) => {
   window.addEventListener('mouseup', endResize);
   window.addEventListener('touchend', endResize);
 
+  /* --- PWA INSTALL LOGIC --- */
+  let deferredPrompt;
+  const installBtn = document.getElementById('install-btn');
+
+  // 1. Listen for the install prompt event
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show the button because the app is installable and not yet installed
+    installBtn.style.display = 'block';
+  });
+
+  // 2. Handle button click
+  async function installPWA() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        installBtn.style.display = 'none';
+      }
+      deferredPrompt = null;
+    }
+  }
+
+  // 3. Register Service Worker (Required for PWA)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('SW Registered'))
+        .catch(err => console.log('SW Error', err));
+    });
+  }
 </script>
 </body>
 </html>
