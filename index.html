@@ -42,90 +42,106 @@
     html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg-core); color: var(--text-main); }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
     
-    /* MAP CONTAINER STYLES - Dynamic height based on flex */
-    #map-container { height: 70vh; width: 100%; position: relative; background: var(--bg-input); z-index: 10; border-bottom: 2px solid var(--accent); transition: height 0.1s ease; flex-shrink: 0; }
-    #map { height: 100%; width: 100%; }
-
-    /* RESIZER BAR */
-    #drag-resizer {
-        height: 14px; width: 100%; background: var(--bg-header); cursor: ns-resize;
-        display: flex; align-items: center; justify-content: center;
-        border-top: 1px solid var(--border-soft); z-index: 60; flex-shrink: 0;
-    }
-    .drag-handle { width: 30px; height: 3px; background: #555; border-radius: 2px; position: relative; }
-    .drag-handle::before, .drag-handle::after {
-        content: ''; position: absolute; left: 50%; transform: translateX(-50%);
-        width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
-    }
-    .drag-handle::before { border-bottom: 4px solid #555; top: -7px; }
-    .drag-handle::after { border-top: 4px solid #555; bottom: -7px; }
-
-    /* FULL SCREEN MODE */
-    body.fullscreen-mode #map-container { height: 100vh !important; position: fixed; top: 0; left: 0; z-index: 9999; border: none; }
-    body.fullscreen-mode #drag-resizer { display: none !important; }
-    body.fullscreen-mode header, body.fullscreen-mode #main-container { display: none !important; }
+    /* VISUAL OVERHAUL: Hide Map, Resizer, and Layout elements */
+    #map-container { height: 0 !important; width: 0 !important; opacity: 0; pointer-events: none; position: absolute; overflow: hidden; }
+    #drag-resizer { display: none !important; }
     
-    /* CUSTOM MAP LABELS (No Bubble) */
-    .gm-style-iw-c { background: none !important; box-shadow: none !important; padding: 0 !important; max-width: none !important; max-height: none !important; }
-    .gm-style-iw-d { overflow: visible !important; background: none !important; color: #00ff41 !important; font-weight: 900 !important; font-size: 14px !important; text-shadow: 0 0 4px #000; text-transform: uppercase; }
-    .gm-style-iw-t::after { display: none !important; }
-    .gm-ui-hover-effect { display: none !important; }
+    /* RESTRUCTURED MAIN CONTAINER - FULL SCREEN */
+    #main-container { display: flex; flex-direction: column; flex: 1; width: 100%; height: 100%; overflow: hidden; background: var(--bg-core); position: relative; }
     
-    #recenter-btn {
-        position: absolute; bottom: 70px; right: 20px;
-        background: #333; color: #fff; width: 40px; height: 40px;
-        border-radius: 50%; border: 1px solid #555;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 20px; cursor: pointer; z-index: 50;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    /* NEW LIST VIEW STYLES (Formerly Mini Map List) */
+    #mini-map-list {
+        position: absolute; inset: 0;
+        max-height: none; width: 100%;
+        background: var(--bg-core); 
+        padding: 20px 15px 100px 15px; /* Bottom padding for route button */
+        border-radius: 0;
+        overflow-y: auto; z-index: 10;
+        border: none; display: block;
     }
 
-    #zoom-btn {
-        position: absolute; bottom: 120px; right: 20px;
-        background: #333; color: #fff; width: 40px; height: 40px;
-        border-radius: 50%; border: 1px solid #555;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 24px; font-weight: bold; cursor: pointer; z-index: 50;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    .mini-list-item { 
+      font-size: 16px; 
+      color: var(--text-main); 
+      margin-bottom: 12px; 
+      display: flex; 
+      align-items: center; 
+      line-height: 1.3; 
+      padding: 20px; 
+      background: var(--bg-panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: transform 0.1s, background 0.2s;
+    }
+    .mini-list-item:active { transform: scale(0.98); background: var(--bg-input); }
+
+    .mini-num { 
+      font-weight: 900; 
+      color: #000; 
+      background: #fff; 
+      border-radius: 50%; 
+      width: 36px; height: 36px; /* Larger */
+      display: flex; align-items: center; justify-content: center; 
+      margin-right: 15px; 
+      font-size: 18px; 
+      flex-shrink: 0; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
     
-    #fs-btn {
-      position: absolute; top: 10px; right: 10px; padding: 8px 12px;
-      background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #777;
-      border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer;
-      z-index: 50; backdrop-filter: blur(4px);
+    .mini-flash { animation: mini-pulse-anim 1s infinite alternate; border: 1px solid var(--update-blue); }
+    @keyframes mini-pulse-anim {
+        from { box-shadow: 0 0 2px var(--update-blue); }
+        to { box-shadow: 0 0 10px var(--update-blue); }
     }
 
-    #back-btn {
-      position: absolute; top: 10px; left: 10px; padding: 8px 16px;
-      background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #777;
-      border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer;
-      z-index: 50; backdrop-filter: blur(4px); display: none;
+    /* CARD OVERLAY SYSTEM (Replaces Feed Flow) */
+    #live-feed { 
+      display: none; /* Hidden by default */
+      position: fixed; 
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      padding: 20px;
+      flex-direction: column;
+      justify-content: flex-end; /* Stick to bottom */
+      align-items: center;
+    }
+    
+    #live-feed.overlay-active { display: flex; }
+
+    /* The individual card when active */
+    .active-card { 
+      background: var(--card-bg); 
+      padding: 15px; 
+      border-radius: 16px; 
+      border: 1px solid var(--border-soft); 
+      width: 100%; 
+      max-width: 600px;
+      display: flex; 
+      flex-direction: column; 
+      animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.6); 
+      margin-bottom: 30px; /* Space from bottom */
     }
 
-    #list-btn {
-      position: absolute; top: 10px; right: 10px; padding: 8px 16px;
-      background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #777;
-      border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer;
-      z-index: 50; backdrop-filter: blur(4px); display: none;
-    }
-/* New List Button for Main Screen */
-    #main-list-btn {
-      position: absolute; top: 50px; right: 10px; padding: 8px 12px;
-      background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #777;
-      border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer;
-      z-index: 50; backdrop-filter: blur(4px);
-    }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-    /* Hide this button when in full screen (since there is already one there) */
-    body.fullscreen-mode #main-list-btn { display: none !important; }    #route-toggle-btn {
-      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); 
-      padding: 12px 24px; width: 60%; text-align: center;
-      background: #222; color: #fff; border: 1px solid #fff;
-      border-radius: 30px; font-weight: 900; font-size: 14px; cursor: pointer;
-      z-index: 50; box-shadow: 0 4px 10px rgba(0,0,0,0.5); letter-spacing: 0.5px;
+    /* ROUTE BUTTON - New Location & Style */
+    #route-toggle-btn {
+      position: absolute; bottom: 30px; right: 20px; 
+      width: 60px; height: 60px; padding: 0;
+      border-radius: 50%;
+      background: #222; color: #fff; border: 2px solid var(--accent);
+      z-index: 100; box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
       transition: all 0.3s ease;
+      transform: none; /* Reset transform */
+      left: auto; /* Remove centering */
     }
+    
+    #route-toggle-btn svg { width: 30px; height: 30px; fill: #fff; }
 
     .route-glow-update {
       animation: proUpdatePulse 2s infinite ease-in-out !important;
@@ -139,250 +155,42 @@
       100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.2); border-color: #777; }
     }
 
-    /* MINI MAP LIST */
-    #mini-map-list {
-        position: absolute; top: 60px; left: 10px;
-        max-height: calc(100% - 150px); width: fit-content;
-        background: rgba(0,0,0,0.8); padding: 6px; border-radius: 8px;
-        overflow-y: auto; z-index: 40;
-        border: 1px solid #444; display: none;
-        cursor: move;
-    }
-    .mini-list-item { font-size: 10px; color: #fff; margin-bottom: 8px; display: flex; align-items: flex-start; line-height: 1.2; padding-right: 6px; }
-    .mini-num { font-weight: 900; color: #000; background: #fff; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; margin-right: 6px; font-size: 10px; flex-shrink: 0; margin-top: 1px; }
-    
-    .mini-flash { animation: mini-pulse-anim 1s infinite alternate; border-radius: 4px; background: rgba(0, 212, 255, 0.2); }
-    @keyframes mini-pulse-anim {
-        from { box-shadow: 0 0 2px var(--update-blue); }
-        to { box-shadow: 0 0 10px var(--update-blue); }
-    }
+    /* UTILITY STYLES PRESERVED */
+    .has-update { border: 2px solid var(--update-blue) !important; animation: update-glow 1.5s infinite alternate !important; }
+    .field-highlight { color: var(--update-blue) !important; text-shadow: 0 0 10px rgba(0, 212, 255, 0.6); font-weight: bold; animation: field-pulse 1s infinite alternate; display: inline-block; }
+    .info-btn-animate { animation: field-pulse 1s infinite alternate !important; background: rgba(0, 212, 255, 0.1) !important; box-shadow: 0 0 15px var(--update-blue) !important; }
+    @keyframes field-pulse { from { opacity: 0.8; transform: scale(1); } to { opacity: 1; transform: scale(1.05); } }
+    .update-badge { background: var(--update-blue); color: #000; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 10px; margin-left: 8px; animation: pulse-update 0.5s infinite alternate; letter-spacing: 0.5px; }
+    @keyframes update-glow { from { box-shadow: 0 0 5px var(--update-blue); } to { box-shadow: 0 0 15px var(--update-blue); } }
+    @keyframes pulse-update { from { opacity: 0.7; } to { opacity: 1; } }
+    .header-logo { height: 28px; width: auto; margin-right: 12px; vertical-align: middle; filter: drop-shadow(0 0 5px var(--accent)); animation: logo-glow 2s infinite alternate; cursor: pointer; }
+    @keyframes logo-glow { from { filter: drop-shadow(0 0 2px var(--accent)); transform: scale(1); } to { filter: drop-shadow(0 0 8px var(--accent)); transform: scale(1.05); } }
+    .stop-badge { background: rgba(0, 212, 255, 0.1); color: var(--update-blue); border: 1px solid var(--update-blue); padding: 4px 10px; border-radius: 6px; font-size: 12px; margin-left: 10px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 0 10px rgba(0, 212, 255, 0.1); text-shadow: 0 0 5px rgba(0, 212, 255, 0.3); animation: pro-pulse-blue 3s infinite ease-in-out; display: inline-block; vertical-align: middle; }
+    .new-stops-badge { background: #ff0000; color: #fff; border: 2px solid #fff; padding: 4px 12px; border-radius: 50px; font-size: 16px; margin-left: 15px; font-weight: 900; display: none; vertical-align: middle; box-shadow: 0 0 15px rgba(255, 0, 0, 0.8); animation: static-glow 2s infinite alternate; }
+    @keyframes static-glow { from { box-shadow: 0 0 5px rgba(255, 0, 0, 0.5); } to { box-shadow: 0 0 15px rgba(255, 0, 0, 1); } }
+    @keyframes pro-pulse-blue { 0% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); background: rgba(0, 212, 255, 0.05); } 50% { box-shadow: 0 0 15px rgba(0, 212, 255, 0.4); border-color: var(--update-blue); background: rgba(0, 212, 255, 0.1); } 100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); background: rgba(0, 212, 255, 0.05); } }
 
-    /* NEW INFO ANIMATIONS */
-    .has-update {
-      border: 2px solid var(--update-blue) !important;
-      animation: update-glow 1.5s infinite alternate !important;
-    }
-
-    /* SPECIFIC FIELD HIGHLIGHTING */
-    .field-highlight {
-      color: var(--update-blue) !important;
-      text-shadow: 0 0 10px rgba(0, 212, 255, 0.6);
-      font-weight: bold;
-      animation: field-pulse 1s infinite alternate;
-      display: inline-block;
-    }
-
-    /* INFO BUTTON ANIMATION */
-    .info-btn-animate {
-      animation: field-pulse 1s infinite alternate !important;
-      background: rgba(0, 212, 255, 0.1) !important;
-      box-shadow: 0 0 15px var(--update-blue) !important;
-    }
-
-    @keyframes field-pulse {
-      from { opacity: 0.8; transform: scale(1); }
-      to { opacity: 1; transform: scale(1.05); }
-    }
-
-    .update-badge {
-      background: var(--update-blue);
-      color: #000; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 10px; margin-left: 8px;
-      animation: pulse-update 0.5s infinite alternate; letter-spacing: 0.5px;
-    }
-
-    @keyframes update-glow {
-      from { box-shadow: 0 0 5px var(--update-blue); }
-      to { box-shadow: 0 0 15px var(--update-blue); }
-    }
-
-    @keyframes pulse-update {
-      from { opacity: 0.7; }
-      to { opacity: 1; }
-    }
-
-    .header-logo {
-      height: 28px; 
-      width: auto;
-      margin-right: 12px;
-      vertical-align: middle;
-      filter: drop-shadow(0 0 5px var(--accent));
-      animation: logo-glow 2s infinite alternate;
-      cursor: pointer;
-    }
-
-    @keyframes logo-glow {
-      from { filter: drop-shadow(0 0 2px var(--accent)); transform: scale(1); }
-      to { filter: drop-shadow(0 0 8px var(--accent)); transform: scale(1.05); }
-    }
-
-    .stop-badge {
-      background: rgba(0, 212, 255, 0.1);
-      color: var(--update-blue);
-      border: 1px solid var(--update-blue);
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      margin-left: 10px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      box-shadow: 0 0 10px rgba(0, 212, 255, 0.1);
-      text-shadow: 0 0 5px rgba(0, 212, 255, 0.3);
-      animation: pro-pulse-blue 3s infinite ease-in-out;
-      display: inline-block;
-      vertical-align: middle;
-    }
-
-    .new-stops-badge {
-      background: #ff0000;
-      color: #fff;
-      border: 2px solid #fff;
-      padding: 4px 12px;
-      border-radius: 50px;
-      font-size: 16px;
-      margin-left: 15px;
-      font-weight: 900;
-      display: none;
-      vertical-align: middle;
-      box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
-      animation: static-glow 2s infinite alternate;
-    }
-
-    @keyframes static-glow {
-      from { box-shadow: 0 0 5px rgba(255, 0, 0, 0.5); }
-      to { box-shadow: 0 0 15px rgba(255, 0, 0, 1); }
-    }
-
-    @keyframes pro-pulse-blue {
-      0% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); background: rgba(0, 212, 255, 0.05); }
-      50% { box-shadow: 0 0 15px rgba(0, 212, 255, 0.4); border-color: var(--update-blue); background: rgba(0, 212, 255, 0.1); }
-      100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); background: rgba(0, 212, 255, 0.05); }
-    }
-
-    #login-overlay {
-      position: fixed; inset: 0; background: #000; z-index: 999;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;
-    }
-    .login-box {
-      width: 100%; max-width: 350px; background: var(--bg-panel); padding: 30px; 
-      border-radius: 16px; border: 1px solid var(--border-soft); box-shadow: 0 20px 50px rgba(0,0,0,0.7);
-      text-align: center;
-    }
+    /* Login & Other existing UI */
+    #login-overlay { position: fixed; inset: 0; background: #000; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
+    .login-box { width: 100%; max-width: 350px; background: var(--bg-panel); padding: 30px; border-radius: 16px; border: 1px solid var(--border-soft); box-shadow: 0 20px 50px rgba(0,0,0,0.7); text-align: center; }
     .login-box h2 { color: var(--accent); margin-top: 0; font-weight: 800; letter-spacing: 1px; }
-    .login-input {
-      width: 100%; padding: 15px; margin: 10px 0; background: var(--bg-input); border: 1px solid var(--border-soft);
-      color: var(--text-main); border-radius: 8px; font-size: 16px; outline: none; transition: 0.3s;
-    }
+    .login-input { width: 100%; padding: 15px; margin: 10px 0; background: var(--bg-input); border: 1px solid var(--border-soft); color: var(--text-main); border-radius: 8px; font-size: 16px; outline: none; transition: 0.3s; }
     .login-input:focus { border-color: var(--accent); background: #2a2a2a; }
-    .login-submit {
-      width: 100%; padding: 15px; margin-top: 15px; background: var(--accent); border: none;
-      color: #000; font-weight: 900; font-size: 16px; border-radius: 8px; cursor: pointer;
-      text-transform: uppercase; box-shadow: 0 4px 15px rgba(255, 204, 0, 0.3);
-    }
-
-    header { padding: 12px 16px; background: var(--bg-header); border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; }
+    .login-submit { width: 100%; padding: 15px; margin-top: 15px; background: var(--accent); border: none; color: #000; font-weight: 900; font-size: 16px; border-radius: 8px; cursor: pointer; text-transform: uppercase; box-shadow: 0 4px 15px rgba(255, 204, 0, 0.3); }
+    header { padding: 12px 16px; background: var(--bg-header); border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 20; }
     h1 { margin: 0; color: var(--accent); font-size: 18px; font-weight: 800; display: flex; align-items: center; letter-spacing: 0.5px; }
     #clock { font-size: 14px; color: var(--accent); font-weight: 600; opacity: 0.9; }
-
-    /* --- NEW INSTALL BUTTON STYLE --- */
-    .install-btn {
-      display: none; /* Hidden by default */
-      background: #2196f3;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-weight: 800;
-      font-size: 11px;
-      cursor: pointer;
-      margin: 0 10px;
-      animation: pulse-blue 2s infinite;
-      text-transform: uppercase;
-      box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
-    }
-    @keyframes pulse-blue {
-      0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); transform: scale(1); }
-      50% { transform: scale(1.05); }
-      70% { box-shadow: 0 0 0 8px rgba(33, 150, 243, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); transform: scale(1); }
-    }
-
-    #main-container { display: flex; flex-direction: column; flex: 1; width: 100%; overflow: hidden; background: var(--bg-core); }
+    .install-btn { display: none; background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; cursor: pointer; margin: 0 10px; animation: pulse-blue 2s infinite; text-transform: uppercase; box-shadow: 0 0 10px rgba(33, 150, 243, 0.5); }
+    @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); transform: scale(1); } 50% { transform: scale(1.05); } 70% { box-shadow: 0 0 0 8px rgba(33, 150, 243, 0); } 100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); transform: scale(1); } }
     
     #history-sidebar { display: none; } /* Hidden in Driver Mode */
     
-    #multi-route-btn {
-      position: fixed; bottom: 10px; left: 8px; width: 100px;
-      padding: 10px 4px; background: #222; border: 1px solid #444;
-      color: #888; font-weight: 800; font-size: 11px; border-radius: 8px;
-      cursor: pointer; text-align: center; z-index: 100; transition: all 0.3s;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    }
+    #multi-route-btn { position: fixed; bottom: 10px; left: 8px; width: 100px; padding: 10px 4px; background: #222; border: 1px solid #444; color: #888; font-weight: 800; font-size: 11px; border-radius: 8px; cursor: pointer; text-align: center; z-index: 100; transition: all 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: none !important; /* HIDING OLD BUTTON */ }
     
-    .glow-active {
-      background: var(--queue-orange) !important;
-      color: #000 !important;
-      border-color: #fff !important;
-      animation: buttonGlow 1.5s infinite alternate;
-    }
-
-    .glow-max {
-      background: var(--active-green) !important;
-      color: #fff !important;
-      border: 2px solid #fff !important;
-      transform: scale(1.05);
-      animation: buttonMaxGlow 0.8s infinite alternate !important;
-    }
-
-    @keyframes buttonGlow {
-      from { box-shadow: 0 0 5px var(--queue-orange); transform: scale(1); }
-      to { box-shadow: 0 0 15px var(--queue-orange); transform: scale(1.02); }
-    }
-
-    @keyframes buttonMaxGlow {
-      from { box-shadow: 0 0 10px var(--active-green); }
-      to { box-shadow: 0 0 25px rgba(255,255,255,0.5); }
-    }
-
-    .section-label-pending { font-size: 13px; font-weight: 800; text-transform: uppercase; margin: 10px 0 6px 0; color: var(--queue-orange); border-bottom: 1px solid #333; animation: pulseOrange 3s infinite ease-in-out; letter-spacing: 0.5px; }
-    .section-label-done { font-size: 12px; font-weight: 800; text-transform: uppercase; margin: 15px 0 6px 0; color: var(--active-green); border-bottom: 1px solid #333; opacity: 0.8; }
-    
-    .history-item { background: var(--bg-panel); padding: 10px 8px; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid var(--active-green); font-size: 12px; cursor: pointer; overflow: hidden; white-space: normal; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-    .just-archived { animation: proArchivePop 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; z-index: 10; border-left-width: 6px; }
-
-    @keyframes proArchivePop {
-      0% { transform: scale(0.5) translateX(50px); opacity: 0; background: var(--active-green); }
-      30% { transform: scale(1.1) translateX(0); opacity: 1; background: var(--active-green); }
-      100% { transform: scale(1); opacity: 1; background: #151515; }
-    }
-
-    /* NEW MINI JOB ANIMATION */
-    .new-mini-pop { animation: miniPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    @keyframes miniPop {
-      0% { transform: scale(0.8); opacity: 0; background: var(--update-blue); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    .history-contact { color: var(--queue-orange); font-size: 11px; display: block; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
-    .history-package { color: #777; font-size: 12px; display: block; text-transform: uppercase; font-weight: 700; margin-top: 3px; }
-
-    #live-feed { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
-    .active-card { background: var(--card-bg); padding: 10px; border-radius: 12px; border: 1px solid var(--border-soft); width: 100%; display: flex; flex-direction: column; animation: slideInRight 0.4s both; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; }
-
-    .new-job-highlight {
-      border: 2px solid var(--active-green) !important;
-      box-shadow: 0 0 40px rgba(76, 175, 80, 0.3), inset 0 0 20px rgba(76, 175, 80, 0.1);
-      background: linear-gradient(135deg, #1e251e 0%, #1a1a1a 100%) !important;
-    }
-
+    .new-job-highlight { border: 2px solid var(--active-green) !important; box-shadow: 0 0 40px rgba(76, 175, 80, 0.3), inset 0 0 20px rgba(76, 175, 80, 0.1); background: linear-gradient(135deg, #1e251e 0%, #1a1a1a 100%) !important; }
     @keyframes softPulse { 0% { border-color: #333; } 50% { border-color: #555; } 100% { border-color: #333; } }
     .card-exit-success { transform: scale(0.9) translateX(-20px); opacity: 0; filter: blur(5px); pointer-events: none; transition: 0.5s ease; }
-    
-    .done-slash {
-      border-left-color: #555 !important;
-      opacity: 0.5;
-      filter: grayscale(1);
-    }
-
+    .done-slash { border-left-color: #555 !important; opacity: 0.5; filter: grayscale(1); }
     .card-date-badge { font-size: 10px; font-weight: 800; color: #555; text-transform: uppercase; margin-right: 8px; display: flex; align-items: center; letter-spacing: 0.5px; }
     .card-label { color: var(--accent); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; margin-bottom: 1px; margin-top: 4px; }
     .nav-link { text-decoration: none; color: inherit; }
@@ -391,76 +199,35 @@
     .drop-value { font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--text-sec); text-transform: uppercase; word-wrap: break-word; }
     .tech-info { font-size: 14px; font-weight: 700; color: var(--text-main); text-transform: uppercase; line-height: 1.2; }
     .dim-x { color: var(--text-sec); font-weight: 400; padding: 0 1px; }
-    
     .time-stack { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding-right: 60px; }
     .job-time-stamp { font-size: 13px; font-weight: 700; color: #FFB020; }
     .job-date-stamp { font-size: 9px; font-weight: 600; color: #666; text-transform: uppercase; }
-
     .info-btn { width: 100%; background: transparent; color: var(--review-blue); border: 1px solid var(--review-blue); padding: 8px 0; font-size: 11px; font-weight: 800; border-radius: 6px; cursor: pointer; transition: background 0.2s; margin-bottom: 6px; }
     .info-btn:active { background: rgba(33, 150, 243, 0.1); }
     .done-btn { width: 100%; padding: 12px 0; border: none; border-radius: 6px; color: #fff; font-weight: 800; cursor: pointer; text-transform: uppercase; background: linear-gradient(135deg, var(--active-green), #388e3c); font-size: 14px; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3); transition: transform 0.1s; letter-spacing: 1px; flex: 1; }
     .done-btn:active { transform: scale(0.98); }
-
-    .arrival-highlight .done-btn {
-      animation: arrival-glow 0.8s infinite alternate !important;
-      border: 3px solid #fff !important;
-      box-shadow: 0 0 25px var(--active-green) !important;
-    }
-    @keyframes arrival-glow {
-      from { transform: scale(1); filter: brightness(1); }
-      to { transform: scale(1.08); filter: brightness(1.3); }
-    }
-    
+    .arrival-highlight .done-btn { animation: arrival-glow 0.8s infinite alternate !important; border: 3px solid #fff !important; box-shadow: 0 0 25px var(--active-green) !important; }
+    @keyframes arrival-glow { from { transform: scale(1); filter: brightness(1); } to { transform: scale(1.08); filter: brightness(1.3); } }
     .details-box { display: none; background: #111; padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid var(--review-blue); font-size: 15px; color: #ddd; line-height: 1.5; overflow-wrap: anywhere; pointer-events: auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-    
-    .decline-btn {
-      width: 100%; margin-top: 15px; padding: 12px; background: transparent; 
-      color: var(--decline-red); border: 1px solid var(--decline-red); 
-      border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer; 
-      text-transform: uppercase; transition: 0.3s;
-    }
+    .decline-btn { width: 100%; margin-top: 15px; padding: 12px; background: transparent; color: var(--decline-red); border: 1px solid var(--decline-red); border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
     .decline-btn:active { background: rgba(244, 67, 54, 0.1); }
-
-    /* DND BUTTON STYLING */
-    .dnd-btn {
-      width: 100%; margin-top: 10px; padding: 12px; background: #333; 
-      color: var(--queue-orange); border: 1px solid var(--queue-orange); border-radius: 6px; font-weight: 800; 
-      font-size: 14px; cursor: pointer; text-transform: uppercase; transition: 0.2s;
-    }
+    .dnd-btn { width: 100%; margin-top: 10px; padding: 12px; background: #333; color: var(--queue-orange); border: 1px solid var(--queue-orange); border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
     .dnd-btn:active { background: var(--queue-orange); color: #000; }
-
-    /* DRIVER NOTE BUTTON STYLING */
-    .driver-note-btn {
-      width: 100%; margin-top: 10px; padding: 12px; background: transparent; 
-      color: var(--accent); border: 1px solid var(--accent); 
-      border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer; 
-      text-transform: uppercase; transition: 0.3s;
-    }
+    .driver-note-btn { width: 100%; margin-top: 10px; padding: 12px; background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
     .driver-note-btn:active { background: var(--accent); color: #000; }
-
-    /* EDITED NOTES STYLE */
     .notes-edited { color: var(--queue-orange) !important; font-style: italic; }
     .edit-note-input { width: 100%; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 8px; font-family: inherit; margin-top: 5px; font-size: 14px; }
     .save-note-btn { background: var(--active-green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; margin-top: 8px; cursor: pointer; font-weight: bold; }
     .glow-yellow { border: 1px solid var(--accent) !important; box-shadow: 0 0 10px var(--accent) !important; outline: none; }
-
-    .cancel-note-btn {
-        position: absolute; bottom: 15px; right: 10px;
-        background: #e60000; color: #fff; border: 1px solid #fff;
-        padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; cursor: pointer;
-        z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-    }
+    .cancel-note-btn { position: absolute; bottom: 15px; right: 10px; background: #e60000; color: #fff; border: 1px solid #fff; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; cursor: pointer; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
     .cancel-note-btn:active { transform: scale(0.95); background: #ff3333; }
-
-    @keyframes heavy-flash {
-      0% { color: #ff3333; text-shadow: 0 0 5px #ff0000; transform: scale(1); }
-      50% { color: #ff0000; text-shadow: 0 0 15px #ff0000; transform: scale(1.1); }
-      100% { color: #ff3333; text-shadow: 0 0 5px #ff0000; transform: scale(1); }
-    }
+    @keyframes heavy-flash { 0% { color: #ff3333; text-shadow: 0 0 5px #ff0000; transform: scale(1); } 50% { color: #ff0000; text-shadow: 0 0 15px #ff0000; transform: scale(1.1); } 100% { color: #ff3333; text-shadow: 0 0 5px #ff0000; transform: scale(1); } }
     .heavy-word { display: inline-block; animation: heavy-flash 0.8s infinite; font-weight: 900; text-transform: uppercase; }
-
     @keyframes pulseOrange { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
     @keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    
+    /* Clean up Map Controls */
+    #zoom-btn, #recenter-btn, #fs-btn, #back-btn, #list-btn, #main-list-btn { display: none !important; }
   </style>
 </head>
 <body>
@@ -485,14 +252,6 @@
 
 <div id="map-container">
     <div id="map"></div>
-    <div id="mini-map-list"></div>
-    <div id="recenter-btn" onclick="enableAutoCenter()">⌖</div>
-    <div id="zoom-btn" onclick="zoomToFit()">-</div>
-    <div id="fs-btn" onclick="toggleFullScreen()">FULL SCREEN</div>
-    <div id="back-btn" onclick="toggleFullScreen()">BACK</div>
-  <div id="main-list-btn" onclick="toggleList()">LIST</div>    
-  <div id="list-btn" onclick="toggleList()">LIST</div>
-    <button id="route-toggle-btn" onclick="openExternalRoute()">ROUTE</button>
 </div>
 
 <div id="drag-resizer">
@@ -500,6 +259,17 @@
 </div>
 
 <div id="main-container">
+  
+  <div id="mini-map-list"></div>
+  
+  <div id="live-feed"></div>
+  
+  <button id="route-toggle-btn" onclick="openExternalRoute()">
+    <svg viewBox="0 0 24 24">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    </svg>
+  </button>
+
   <div id="history-sidebar" style="display:none;">
     <div class="section-label-pending">Pending</div>
     <div id="queue-log"></div>
@@ -507,7 +277,7 @@
     <div id="recent-log"></div>
     <button id="multi-route-btn" onclick="routeOptimized()">ROUTE NAV</button>
   </div>
-  <div id="live-feed"></div>
+
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -521,16 +291,7 @@
   const savedTheme = localStorage.getItem('ec_theme') || 'dark';
   document.body.setAttribute('data-theme', savedTheme);
   
-  const savedMapHeight = localStorage.getItem('ec_map_height');
-  if(savedMapHeight) document.getElementById('map-container').style.height = savedMapHeight;
-
-  const savedListPos = localStorage.getItem('ec_list_pos');
-  if(savedListPos) {
-      const pos = JSON.parse(savedListPos);
-      const el = document.getElementById('mini-map-list');
-      el.style.top = pos.top;
-      el.style.left = pos.left;
-  }
+  // Map height logic removed as map is hidden
 
   firebase.initializeApp({
     apiKey: "AIzaSyAKmgoXA4m3cRTmxJq4aUyva5SVvFbTNqg",
@@ -644,39 +405,6 @@
           map.setZoom(17);
           map.setTilt(45);
       }
-  }
-
-  function zoomToFit() {
-    if(!map) return;
-    autoCenter = false;
-    const bounds = new google.maps.LatLngBounds();
-    if(lastGps) bounds.extend(lastGps);
-    
-    Object.values(globalJobs).forEach(job => {
-       if(job.status === 'pending' && job.assigned_to === currentDriver) {
-           // This requires geocoded coords which we might not have directly here
-           // But if we have markers, use them
-           mapMarkers.forEach(m => bounds.extend(m.getPosition()));
-       }
-    });
-    
-    if(!bounds.isEmpty()) {
-        map.fitBounds(bounds);
-    }
-  }
-
-  function toggleFullScreen() {
-    document.body.classList.toggle('fullscreen-mode');
-    const isFs = document.body.classList.contains('fullscreen-mode');
-    document.getElementById('fs-btn').style.display = isFs ? 'none' : 'block';
-    document.getElementById('back-btn').style.display = isFs ? 'block' : 'none';
-    document.getElementById('list-btn').style.display = isFs ? 'block' : 'none';
-    if(map) google.maps.event.trigger(map, "resize");
-  }
-
-  function toggleList() {
-    const list = document.getElementById('mini-map-list');
-    list.style.display = (list.style.display === 'none' || list.style.display === '') ? 'block' : 'none';
   }
 
   function openExternalRoute() {
@@ -947,8 +675,9 @@
                    // Mini List Item & Animation Logic
                    const isUnseen = job.timestamp > lastRouteClick;
                    const animClass = isUnseen ? 'mini-flash' : '';
+                   const jobId = optimizedOrder[i];
                    
-                   listHtml += `<div class="mini-list-item ${animClass}"><div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div><div style="flex:1; line-height:1.1;">${bizName}</div></div>`;
+                   listHtml += `<div class="mini-list-item ${animClass}" onclick="showJobCard('${jobId}')"><div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div><div style="flex:1;">${bizName}</div></div>`;
                 }
             });
             
@@ -1058,13 +787,7 @@
   }
 
   function scrollToCard(id) {
-    const card = document.getElementById(`card-${id}`);
-    if (card) {
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      card.style.transition = '0.3s';
-      card.style.background = '#2a2a2a';
-      setTimeout(() => card.style.background = 'var(--card-bg)', 500);
-    }
+    // Legacy function, replaced by openCardOverlay logic
   }
 
   function updateNewStopsCountUI() {
@@ -1293,6 +1016,23 @@ document.addEventListener('keypress', (e) => {
       // Replaces external nav with Internal Map Focus
       enableAutoCenter();
   }
+  
+  /* NEW OVERLAY FUNCTIONS */
+  function showJobCard(id) {
+      // Hide all cards
+      document.querySelectorAll('.active-card').forEach(c => c.style.display = 'none');
+      // Show specific card
+      const card = document.getElementById('card-' + id);
+      if(card) {
+          card.style.display = 'flex';
+          const feed = document.getElementById('live-feed');
+          feed.classList.add('overlay-active');
+      }
+  }
+  
+  function closeJobCard() {
+      document.getElementById('live-feed').classList.remove('overlay-active');
+  }
 
   let pickupData = {};
   let dropoffData = {};
@@ -1490,6 +1230,9 @@ document.addEventListener('keypress', (e) => {
         card.className = "active-card";
         card.onclick = () => acknowledgeUpdate(id);
         
+        // Hide by default for overlay system
+        card.style.display = 'none';
+        
         if (!p.seen_by || !p.seen_by[currentDriver]) {
           card.classList.add('new-job-highlight');
         }
@@ -1517,7 +1260,7 @@ document.addEventListener('keypress', (e) => {
 
           <div style="display:flex; gap:10px;">
             <div style="flex:1; min-width:0;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; margin-right:30px;">
-                  <div class="card-date-badge">
+                  <div class="card-date-badge" onclick="closeJobCard()">
                      <div style="background:#fff; color:#000; font-weight:900; padding:2px 6px; border-radius:50%; font-size:14px; border:2px solid ${badgeColor}; width:24px; height:24px; display:flex; align-items:center; justify-content:center; margin-right:6px;">${seqIndex}</div>
                      <div style="background:${badgeColor}; color:#000; font-weight:900; padding:2px 6px; border-radius:4px; font-size:11px;">${badgeText}</div>
                      ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
@@ -1580,6 +1323,7 @@ document.addEventListener('keypress', (e) => {
     if(!confirm("Complete?")) return;
     const card = document.getElementById(`card-${id}`);
     if(card) card.classList.add('card-exit-success');
+    closeJobCard(); // Close overlay on complete
     
     const job = globalJobs[id];
     const refPath = job ? (job.jobType === 'pickup' ? 'pickups' : 'dropoffs') : 'dropoffs';
@@ -1611,110 +1355,7 @@ document.addEventListener('keypress', (e) => {
       } 
   });
 
-  const dragger = document.getElementById("mini-map-list");
-  let isDown = false;
-  let offset = [0,0];
-
-  dragger.addEventListener('mousedown', function(e) {
-      isDown = true;
-      offset = [
-          dragger.offsetLeft - e.clientX,
-          dragger.offsetTop - e.clientY
-      ];
-  }, true);
-
-  document.addEventListener('mouseup', function() {
-      if(isDown) {
-          isDown = false;
-          // SAVE MINI LIST POSITION
-          localStorage.setItem('ec_list_pos', JSON.stringify({
-              top: dragger.style.top,
-              left: dragger.style.left
-          }));
-      }
-  }, true);
-
-  document.addEventListener('mousemove', function(e) {
-      if (isDown) {
-          e.preventDefault();
-          dragger.style.left = (e.clientX + offset[0]) + 'px';
-          dragger.style.top  = (e.clientY + offset[1]) + 'px';
-      }
-  }, true);
-  
-  dragger.addEventListener('touchstart', function(e) {
-      isDown = true;
-      const touch = e.touches[0];
-      offset = [
-          dragger.offsetLeft - touch.clientX,
-          dragger.offsetTop - touch.clientY
-      ];
-  }, {passive: false});
-
-  document.addEventListener('touchend', function() {
-      if(isDown) {
-          isDown = false;
-          // SAVE MINI LIST POSITION (MOBILE)
-          localStorage.setItem('ec_list_pos', JSON.stringify({
-              top: dragger.style.top,
-              left: dragger.style.left
-          }));
-      }
-  }, true);
-
-  document.addEventListener('touchmove', function(e) {
-      if (isDown) {
-          e.preventDefault();
-          const touch = e.touches[0];
-          dragger.style.left = (touch.clientX + offset[0]) + 'px';
-          dragger.style.top  = (touch.clientY + offset[1]) + 'px';
-      }
-  }, {passive: false});
-
-  /* RESIZER LOGIC */
-  const resizer = document.getElementById('drag-resizer');
-  const mapContainer = document.getElementById('map-container');
-  let isResizing = false;
-
-  const startResize = (e) => {
-      isResizing = true;
-      document.body.style.cursor = 'ns-resize';
-      document.body.style.userSelect = 'none';
-  };
-
-  const endResize = () => {
-      if (!isResizing) return;
-      isResizing = false;
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
-      if(map) google.maps.event.trigger(map, 'resize');
-      
-      // SAVE SPLIT SCREEN HEIGHT
-      localStorage.setItem('ec_map_height', mapContainer.style.height);
-  };
-
-  const handleResize = (e) => {
-      if (!isResizing) return;
-      
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const headerHeight = document.querySelector('header').offsetHeight;
-      
-      // Calculate height in VH (percentage of viewport height)
-      let newHeightVh = ((clientY - headerHeight) / window.innerHeight) * 100;
-      
-      // Clamp values (10% to 85%)
-      if (newHeightVh < 10) newHeightVh = 10;
-      if (newHeightVh > 85) newHeightVh = 85;
-      
-      mapContainer.style.height = `${newHeightVh}vh`;
-  };
-
-  resizer.addEventListener('mousedown', startResize);
-  resizer.addEventListener('touchstart', startResize, {passive: true});
-  window.addEventListener('mousemove', handleResize);
-  window.addEventListener('touchmove', handleResize, {passive: false});
-  window.addEventListener('mouseup', endResize);
-  window.addEventListener('touchend', endResize);
+  // Drag listeners removed as resizer is gone
 
   /* --- PWA INSTALL LOGIC --- */
   let deferredPrompt;
