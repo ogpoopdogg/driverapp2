@@ -1742,7 +1742,7 @@ document.addEventListener('keypress', (e) => {
   // 3. Register Service Worker (Required for PWA)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./firebase-messaging-sw.js')
+      navigator.serviceWorker.register('./sw.js')
         .then(reg => console.log('SW Registered'))
         .catch(err => console.log('SW Error', err));
     });
