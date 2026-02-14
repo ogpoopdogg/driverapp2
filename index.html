@@ -733,23 +733,14 @@
   }
 
   /* --- TRACKING & AUDIO --- */
-  function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371000;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
   async function startContinuousTracking() {
     if ("Notification" in window && "serviceWorker" in navigator && messaging) {
       Notification.requestPermission().then(perm => {
         if (perm === 'granted') {
           navigator.serviceWorker.ready.then(reg => {
             messaging.getToken({ serviceWorkerRegistration: reg, vapidKey: "BA1S09dDHyCTLXZfDGckfFdg0kvCyezfgst5eMhe0TnL03C7eHn3yogeC_u20knFpMxFNsHGZHsDjNp0RXjKHfI" }).then(token => {
-              if (token) db.ref(`driver_locations/${currentDriver}/fcm_token`).set(token);
-            }).catch(e => console.log("Token error", e));
+              if (token && currentDriver) db.ref(`driver_locations/${currentDriver}/fcm_token`).set(token);
+            }).catch(e => console.log("Messaging Token error:", e));
           });
         }
       });
@@ -1286,6 +1277,15 @@ document.addEventListener('keypress', (e) => {
         { enableHighAccuracy: true, timeout: 5000 }
       );
     });
+  }
+
+  function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   async function routeOptimized() {
