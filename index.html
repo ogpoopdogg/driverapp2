@@ -68,7 +68,7 @@
       align-items: center; 
       justify-content: space-between; /* Added for address spacing */
       line-height: 1.3; 
-      padding: 20px; 
+      padding: 12px 15px; 
       background: var(--bg-panel);
       border: 1px solid var(--border-soft);
       border-radius: 12px;
@@ -431,6 +431,7 @@
   function openExternalRoute() {
     hasInitialRoute = true;
     document.getElementById('route-toggle-btn').classList.remove('route-glow-update');
+    document.querySelectorAll('.mini-flash').forEach(el => el.classList.remove('mini-flash')); 
     if(optimizedOrder.length === 0) {
         alert("No stops to route.");
         return;
@@ -643,16 +644,7 @@
         if (result.routes && result.routes[0]) {
             // Save Polyline for Command Center
             if(result.routes[0].polyline) {
-                 let dur = result.routes[0].duration ? parseInt(result.routes[0].duration) : 0;
-                 let durStr = dur > 3600 ? `${Math.floor(dur/3600)} hr ${Math.floor((dur%3600)/60)} min` : `${Math.floor(dur/60)} min`;
-                 
-                 db.ref(`driver_locations/${currentDriver}`).update({
-                    active_route: result.routes[0].polyline.encodedPolyline,
-                    total_duration: durStr,
-                    route_timestamp: Date.now()
-                });
-                
-                // Draw Line
+                 // Draw Line
                 const path = google.maps.geometry.encoding.decodePath(result.routes[0].polyline.encodedPolyline);
                 if(mapPolyline) mapPolyline.setMap(null);
                 mapPolyline = new google.maps.Polyline({
@@ -682,6 +674,21 @@
                      if(jId) optimizedOrder.push(jId);
                 });
             });
+
+            // UPDATE DB WITH ROUTE INFO
+            if(result.routes[0].polyline) {
+                 let dur = result.routes[0].duration ? parseInt(result.routes[0].duration) : 0;
+                 let durStr = dur > 3600 ? `${Math.floor(dur/3600)} hr ${Math.floor((dur%3600)/60)} min` : `${Math.floor(dur/60)} min`;
+                 
+                 const routeString = orderedGroups.map((g, i) => `${i+1}. ${g.masterJob.jobType==='pickup'?g.masterJob.pickup_location:g.masterJob.destination}`).join(" | ");
+
+                 db.ref(`driver_locations/${currentDriver}`).update({
+                    active_route: result.routes[0].polyline.encodedPolyline,
+                    route_string: routeString,
+                    total_duration: durStr,
+                    route_timestamp: Date.now()
+                });
+            }
 
             // Auto Route logic handled in mergeAndRender
 
@@ -735,20 +742,20 @@
                    mapLabels.push(info);
 
                    // Mini List Item & Animation Logic
-                   const isUnseen = group.jobs.some(j => j.timestamp > lastRouteClick);
-                   const animClass = isUnseen ? 'mini-flash' : '';
-                   
-                   const groupIds = group.jobs.map(j => Object.keys(globalJobs).find(k => globalJobs[k] === j)).join(',');
+                   const groupIds = group.jobs.map(j => Object.keys(globalJobs).find(k => globalJobs[k] === j));
                    const countBadge = group.jobs.length > 1 ? `<span style="background:var(--accent); color:#000; font-size:10px; font-weight:900; padding:1px 6px; border-radius:8px; margin-left:6px; vertical-align:middle;">${group.jobs.length} ORDERS</span>` : "";
 
+                   const hasUpdate = groupIds.some(id => pendingAlerts[id] && pendingAlerts[id].length > 0);
+                   const animClass = (!hasInitialRoute || hasUpdate) ? 'mini-flash' : '';
+
                    listHtml += `
-                    <div class="mini-list-item ${animClass}" onclick="showJobGroup('${groupIds}')">
+                    <div class="mini-list-item ${animClass}" onclick="showJobGroup('${groupIds.join(',')}')">
                         <div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div>
                         <div style="flex:1; overflow:hidden;">
                             <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${bizName} ${countBadge}</div>
                             <div style="border:1px solid #333; border-radius:6px; padding:6px; margin-top:5px; background:rgba(0,0,0,0.2);">
                                 <div class="mini-address" style="text-align:left; margin:0; -webkit-line-clamp:1;">${addrText}</div>
-                                <div style="font-size:10px; color:#666; margin-top:2px;">${city}</div>
+                                <div style="font-size:13px; font-weight:700; color:#888; margin-top:2px;">${city}</div>
                             </div>
                         </div>
                     </div>`;
@@ -857,6 +864,9 @@
       
       const badge = document.getElementById(`badge-${id}`);
       if(badge) badge.style.display = 'none';
+      
+      // Update Map List Animations
+      updateRoute();
     }, 3000);
   }
 
@@ -1179,11 +1189,12 @@ document.addEventListener('keypress', (e) => {
     // CAPTURE EXISTING IDs BEFORE CLEARING
     const existingQueueIds = Array.from(qLog.querySelectorAll('.history-item')).map(el => el.id.replace('mini-', ''));
 
-    feed.innerHTML = "<div style='width:100%; text-align:center; color:#555; font-size:10px; padding:10px; opacity:0.7; letter-spacing:1px;'>&lt;&lt; SWIPE RIGHT TO GO BACK</div>"; 
+    feed.innerHTML = "<div style='width:100%; text-align:center; color:#555; font-size:10px; padding:10px; opacity:0.7; letter-spacing:1px;'>>> SWIPE RIGHT TO GO BACK</div>"; 
     rLog.innerHTML = ""; qLog.innerHTML = "";
     const startOfToday = new Date().setHours(0,0,0,0);
     const lastDoneId = sessionStorage.getItem('last_completed_job');
     let pendingCount = 0;
+    const uniqueStops = new Set();
 
     let sortedEntries;
     if (optimizedOrder.length > 0) {
@@ -1277,10 +1288,7 @@ document.addEventListener('keypress', (e) => {
       item.className = "history-item";
       item.id = `mini-${id}`;
       
-      // ANIMATE IF NEW TO PENDING LIST
-      if (p.status !== 'completed' && !existingQueueIds.includes(id) && existingQueueIds.length > 0) {
-        item.classList.add('new-mini-pop');
-      }
+      // ANIMATE IF NEW TO PENDING LIST (REMOVED)
 
       if(id === lastDoneId) {
         item.classList.add('just-archived');
@@ -1303,6 +1311,7 @@ document.addEventListener('keypress', (e) => {
       } else {
         pendingCount++;
         seqIndex++;
+        uniqueStops.add((p.jobType === 'pickup' ? p.pickup_location : p.destination).trim());
         item.onclick = () => scrollToCard(id); 
         qLog.appendChild(item);
 
@@ -1385,7 +1394,7 @@ document.addEventListener('keypress', (e) => {
     });
 
     updateNewStopsCountUI();
-    if (stopCounter) stopCounter.innerText = `${pendingCount} STOP${pendingCount !== 1 ? 'S' : ''}`;
+    if (stopCounter) stopCounter.innerText = `${uniqueStops.size} STOP${uniqueStops.size !== 1 ? 'S' : ''}`;
 
     if(pendingCount >= 20) {
       routeBtn.classList.add('glow-max');
