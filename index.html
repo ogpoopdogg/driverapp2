@@ -680,7 +680,7 @@
                  let dur = result.routes[0].duration ? parseInt(result.routes[0].duration) : 0;
                  let durStr = dur > 3600 ? `${Math.floor(dur/3600)} hr ${Math.floor((dur%3600)/60)} min` : `${Math.floor(dur/60)} min`;
                  
-                 const routeString = orderedGroups.map((g, i) => `${i+1}. ${g.masterJob.jobType==='pickup'?g.masterJob.pickup_location:g.masterJob.destination}`).join(" | ");
+                 const routeString = orderedGroups.map((g, i) => `${i+1}. ${g.masterJob.jobType==='pickup' ? (g.masterJob.name + ' ' + g.masterJob.pickup_location) : (g.masterJob.delivery_name + ' ' + g.masterJob.destination)}`).join(" | ");
 
                  db.ref(`driver_locations/${currentDriver}`).update({
                     active_route: result.routes[0].polyline.encodedPolyline,
