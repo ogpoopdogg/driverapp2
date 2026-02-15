@@ -703,7 +703,17 @@
                    
                    // Update Lat/Lng for all jobs in group if valid loc
                    if(loc) {
-                        group.jobs.forEach(gj => { gj.lat = loc.latitude; gj.lng = loc.longitude; });
+                        group.jobs.forEach(gj => { 
+                            gj.lat = loc.latitude; 
+                            gj.lng = loc.longitude;
+                            
+                            // SAVE TO DB
+                            const jId = Object.keys(globalJobs).find(k => globalJobs[k] === gj);
+                            if(jId) {
+                                const refPath = gj.jobType === 'pickup' ? 'pickups' : 'dropoffs';
+                                db.ref(refPath).child(jId).update({ lat: loc.latitude, lng: loc.longitude });
+                            }
+                        });
                    }
 
                    if(!loc) return;
