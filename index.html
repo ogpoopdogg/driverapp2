@@ -1038,7 +1038,7 @@ document.addEventListener('keypress', (e) => {
             mode: "no-cors",
             body: JSON.stringify({
                 email: job.customer_email,
-                notes: reason,
+                notes: updatedNotes,
                 type: job.jobType
             })
         });
