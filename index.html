@@ -37,6 +37,22 @@
       --card-bg: #ffffff;
     }
 
+    /* LIGHT MODE TEXT OVERRIDES */
+    [data-theme="light"] #clock,
+    [data-theme="light"] .city-tag,
+    [data-theme="light"] .stop-badge,
+    [data-theme="light"] .pickup-value,
+    [data-theme="light"] .drop-value,
+    [data-theme="light"] .mini-address,
+    [data-theme="light"] .driver-name-display {
+        color: #000000 !important;
+        border-color: #000000 !important;
+        text-shadow: none !important;
+    }
+    [data-theme="light"] [id^="po-container"] span {
+        color: #000000 !important;
+    }
+
     * { box-sizing: border-box; }
     
     html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg-core); color: var(--text-main); }
@@ -120,6 +136,17 @@
     @keyframes mini-pulse-anim {
         from { box-shadow: 0 0 2px var(--update-blue); }
         to { box-shadow: 0 0 10px var(--update-blue); }
+    }
+    
+    /* ARRIVAL TINT ANIMATION */
+    .arrival-green-tint {
+        background: rgba(76, 175, 80, 0.15) !important;
+        border: 1px solid #4caf50 !important;
+        animation: proGreenPulse 1.5s infinite alternate !important;
+    }
+    @keyframes proGreenPulse {
+        from { box-shadow: inset 0 0 5px rgba(76,175,80,0.2); }
+        to { box-shadow: inset 0 0 20px rgba(76,175,80,0.5); }
     }
 
     /* CARD OVERLAY SYSTEM (Replaces Feed Flow) */
@@ -541,6 +568,7 @@
         if (job.status === 'pending' && job.lat && job.lng && job.assigned_to === currentDriver) {
           if (getDistance(pos.coords.latitude, pos.coords.longitude, job.lat, job.lng) < 50) {
             document.getElementById('card-' + jid)?.classList.add('arrival-highlight');
+            document.getElementById('mini-' + jid)?.classList.add('arrival-green-tint');
           }
         }
       });
@@ -774,7 +802,7 @@
                    const badgeHtml = hasUpdate ? `<div class="list-update-badge">NEW INFO</div>` : '';
 
                    listHtml += `
-                    <div class="mini-list-item ${animClass}" onclick="showJobGroup('${groupIds.join(',')}')">
+                    <div class="mini-list-item ${animClass}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds[0]}">
                         ${badgeHtml}
                         <div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div>
                         <div style="flex:1; overflow:hidden;">
@@ -828,7 +856,7 @@
       // Update Header
       document.getElementById('header-name').innerHTML = `
         <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
-        <span style="font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
+        <span class="driver-name-display" onclick="location.reload()" style="cursor:pointer; font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
         <span style="white-space: nowrap;">
           <span id="stop-counter" class="stop-badge" style="margin-left: 0;">0 STOPS</span>
         </span>
