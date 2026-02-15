@@ -92,17 +92,28 @@
 
     /* NEW ADDRESS STYLE */
     .mini-address {
-      font-size: 11px;
-      color: #aaa; /* Distinct low-contrast color */
+      font-size: 13px;
+      color: #ffffff; /* Bright White */
       text-align: right;
       margin-left: 10px;
-      max-width: 110px;
-      line-height: 1.2;
-      max-height: 2.4em; /* Height constraint */
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
+      max-width: none;
+      line-height: 1.3;
+      overflow: visible;
+      display: block;
+    }
+
+    .list-update-badge {
+        background: var(--update-blue);
+        color: #000;
+        font-size: 9px;
+        font-weight: 900;
+        padding: 3px 6px;
+        border-radius: 4px;
+        margin-right: 8px;
+        animation: pulse-update 0.5s infinite alternate;
+        display: flex; 
+        align-items: center;
+        box-shadow: 0 0 5px var(--update-blue);
     }
     
     .mini-flash { animation: mini-pulse-anim 1s infinite alternate; border: 1px solid var(--update-blue); }
@@ -363,6 +374,8 @@
   const gpsInterval = 10000; // Faster updates for Nav
   let wakeLock = null;
   let lastRouteClick = Date.now();
+
+  let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
 
   // DARK MODE STYLES
   const darkMapStyles = [
@@ -756,16 +769,18 @@
                    const countBadge = group.jobs.length > 1 ? `<span style="background:var(--accent); color:#000; font-size:10px; font-weight:900; padding:1px 6px; border-radius:8px; margin-left:6px; vertical-align:middle;">${group.jobs.length} ORDERS</span>` : "";
 
                    const hasUpdate = groupIds.some(id => pendingAlerts[id] && pendingAlerts[id].length > 0);
-                   const hasNew = groupIds.some(id => globalJobs[id] && (!globalJobs[id].seen_by || !globalJobs[id].seen_by[currentDriver]));
-                   const animClass = (!hasInitialRoute || hasUpdate || hasNew) ? 'mini-flash' : '';
+                   const isNew = groupIds.some(id => !previouslyKnown.includes(id));
+                   const animClass = (hasUpdate || isNew) ? 'mini-flash' : '';
+                   const badgeHtml = hasUpdate ? `<div class="list-update-badge">NEW INFO</div>` : '';
 
                    listHtml += `
                     <div class="mini-list-item ${animClass}" onclick="showJobGroup('${groupIds.join(',')}')">
+                        ${badgeHtml}
                         <div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div>
                         <div style="flex:1; overflow:hidden;">
                             <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${bizName} ${countBadge}</div>
                             <div style="border:1px solid #333; border-radius:6px; padding:6px; margin-top:5px; background:rgba(0,0,0,0.2);">
-                                <div class="mini-address" style="text-align:left; margin:0; -webkit-line-clamp:1;">${addrText}</div>
+                                <div class="mini-address" style="text-align:left; margin:0;">${addrText}</div>
                                 <div style="font-size:13px; font-weight:700; color:#888; margin-top:2px;">${city}</div>
                             </div>
                         </div>
@@ -784,6 +799,12 @@
             }
 
             renderUnifiedFeed(); // Refresh numbers in list
+            
+            // SAVE CURRENT STATE FOR NEXT RELOAD
+            const currentIds = Object.keys(globalJobs);
+            if(currentIds.length > 0) {
+                localStorage.setItem('ec_known_jobs', JSON.stringify(currentIds));
+            }
         }
     } catch(e) {
         console.error("Routing Error", e);
@@ -928,7 +949,7 @@ document.addEventListener('keypress', (e) => {
     const isOpening = box.style.display !== "block";
     box.style.display = isOpening ? "block" : "none";
     btn.innerText = isOpening ? "HIDE" : "INFO";
-    acknowledgeUpdate(id);
+    // acknowledgeUpdate removed to strictly follow close-to-ack rule
   }
 
   function restoreToQueue(id) {
@@ -1129,12 +1150,42 @@ document.addEventListener('keypress', (e) => {
   
   function closeJobCard() {
       document.querySelectorAll('.active-card').forEach(card => {
-        if(card.style.display !== 'none' && card.classList.contains('new-job-highlight')) {
+        if(card.style.display !== 'none') {
              const id = card.id.replace('card-', '');
-             const job = globalJobs[id];
-             if(job) {
-                 const refPath = job.jobType === 'pickup' ? 'pickups' : 'dropoffs';
-                 markAsSeenPersistent(id, refPath);
+             
+             // Mark Seen (Green Border)
+             if(card.classList.contains('new-job-highlight')) {
+                 const job = globalJobs[id];
+                 if(job) {
+                     const refPath = job.jobType === 'pickup' ? 'pickups' : 'dropoffs';
+                     markAsSeenPersistent(id, refPath);
+                 }
+             }
+             
+             // Mark Updates Acknowledged (Blue Flash / Badge)
+             if(pendingAlerts[id] || sessionStorage.getItem(`ack_update_${id}`) !== 'true') {
+                  sessionStorage.setItem(`ack_update_${id}`, 'true');
+                  delete pendingAlerts[id];
+                  card.classList.remove('has-update');
+                  const badge = document.getElementById(`badge-${id}`);
+                  if(badge) badge.style.display = 'none';
+             }
+             
+             // Handle List Animation Removal (New & Updates)
+             // 1. Add to previouslyKnown so it stops flashing as "New"
+             if(!previouslyKnown.includes(id)) previouslyKnown.push(id);
+             
+             // 2. Direct DOM cleanup to avoid full re-route
+             const miniList = document.getElementById('mini-map-list');
+             if(miniList) {
+                 miniList.querySelectorAll('.mini-list-item').forEach(item => {
+                     const onclick = item.getAttribute('onclick');
+                     if(onclick && onclick.includes(id)) {
+                         item.classList.remove('mini-flash');
+                         const b = item.querySelector('.list-update-badge');
+                         if(b) b.remove();
+                     }
+                 });
              }
         }
       });
@@ -1335,7 +1386,6 @@ document.addEventListener('keypress', (e) => {
         const navUrl = getNavUrl((topContact ? topContact + ' ' : '') + topAddr, p.city || '');
         const card = document.createElement("div"); 
         card.className = "active-card";
-        card.onclick = () => acknowledgeUpdate(id);
         
         // Hide by default for overlay system
         card.style.display = 'none';
