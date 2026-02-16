@@ -1106,6 +1106,7 @@ document.addEventListener('keypress', (e) => {
       const taggedNote = existing ? `${existing} | Driver Note (${currentDriver}): ${newText}` : `Driver Note (${currentDriver}): ${newText}`;
       selfEdited.add(`${id}_notes`);
       db.ref(refPath).child(id).update({ other_info: taggedNote })
+        .then(() => closeJobCard())
         .catch(err => alert("Save failed: " + err.message));
     });
   }
@@ -1278,6 +1279,86 @@ document.addEventListener('keypress', (e) => {
   }
 
   function renderUnifiedFeed() {
+    const pendingJobsList = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && j.status === 'pending');
+    const mmList = document.getElementById('mini-map-list');
+    
+    if (pendingJobsList.length === 0 && currentDriver) {
+       mmList.innerHTML = ""; // Clear existing
+       mmList.style.display = "grid";
+       mmList.style.gridTemplateColumns = "1fr 1fr";
+       mmList.style.height = "100vh"; // Per instruction
+       mmList.style.padding = "0";
+       mmList.style.overflow = "hidden";
+       
+       const doneJobs = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && j.status === 'completed').sort((a,b) => (a.completed_at||0) - (b.completed_at||0));
+       const doneCount = doneJobs.length;
+       
+       // Calc Time
+       let timeDisplay = "0h 0m";
+       let effDisplay = "0 min/stop";
+       if(doneCount > 0) {
+           const first = doneJobs[0].timestamp || doneJobs[0].completed_at;
+           const last = doneJobs[doneCount-1].completed_at;
+           const diff = last - first;
+           const hrs = Math.floor(diff / 3600000);
+           const mins = Math.floor((diff % 3600000) / 60000);
+           timeDisplay = `${hrs}h ${mins}m`;
+           effDisplay = `${Math.floor((diff/60000)/doneCount)} min/stop`;
+       }
+       
+       mmList.innerHTML = `
+          <div style="background:var(--bg-core); display:flex; flex-direction:column; justify-content:center; padding:40px; border-right:1px solid var(--border-soft);">
+              <h2 style="color:var(--accent); margin-bottom:40px; font-weight:900; letter-spacing:1px;">ALL STOPS COMPLETE</h2>
+              
+              <div style="background:var(--card-bg); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid var(--border-soft);">
+                  <div style="color:var(--text-sec); font-size:11px; font-weight:700; text-transform:uppercase;">Stops Completed</div>
+                  <div style="color:var(--text-main); font-size:32px; font-weight:900;">${doneCount}</div>
+              </div>
+              
+              <div style="background:var(--card-bg); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid var(--border-soft);">
+                  <div style="color:var(--text-sec); font-size:11px; font-weight:700; text-transform:uppercase;">Total Time</div>
+                  <div style="color:var(--text-main); font-size:32px; font-weight:900;">${timeDisplay}</div>
+              </div>
+              
+              <div style="background:var(--card-bg); padding:20px; border-radius:12px; margin-bottom:40px; border:1px solid var(--border-soft);">
+                  <div style="color:var(--text-sec); font-size:11px; font-weight:700; text-transform:uppercase;">Efficiency</div>
+                  <div style="color:var(--text-main); font-size:32px; font-weight:900;">${effDisplay}</div>
+              </div>
+              
+              <div style="display:flex; align-items:center; color:var(--active-green); font-weight:800; font-size:12px; letter-spacing:1px;">
+                  <div style="width:12px; height:12px; background:var(--active-green); border-radius:50%; margin-right:10px; box-shadow:0 0 10px var(--active-green); animation:pulse-update 1s infinite;"></div>
+                  APP LIVE: WAITING FOR DISPATCH
+              </div>
+          </div>
+          <div id="victory-map" style="background:#111;"></div>
+       `;
+       
+       // MAP LOGIC
+       setTimeout(() => {
+           if(document.getElementById('victory-map')) {
+               const vMap = new google.maps.Map(document.getElementById('victory-map'), {
+                   zoom: 12, center: {lat: 49.8485, lng: -99.9501}, disableDefaultUI: true,
+                   styles: document.body.getAttribute('data-theme') === 'light' ? [] : darkMapStyles
+               });
+               const points = doneJobs.filter(j => j.lat && j.lng).map(j => ({lat: j.lat, lng: j.lng}));
+               if(points.length > 0) {
+                   const bounds = new google.maps.LatLngBounds();
+                   points.forEach(p => bounds.extend(p));
+                   vMap.fitBounds(bounds);
+                   new google.maps.Polyline({path: points, strokeColor: "#ffcc00", strokeWeight: 5, map: vMap});
+               }
+           }
+       }, 100);
+       
+    } else {
+        // Restore List View styles
+        mmList.style.display = 'block';
+        mmList.style.gridTemplateColumns = 'none';
+        mmList.style.height = '100%'; 
+        mmList.style.padding = '20px 15px 100px 15px';
+        mmList.style.overflow = 'auto'; // Revert overflow
+    }
+
     const feed = document.getElementById("live-feed"); 
     const rLog = document.getElementById("recent-log"); 
     const qLog = document.getElementById("queue-log");
