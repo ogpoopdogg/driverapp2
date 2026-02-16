@@ -621,12 +621,13 @@
     }
     mapLabels.forEach(l => l.close());
     mapLabels = [];
-    document.getElementById('mini-map-list').innerHTML = "";
-    document.getElementById('mini-map-list').style.display = 'none';
     
     optimizedOrder = []; 
 
     if(jobs.length === 0) return;
+
+    document.getElementById('mini-map-list').innerHTML = "";
+    document.getElementById('mini-map-list').style.display = 'none';
 
     // --- GROUPING LOGIC FOR API OPTIMIZATION ---
     const groups = [];
@@ -1106,6 +1107,7 @@ document.addEventListener('keypress', (e) => {
       const taggedNote = existing ? `${existing} | Driver Note (${currentDriver}): ${newText}` : `Driver Note (${currentDriver}): ${newText}`;
       selfEdited.add(`${id}_notes`);
       db.ref(refPath).child(id).update({ other_info: taggedNote })
+        .then(() => closeJobCard())
         .catch(err => alert("Save failed: " + err.message));
     });
   }
@@ -1503,6 +1505,52 @@ document.addEventListener('keypress', (e) => {
     } else {
       routeBtn.classList.remove('glow-active', 'glow-max');
       routeBtn.innerText = "ROUTE NAV";
+    }
+
+    const miniList = document.getElementById('mini-map-list');
+    if (pendingCount === 0) {
+        // Scorecard Logic
+        const completed = Object.values(globalJobs).filter(j => 
+            j.assigned_to === currentDriver && 
+            j.status === 'completed' && 
+            (j.completed_at || 0) >= startOfToday
+        ).sort((a,b) => b.completed_at - a.completed_at);
+        
+        let html = `<div style="padding:20px; text-align:center; border-bottom:1px solid var(--border-soft);">
+            <div style="font-size:16px; font-weight:900; color:var(--accent); letter-spacing:1px;">DAILY PERFORMANCE</div>
+            <div style="font-size:48px; font-weight:900; color:var(--text-main); margin:10px 0; line-height:1;">${completed.length}</div>
+            <div style="font-size:10px; font-weight:700; color:#666; letter-spacing:1px;">STOPS COMPLETED</div>
+        </div><div style="padding:15px;">`;
+
+        if(completed.length === 0) {
+             html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
+        } else {
+             completed.forEach(j => {
+                 const time = formatTime12(j.completed_at);
+                 const isPick = j.jobType === 'pickup';
+                 const color = isPick ? '#ff9800' : '#4caf50';
+                 const addr = isPick ? j.pickup_location : j.destination;
+                 const name = isPick ? j.name : j.delivery_name;
+                 const po = j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : '';
+                 const pkg = j.package_details ? `<div style="color:#777; font-size:11px; margin-top:2px; font-style:italic;">${j.package_details}</div>` : '';
+                 
+                 html += `
+                   <div style="background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; padding:12px; margin-bottom:10px;">
+                      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                         <span style="color:${color}; font-weight:900; font-size:10px; text-transform:uppercase;">${j.jobType}</span>
+                         <span style="color:#888; font-size:11px; font-weight:700;">${time}</span>
+                      </div>
+                      <div style="color:var(--text-main); font-weight:800; font-size:13px; line-height:1.2;">${name}</div>
+                      <div style="color:#aaa; font-size:12px; margin-top:2px;">${addr}</div>
+                      ${po}
+                      ${pkg}
+                   </div>
+                 `;
+             });
+        }
+        html += `</div><div style="height:60px;"></div>`;
+        miniList.innerHTML = html;
+        miniList.style.display = 'block';
     }
   }
 
