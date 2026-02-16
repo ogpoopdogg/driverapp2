@@ -398,7 +398,7 @@
   let hasInitialRoute = false;
 
   let lastGpsUpdate = 0;
-  const gpsInterval = 10000; // Faster updates for Nav
+  const gpsInterval = 30000; // Faster updates for Nav
   let wakeLock = null;
   let lastRouteClick = Date.now();
 
@@ -540,6 +540,27 @@
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
+  
+  function broadcastLocation() {
+    if(!currentDriver || !lastGps) return;
+    const now = Date.now();
+    // 2 second throttle to prevent double-send on click+interval overlap
+    if(now - lastGpsUpdate < 2000) return; 
+    
+    db.ref(`driver_locations/${currentDriver}`).update({
+      lat: lastGps.lat,
+      lng: lastGps.lng,
+      last_seen: now,
+      gps_timestamp: now 
+    });
+    lastGpsUpdate = now;
+  }
+  
+  // Start the interval
+  setInterval(broadcastLocation, gpsInterval);
+  // Listen for interactions
+  document.addEventListener('click', broadcastLocation);
+  document.addEventListener('touchstart', broadcastLocation, {passive: true});
 
   async function startContinuousTracking() {
     if ("Notification" in window && "serviceWorker" in navigator && messaging) {
@@ -592,16 +613,8 @@
          updateRoute();
       }
 
-      const now = Date.now();
-      if (now - lastGpsUpdate > gpsInterval) {
-        db.ref(`driver_locations/${currentDriver}`).update({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          last_seen: now,
-          gps_timestamp: now 
-        });
-        lastGpsUpdate = now;
-      }
+      if (lastGpsUpdate === 0) broadcastLocation();
+
     }, (err) => console.warn("GPS Error:", err.message), 
     { enableHighAccuracy: true, maximumAge: 0 });
   }
@@ -1439,6 +1452,8 @@ document.addEventListener('keypress', (e) => {
         const notesDisplay = (p.other_info && p.other_info.trim() !== "") ? 
           `<div class="${isEdited ? 'notes-edited' : ''} ${needsAlert && changedFields.includes('notes') ? 'field-highlight' : ''}" style="text-align:center; width:100%; margin-top:10px; color:#ddd; font-size:12px; word-wrap:break-word; font-style:italic;">${noteWithTags}</div>` 
           : '';
+        
+        const phoneVal = p.phone || p.phone_number || p.customer_phone;
 
         card.innerHTML = `
           <div style="display:flex; gap:10px;">
@@ -1468,6 +1483,8 @@ document.addEventListener('keypress', (e) => {
                ${(p.po_number && p.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" style="font-weight:bold; color:#aaa; font-size:13px; cursor:pointer; margin-top:4px;">PO: <span class="${needsAlert && changedFields.includes('po') ? 'field-highlight' : ''}" style="color:var(--accent);">${p.po_number}</span></div>` : ''}
                
                ${notesDisplay}
+               
+               ${(phoneVal) ? `<a href="tel:${phoneVal}" style="display:block; margin-top:12px; color:#2196f3; font-weight:900; font-size:18px; font-family:monospace; text-decoration:none; border-top:1px solid #333; padding-top:8px;" onclick="event.stopPropagation()">📞 ${phoneVal}</a>` : ''}
             </div>
 
             <div style="width:75px; display:flex; flex-direction:column; gap:6px; justify-content:center;"> 
@@ -1505,6 +1522,10 @@ document.addEventListener('keypress', (e) => {
     } else {
       routeBtn.classList.remove('glow-active', 'glow-max');
       routeBtn.innerText = "ROUTE NAV";
+    }
+
+    if (feed.classList.contains('overlay-active') && feed.querySelectorAll('.active-card').length === 0) {
+        closeJobCard();
     }
 
     const miniList = document.getElementById('mini-map-list');
