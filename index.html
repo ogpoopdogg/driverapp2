@@ -740,6 +740,7 @@
                  db.ref(`driver_locations/${currentDriver}`).update({
                     active_route: result.routes[0].polyline.encodedPolyline,
                     route_string: routeString,
+                    route_order: optimizedOrder,
                     total_duration: durStr,
                     route_timestamp: Date.now()
                 });
@@ -1516,7 +1517,7 @@ document.addEventListener('keypress', (e) => {
       routeBtn.classList.add('glow-max');
       routeBtn.innerText = "MAX ROUTE";
     } else if(pendingCount > 1) {
-      routeBtn.classList.remove('glow-active');
+      routeBtn.classList.remove('glow-active', 'glow-max');
       routeBtn.classList.add('glow-active');
       routeBtn.innerText = "ROUTE NAV";
     } else {
