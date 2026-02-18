@@ -331,8 +331,8 @@
     optimizedOrder = []; 
     if(jobs.length === 0) return;
 
-    document.getElementById('mini-map-list').innerHTML = "";
     document.getElementById('mini-map-list').style.display = 'none';
+    document.getElementById('mini-map-list').innerHTML = "";
 
     const groups = [], groupMap = new Map();
     jobs.forEach(j => {
@@ -421,7 +421,7 @@
                 }
             });
             document.getElementById('mini-map-list').innerHTML = listHtml;
-            document.getElementById('mini-map-list').style.display = listHtml ? 'block' : 'none';
+            document.getElementById('mini-map-list').style.display = 'block';
             isNavigating = true;
             renderUnifiedFeed(); 
             if(Object.keys(globalJobs).length > 0) localStorage.setItem('ec_known_jobs', JSON.stringify(Object.keys(globalJobs)));
@@ -743,7 +743,7 @@
     
     setTimeout(() => { 
         if(isPickup) {
-            db.ref('pickups').child(id).update({ status: 'in_transit' }).then(() => { delete pickupData[id]; mergeAndRender(); }); 
+            db.ref('pickups').child(id).update({ status: 'in_transit' }); 
         } else {
             sessionStorage.setItem('last_completed_job', id);
             db.ref('dropoffs').child(id).update({ status: 'completed', completed_at: Date.now() }); 
@@ -782,15 +782,23 @@
               count++;
               const newId = db.ref('dropoffs').push().key;
               updates[`dropoffs/${newId}`] = {
-                  name: job.delivery_name || 'Unknown', destination: job.destination || 'Unknown', city: job.city || 'Brandon', pickup_location: 'Depot/Base',
-                  status: 'pending', assigned_to: 'Unassigned', package_details: job.package_details || '', po_number: job.po_number || '', timestamp: timestamp,
+                  delivery_name: job.delivery_name || 'Unknown',
+                  destination: job.destination || 'Unknown',
+                  name: job.name || 'Unknown',
+                  pickup_location: 'Depot/Base',
+                  city: job.city || 'Brandon',
+                  status: 'pending',
+                  assigned_to: 'Unassigned',
+                  package_details: job.package_details || '',
+                  po_number: job.po_number || '',
+                  timestamp: timestamp,
                   other_info: (job.other_info || '') + ` [Converted from Pickup: ${job.name || 'Unknown'}]`
               };
               updates[`pickups/${key}/status`] = 'completed'; updates[`pickups/${key}/completed_at`] = timestamp;
           }
       });
       if (count === 0) { alert("No 'In Transit' pickups found to unload."); return; }
-      db.ref().update(updates).then(() => { alert("Inventory Unloaded. Deliveries created for Dispatch."); location.reload(); }).catch(e => alert("Error unloading: " + e.message));
+      db.ref().update(updates).then(() => { alert("Inventory Unloaded. Deliveries created for Dispatch."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
   }
 </script>
 </body>
