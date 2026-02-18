@@ -752,7 +752,7 @@
          closeJobCard();
          setTimeout(() => {
             sessionStorage.setItem('last_completed_job', id);
-            db.ref('jobs').child(id).update({ status: 'completed', completed_at: Date.now() });
+            db.ref('jobs').child(id).update({ status: 'completed', completed_at: Date.now(), other_info: (job.other_info || '') + " | Delivered by " + currentDriver });
          }, 500);
     }
   }
@@ -788,7 +788,7 @@
               count++;
               updates[`jobs/${key}/status`] = 'pending_delivery';
               updates[`jobs/${key}/assigned_to`] = 'Unassigned';
-              updates[`jobs/${key}/other_info`] = (job.other_info || '') + ` | Inbound Scan by ${currentDriver}`;
+              updates[`jobs/${key}/other_info`] = (job.other_info || '') + ` | Picked up by ${currentDriver}`;
           }
       });
       if (count === 0) { alert("No 'In Transit' jobs found."); return; }
