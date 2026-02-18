@@ -253,8 +253,8 @@
     const waypoints = optimizedOrder.map(id => {
         const job = globalJobs[id];
         if(!job) return "";
-        const addr = job.jobType === 'pickup' ? job.pickup_location : job.destination;
-        const name = job.jobType === 'pickup' ? job.name : job.delivery_name;
+        const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
+        const name = job.status === 'pending_pickup' ? job.name : job.delivery_name;
         const city = job.city || "Brandon";
         const key = `${name} ${addr}, ${city}`;
         if(seenLocs.has(key)) return "";
@@ -324,7 +324,7 @@
   }
 
   async function updateRoute() {
-    const jobs = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver);
+    const jobs = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver);
     if(mapPolyline) mapPolyline.setMap(null);
     if (mapMarkers.length > 0) { mapMarkers.forEach(m => m.setMap(null)); mapMarkers = []; }
     mapLabels.forEach(l => l.close()); mapLabels = [];
@@ -336,8 +336,8 @@
 
     const groups = [], groupMap = new Map();
     jobs.forEach(j => {
-        const addr = j.jobType === 'pickup' ? j.pickup_location : j.destination;
-        const name = j.jobType === 'pickup' ? j.name : j.delivery_name;
+        const addr = j.status === 'pending_pickup' ? j.pickup_location : j.destination;
+        const name = j.status === 'pending_pickup' ? j.name : j.delivery_name;
         const city = j.city || "Brandon";
         const key = `${name}|${addr}|${city}`.toLowerCase();
         if(!groupMap.has(key)) {
@@ -375,7 +375,7 @@
             if(result.routes[0].polyline) {
                  let dur = result.routes[0].duration ? parseInt(result.routes[0].duration) : 0;
                  let durStr = dur > 3600 ? `${Math.floor(dur/3600)} hr ${Math.floor((dur%3600)/60)} min` : `${Math.floor(dur/60)} min`;
-                 db.ref(`driver_locations/${currentDriver}`).update({ active_route: result.routes[0].polyline.encodedPolyline, route_string: orderedGroups.map((g, i) => `${i+1}. ${g.masterJob.jobType==='pickup' ? (g.masterJob.name + ' ' + g.masterJob.pickup_location) : (g.masterJob.delivery_name + ' ' + g.masterJob.destination)}`).join(" | "), route_order: optimizedOrder, total_duration: durStr, route_timestamp: Date.now() });
+                 db.ref(`driver_locations/${currentDriver}`).update({ active_route: result.routes[0].polyline.encodedPolyline, route_string: orderedGroups.map((g, i) => `${i+1}. ${g.masterJob.status==='pending_pickup' ? (g.masterJob.name + ' ' + g.masterJob.pickup_location) : (g.masterJob.delivery_name + ' ' + g.masterJob.destination)}`).join(" | "), route_order: optimizedOrder, total_duration: durStr, route_timestamp: Date.now() });
             }
 
             const legs = result.routes[0].legs;
@@ -389,12 +389,12 @@
                         group.jobs.forEach(gj => { 
                             gj.lat = loc.latitude; gj.lng = loc.longitude;
                             const jId = Object.keys(globalJobs).find(k => globalJobs[k] === gj);
-                            if(jId) db.ref(gj.jobType === 'pickup' ? 'pickups' : 'dropoffs').child(jId).update({ lat: loc.latitude, lng: loc.longitude });
+                            if(jId) db.ref('jobs').child(jId).update({ lat: loc.latitude, lng: loc.longitude });
                         });
                    }
                    if(!loc) return;
                    
-                   const isPickup = job.jobType === 'pickup', colorHex = isPickup ? "#FE9800" : "#4CAF50";
+                   const isPickup = job.status === 'pending_pickup', colorHex = isPickup ? "#FE9800" : "#4CAF50";
                    const bizName = isPickup ? job.name : job.delivery_name, addrText = isPickup ? job.pickup_location : job.destination;
                    
                    mapMarkers.push(new google.maps.Marker({ position: { lat: loc.latitude, lng: loc.longitude }, map: map, label: { text: (i+1).toString(), color: "white", fontWeight: "bold" }, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: colorHex, fillOpacity: 1, strokeColor: "white", strokeWeight: 2 }, zIndex: 100 }));
@@ -494,25 +494,25 @@
 
   function restoreToQueue(id) {
     const job = globalJobs[id]; if(!job) return;
-    if(confirm("Restore this job back to the active list?")) db.ref(job.jobType === 'pickup' ? 'pickups' : 'dropoffs').child(id).update({ status: 'pending', completed_at: null });
+    if(confirm("Restore this job back to the active list?")) db.ref('jobs').child(id).update({ status: 'pending_pickup', completed_at: null });
   }
 
   function declineJob(id) {
     const job = globalJobs[id]; if(!job) return;
-    if(confirm("Are you sure you want to decline this job?")) db.ref(job.jobType === 'pickup' ? 'pickups' : 'dropoffs').child(id).update({ assigned_to: "", status: "pending" }).catch(err => alert("Error: " + err.message));
+    if(confirm("Are you sure you want to decline this job?")) db.ref('jobs').child(id).update({ assigned_to: "", status: "pending_pickup" }).catch(err => alert("Error: " + err.message));
   }
 
   function dndJob(id, existingNotes) {
     const job = globalJobs[id]; if(!job) return;
-    const refPath = job.jobType === 'pickup' ? 'pickups' : 'dropoffs';
-    const reason = prompt(job.jobType === 'pickup' ? "Reason for DNP:" : "Reason for DND:");
+    const refPath = 'jobs';
+    const reason = prompt(job.status === 'pending_pickup' ? "Reason for DNP:" : "Reason for DND:");
     if (reason === null) return; 
     if (!reason.trim()) { alert("Please provide a reason."); return; }
-    const tag = job.jobType === 'pickup' ? "DNP" : "DND";
+    const tag = job.status === 'pending_pickup' ? "DNP" : "DND";
     const newEntry = `${tag} (${currentDriver}): ${reason}`;
     
-    db.ref(refPath).child(id).update({ assigned_to: "", status: "pending", other_info: existingNotes ? `${existingNotes} | ${newEntry}` : newEntry }).then(() => closeJobCard()).catch(err => alert("Error: " + err.message));
-    if (job.customer_email) fetch("https://script.google.com/macros/s/AKfycbyQDC4eq3YiiDLuY42Y7rBpWa1FBkPTaCUMQJTSw8qAEzW5sfBA4hR4WNNwzdxMFLij/exec", { method: "POST", mode: "no-cors", body: JSON.stringify({ email: job.customer_email, notes: newEntry, type: job.jobType }) });
+    db.ref(refPath).child(id).update({ assigned_to: "", status: "pending_pickup", other_info: existingNotes ? `${existingNotes} | ${newEntry}` : newEntry }).then(() => closeJobCard()).catch(err => alert("Error: " + err.message));
+    if (job.customer_email) fetch("https://script.google.com/macros/s/AKfycbyQDC4eq3YiiDLuY42Y7rBpWa1FBkPTaCUMQJTSw8qAEzW5sfBA4hR4WNNwzdxMFLij/exec", { method: "POST", mode: "no-cors", body: JSON.stringify({ email: job.customer_email, notes: newEntry, type: job.status }) });
   }
 
   function enterNoteEdit(id, currentNotes) {
@@ -523,7 +523,7 @@
   function saveNoteEdit(id) {
     const job = globalJobs[id]; if(!id) return;
     selfEdited.add(`${id}_notes`);
-    db.ref(job.jobType === 'pickup' ? 'pickups' : 'dropoffs').child(id).update({ other_info: `${document.getElementById('edit-input-' + id).value} (Edited by ${currentDriver})` }).catch(err => alert("Save failed: " + err.message));
+    db.ref('jobs').child(id).update({ other_info: `${document.getElementById('edit-input-' + id).value} (Edited by ${currentDriver})` }).catch(err => alert("Save failed: " + err.message));
   }
 
   function toggleDriverNoteEdit(e, id) {
@@ -543,7 +543,7 @@
 
   function saveDriverNote(id) {
     const job = globalJobs[id]; if(!job) return;
-    const refPath = job.jobType === 'pickup' ? 'pickups' : 'dropoffs';
+    const refPath = 'jobs';
     const newText = document.getElementById(`driver-edit-input-${id}`).value;
     db.ref(refPath).child(id).child("other_info").once("value", s => {
       const existing = s.val() || "";
@@ -561,7 +561,7 @@
     e.stopPropagation();
     const job = globalJobs[id]; if(!job) return;
     selfEdited.add(`${id}_po`);
-    db.ref(job.jobType === 'pickup' ? 'pickups' : 'dropoffs').child(id).update({ po_number: document.getElementById(`po-input-${id}`).value });
+    db.ref('jobs').child(id).update({ po_number: document.getElementById(`po-input-${id}`).value });
   }
 
   function cancelPoEdit(e, id, original) {
@@ -585,7 +585,7 @@
         if(card.style.display !== 'none') {
              const id = card.id.replace('card-', '');
              if(card.classList.contains('new-job-highlight')) {
-                 const job = globalJobs[id]; if(job) markAsSeenPersistent(id, job.jobType === 'pickup' ? 'pickups' : 'dropoffs');
+                 const job = globalJobs[id]; if(job) markAsSeenPersistent(id, 'jobs');
              }
              if(pendingAlerts[id] || sessionStorage.getItem(`ack_update_${id}`) !== 'true') {
                   sessionStorage.setItem(`ack_update_${id}`, 'true'); delete pendingAlerts[id]; card.classList.remove('has-update'); document.getElementById(`badge-${id}`)?.style.setProperty('display', 'none');
@@ -598,19 +598,16 @@
   }
 
   function startDataListeners() {
-    db.ref("pickups").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => { pickupData = snap.val() || {}; mergeAndRender(); });
-    db.ref("dropoffs").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => { dropoffData = snap.val() || {}; mergeAndRender(); });
+    db.ref("jobs").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => { jobsData = snap.val() || {}; mergeAndRender(); });
   }
-  let pickupData = {}, dropoffData = {};
+  let jobsData = {};
 
   function mergeAndRender() {
     if(!currentDriver) return;
     const prevTop = optimizedOrder[0];
-    globalJobs = {};
-    Object.entries(pickupData).forEach(([k, v]) => globalJobs[k] = { ...v, jobType: 'pickup' });
-    Object.entries(dropoffData).forEach(([k, v]) => globalJobs[k] = { ...v, jobType: 'delivery' });
+    globalJobs = jobsData;
     
-    const currentPending = Object.values(globalJobs).filter(j => j.status === 'pending' && j.assigned_to === currentDriver).length;
+    const currentPending = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver).length;
     if (currentPending !== lastPendingCount) {
          if (currentPending > lastPendingCount) lastAnnouncedId = null;
          if (!isFirstLoad) document.getElementById('route-toggle-btn').classList.add('route-glow-update');
@@ -646,11 +643,13 @@
       fieldSnapshots[id] = { ...cf };
       const changed = pendingAlerts[id] || [], needsAlert = changed.length > 0 && !sessionStorage.getItem(`ack_update_${id}`);
       
-      let topLabel, topAddr, topContact, botLabel, botAddr, botContact, badgeColor, badgeText, dndText;
-      if (p.jobType === 'pickup') {
-            badgeColor = "#ff9800"; badgeText = "PICK UP"; dndText = "DNP"; topLabel = "PICKUP AT"; topAddr = p.pickup_location; topContact = p.name; botLabel = "DELIVER TO"; botAddr = p.destination; botContact = p.delivery_name;
+      let badgeColor, badgeText, btnText, topOpacity = 1, botOpacity = 1;
+      if (p.status === 'pending_pickup') {
+          badgeColor = "#ff9800"; badgeText = "PICK UP"; btnText = "PICKED UP"; botOpacity = 0.5;
+      } else if (p.status === 'in_transit') {
+          badgeColor = "#2196f3"; badgeText = "ON TRUCK"; btnText = "UNLOAD AT DEPOT"; topOpacity = 0.5;
       } else {
-            badgeColor = "#00ff41"; badgeText = "DELIVERY"; dndText = "DND"; topLabel = "DELIVER TO"; topAddr = p.destination; topContact = p.delivery_name; botLabel = "FROM"; botAddr = p.pickup_location; botContact = p.name; 
+          badgeColor = "#4caf50"; badgeText = "DELIVERY"; btnText = "DONE"; topOpacity = 0.5;
       }
       
       const item = document.createElement("div"); 
@@ -658,12 +657,13 @@
       if(id === lastDoneId) { item.classList.add('just-archived'); sessionStorage.removeItem('last_completed_job'); }
       if(needsAlert) item.classList.add('has-update');
 
-      item.innerHTML = `<div style="background:${badgeColor}; width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px;"></div><span class="history-contact" style="font-size:12px; margin-bottom:1px; display:inline;">${topContact || 'No Name'}</span><div style="font-weight:700; font-size:11px; line-height:1.2; color:#ccc;">${topAddr || 'No Address'}</div><span class="history-package">${(p.package_details || '').replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</span>`;
+      item.innerHTML = `<div style="background:${badgeColor}; width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px;"></div><span class="history-contact" style="font-size:12px; margin-bottom:1px; display:inline;">${p.name || 'No Name'}</span><div style="font-weight:700; font-size:11px; line-height:1.2; color:#ccc;">${p.pickup_location || 'No Address'}</div><span class="history-package">${(p.package_details || '').replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</span>`;
 
       if (p.status === 'completed') {
         item.classList.add('done-slash'); item.onclick = () => restoreToQueue(id); rLog.appendChild(item);
-      } else if (p.status === 'pending') {
-        pendingCount++; seqIndex++; uniqueStops.add((p.jobType === 'pickup' ? p.pickup_location : p.destination).trim()); item.onclick = () => scrollToCard(id); qLog.appendChild(item);
+      } else {
+        if (p.status !== 'in_transit') pendingCount++;
+        seqIndex++; uniqueStops.add((p.status === 'pending_pickup' ? p.pickup_location : p.destination).trim()); item.onclick = () => scrollToCard(id); qLog.appendChild(item);
 
         const card = document.createElement("div"); card.className = "active-card"; card.style.display = 'none'; card.id = `card-${id}`;
         if (!p.seen_by || !p.seen_by[currentDriver]) card.classList.add('new-job-highlight');
@@ -683,15 +683,19 @@
                      <div class="type-badge" style="background:${badgeColor};">${badgeText}</div>
                      ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
                   </div>
-                  <a href="${getNavUrl((topContact ? topContact + ' ' : '') + topAddr, p.city || '')}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${p.city || '??'}</div></a>
+                  <a href="${getNavUrl((p.status==='pending_pickup'?p.name:p.delivery_name) + ' ' + (p.status==='pending_pickup'?p.pickup_location:p.destination), p.city || '')}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${p.city || '??'}</div></a>
                </div>
-               <div class="card-label">${topLabel}</div>
-               <div class="tech-info ${needsAlert && changed.includes('contact') ? 'field-highlight' : ''}" style="margin-bottom:2px; color: var(--queue-orange); font-size:16px; line-height:1.1;">${topContact || 'N/A'}</div>
-               <a href="${getNavUrl((topContact ? topContact + ' ' : '') + topAddr, p.city || '')}" target="_blank" class="nav-link"><div class="pickup-value ${needsAlert && changed.includes('addr') ? 'field-highlight' : ''}">${topAddr}</div></a>
+               <div style="opacity:${topOpacity}">
+                   <div class="card-label">FROM</div>
+                   <div class="tech-info ${needsAlert && changed.includes('contact') ? 'field-highlight' : ''}" style="margin-bottom:2px; color: var(--queue-orange); font-size:16px; line-height:1.1;">${p.name || 'N/A'}</div>
+                   <a href="${getNavUrl((p.name ? p.name + ' ' : '') + p.pickup_location, p.city || '')}" target="_blank" class="nav-link"><div class="pickup-value ${needsAlert && changed.includes('addr') ? 'field-highlight' : ''}">${p.pickup_location}</div></a>
+               </div>
                <div class="pkg-wrapper"><div class="tech-info ${needsAlert && changed.includes('details') ? 'field-highlight' : ''}" style="font-size:12px; color:#ddd; text-transform:uppercase;">${(p.package_details || "-").replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</div></div>
-               <div class="card-label" style="margin-top:4px;">${botLabel}</div>
-               <div class="tech-info ${needsAlert && changed.includes('dropName') ? 'field-highlight' : ''}" style="color: #bbb; font-size:13px;">${botContact || 'N/A'}</div>
-               <div class="drop-value ${needsAlert && changed.includes('dest') ? 'field-highlight' : ''}" style="font-size:13px; color:#999;">${botAddr}</div>
+               <div style="opacity:${botOpacity}">
+                   <div class="card-label" style="margin-top:4px;">TO</div>
+                   <div class="tech-info ${needsAlert && changed.includes('dropName') ? 'field-highlight' : ''}" style="color: #bbb; font-size:13px;">${p.delivery_name || 'N/A'}</div>
+                   <div class="drop-value ${needsAlert && changed.includes('dest') ? 'field-highlight' : ''}" style="font-size:13px; color:#999;">${p.destination}</div>
+               </div>
                ${(p.po_number && p.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" class="po-wrapper">PO: <span class="${needsAlert && changed.includes('po') ? 'field-highlight' : ''}" style="color:var(--accent);">${p.po_number}</span></div>` : ''}
                ${(p.other_info && p.other_info.trim() !== "") ? `<div class="note-box ${isEdited ? 'notes-edited' : ''} ${needsAlert && changed.includes('notes') ? 'field-highlight' : ''}">${noteWithTags}</div>` : ''}
                ${phone ? `<a href="tel:${phone}" class="phone-link" onclick="event.stopPropagation()">📞 ${phone}</a>` : ''}
@@ -701,8 +705,8 @@
                   <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                </div>
                <div class="time-stack"><div class="job-time-stamp">${formatTime12(p.timestamp)}</div><div class="job-date-stamp">${formatDateShort(p.timestamp)}</div></div>
-               <button class="info-btn" onclick="dndJob('${id}', '${escapedNotes}')">${dndText}</button>
-               <button class="done-btn" onclick="markAction('${id}')">${p.jobType === 'pickup' ? 'PICKED UP' : 'DONE'}</button>
+               <button class="info-btn" onclick="dndJob('${id}', '${escapedNotes}')">${p.status==='pending_pickup'?'DNP':'DND'}</button>
+               ${p.status === 'in_transit' ? '' : `<button class="done-btn" onclick="markAction('${id}')">${btnText}</button>`}
             </div>
           </div>
           <div id="driver-note-display-${id}"></div>`;
@@ -711,7 +715,9 @@
     });
 
     updateNewStopsCountUI();
-    if (stopCounter) stopCounter.innerText = `${uniqueStops.size} STOP${uniqueStops.size !== 1 ? 'S' : ''}`;
+    const stopsCredit = Object.values(globalJobs).filter(j => (j.status === 'completed' || j.status === 'in_transit') && j.assigned_to === currentDriver).length;
+    if (stopCounter) stopCounter.innerText = `${stopsCredit} STOPS`;
+    
     if(pendingCount >= 20) { routeBtn.classList.add('glow-max'); routeBtn.innerText = "MAX ROUTE"; } 
     else if(pendingCount > 1) { routeBtn.classList.remove('glow-max'); routeBtn.classList.add('glow-active'); routeBtn.innerText = "ROUTE NAV"; } 
     else { routeBtn.classList.remove('glow-active', 'glow-max'); routeBtn.innerText = "ROUTE NAV"; }
@@ -724,31 +730,31 @@
         let html = `<div class="perf-header"><div class="score-title">DAILY PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
-             const isPick = j.jobType === 'pickup', color = isPick ? '#ff9800' : '#4caf50';
-             html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">${j.jobType}</span><span class="perf-time">${formatTime12(j.completed_at)}</span></div><div class="perf-name">${isPick ? j.name : j.delivery_name}</div><div class="perf-addr">${isPick ? j.pickup_location : j.destination}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
+             const color = '#4caf50';
+             html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">COMPLETED</span><span class="perf-time">${formatTime12(j.completed_at)}</span></div><div class="perf-name">${j.delivery_name}</div><div class="perf-addr">${j.destination}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
         });
-        const transitCount = Object.values(globalJobs).filter(j => j.jobType === 'pickup' && j.assigned_to === currentDriver && j.status === 'in_transit').length;
-        if(transitCount > 0) html += `<button id="unload-depot-btn" style="display:block" onclick="unloadAtDepot()">DEPOT CHECK-IN</button>`;
+        const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
+        if(transitCount > 0) html += `<button id="unload-depot-btn" style="display:block" onclick="unloadAtDepot()">DEPOT CHECK-IN (${transitCount})</button>`;
         miniList.innerHTML = html + `</div><div style="height:60px;"></div>`; miniList.style.display = 'block';
     }
   }
 
   function markAction(id) {
     const job = globalJobs[id]; if(!job) return;
-    const isPickup = job.jobType === 'pickup';
-    if(!confirm(isPickup ? "Confirm Picked Up?" : "Complete Delivery?")) return;
-    
-    document.getElementById(`card-${id}`)?.classList.add('card-exit-success'); 
-    closeJobCard();
-    
-    setTimeout(() => { 
-        if(isPickup) {
-            db.ref('pickups').child(id).update({ status: 'in_transit' }); 
-        } else {
+    if (job.status === 'pending_pickup') {
+         if(!confirm("Confirm Picked Up?")) return;
+         document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
+         closeJobCard();
+         setTimeout(() => db.ref('jobs').child(id).update({ status: 'in_transit' }), 500);
+    } else if (job.status === 'pending_delivery') {
+         if(!confirm("Complete Delivery?")) return;
+         document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
+         closeJobCard();
+         setTimeout(() => {
             sessionStorage.setItem('last_completed_job', id);
-            db.ref('dropoffs').child(id).update({ status: 'completed', completed_at: Date.now() }); 
-        }
-    }, 500); 
+            db.ref('jobs').child(id).update({ status: 'completed', completed_at: Date.now() });
+         }, 500);
+    }
   }
 
   function updateClock() { document.getElementById('clock').innerText = formatTime12(); }
@@ -757,7 +763,7 @@
   document.addEventListener('click', e => { 
       if(e.target.id && e.target.id.startsWith('note-display-')) { 
           e.stopPropagation(); const id = e.target.id.split('-').pop(), job = globalJobs[id];
-          if(job) db.ref(job.jobType === 'pickup' ? 'pickups' : 'dropoffs').child(id).child("other_info").once('value', s => enterNoteEdit(id, (s.val() || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'"))); 
+          if(job) db.ref('jobs').child(id).child("other_info").once('value', s => enterNoteEdit(id, (s.val() || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'"))); 
       } 
   });
 
@@ -775,30 +781,18 @@
 
   function unloadAtDepot() {
       if(!confirm("Are you back at the Depot? This will move all 'In Transit' packages to the Unassigned Delivery list.")) return;
-      const updates = {}, timestamp = Date.now(); let count = 0;
+      const updates = {}; let count = 0;
       Object.keys(globalJobs).forEach(key => {
           const job = globalJobs[key];
-          if (job.jobType === 'pickup' && job.assigned_to === currentDriver && job.status === 'in_transit') {
+          if (job.status === 'in_transit' && job.assigned_to === currentDriver) {
               count++;
-              const newId = db.ref('dropoffs').push().key;
-              updates[`dropoffs/${newId}`] = {
-                  delivery_name: job.delivery_name || 'Unknown',
-                  destination: job.destination || 'Unknown',
-                  name: job.name || 'Unknown',
-                  pickup_location: 'Depot/Base',
-                  city: job.city || 'Brandon',
-                  status: 'pending',
-                  assigned_to: 'Unassigned',
-                  package_details: job.package_details || '',
-                  po_number: job.po_number || '',
-                  timestamp: timestamp,
-                  other_info: (job.other_info || '') + ` [Converted from Pickup: ${job.name || 'Unknown'}]`
-              };
-              updates[`pickups/${key}/status`] = 'completed'; updates[`pickups/${key}/completed_at`] = timestamp;
+              updates[`jobs/${key}/status`] = 'pending_delivery';
+              updates[`jobs/${key}/assigned_to`] = 'Unassigned';
+              updates[`jobs/${key}/other_info`] = (job.other_info || '') + ` | Inbound Scan by ${currentDriver}`;
           }
       });
-      if (count === 0) { alert("No 'In Transit' pickups found to unload."); return; }
-      db.ref().update(updates).then(() => { alert("Inventory Unloaded. Deliveries created for Dispatch."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
+      if (count === 0) { alert("No 'In Transit' jobs found."); return; }
+      db.ref().update(updates).then(() => { alert("Inventory Unloaded. Jobs set to Pending Delivery."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
   }
 </script>
 </body>
