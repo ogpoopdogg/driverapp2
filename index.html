@@ -107,6 +107,9 @@
     .cancel-note-btn:active { transform: scale(0.95); background: #ff3333; }
     @keyframes heavy-flash { 0% { color: #ff3333; text-shadow: 0 0 5px #ff0000; transform: scale(1); } 50% { color: #ff0000; text-shadow: 0 0 15px #ff0000; transform: scale(1.1); } 100% { color: #ff3333; text-shadow: 0 0 5px #ff0000; transform: scale(1); } }
     .heavy-word { display: inline-block; animation: heavy-flash 0.8s infinite; font-weight: 900; text-transform: uppercase; }
+    
+    #unload-depot-btn { display: none; width: 90%; margin: 20px auto; padding: 15px; background: #0056b3; color: #ffffff; font-weight: 800; border: none; border-radius: 8px; font-size: 16px; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0, 86, 179, 0.4); cursor: pointer; }
+    #unload-depot-btn:active { transform: scale(0.98); }
 
     /* REFACTORED UTILITY CLASSES */
     .flex-row { display: flex; gap: 10px; }
@@ -724,6 +727,8 @@
              const isPick = j.jobType === 'pickup', color = isPick ? '#ff9800' : '#4caf50';
              html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">${j.jobType}</span><span class="perf-time">${formatTime12(j.completed_at)}</span></div><div class="perf-name">${isPick ? j.name : j.delivery_name}</div><div class="perf-addr">${isPick ? j.pickup_location : j.destination}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
         });
+        const transitCount = Object.values(globalJobs).filter(j => j.jobType === 'pickup' && j.assigned_to === currentDriver && j.status === 'in_transit').length;
+        if(transitCount > 0) html += `<button id="unload-depot-btn" style="display:block" onclick="unloadAtDepot()">DEPOT CHECK-IN</button>`;
         miniList.innerHTML = html + `</div><div style="height:60px;"></div>`; miniList.style.display = 'block';
     }
   }
@@ -757,6 +762,26 @@
   const feedUi = document.getElementById('live-feed');
   feedUi.addEventListener('touchstart', e => touchStart = e.changedTouches[0].screenX, {passive: true});
   feedUi.addEventListener('touchend', e => { if(e.changedTouches[0].screenX > touchStart + 75) closeJobCard(); }, {passive: true});
+
+  function unloadAtDepot() {
+      if(!confirm("Are you back at the Depot? This will move all 'In Transit' packages to the Unassigned Delivery list.")) return;
+      const updates = {}, timestamp = Date.now(); let count = 0;
+      Object.keys(globalJobs).forEach(key => {
+          const job = globalJobs[key];
+          if (job.jobType === 'pickup' && job.assigned_to === currentDriver && job.status === 'in_transit') {
+              count++;
+              const newId = db.ref('dropoffs').push().key;
+              updates[`dropoffs/${newId}`] = {
+                  name: job.delivery_name || 'Unknown', destination: job.destination || 'Unknown', city: job.city || 'Brandon', pickup_location: 'Depot/Base',
+                  status: 'pending', assigned_to: 'Unassigned', package_details: job.package_details || '', po_number: job.po_number || '', timestamp: timestamp,
+                  other_info: (job.other_info || '') + ` [Converted from Pickup: ${job.name || 'Unknown'}]`
+              };
+              updates[`pickups/${key}/status`] = 'completed'; updates[`pickups/${key}/completed_at`] = timestamp;
+          }
+      });
+      if (count === 0) { alert("No 'In Transit' pickups found to unload."); return; }
+      db.ref().update(updates).then(() => alert("Inventory Unloaded. Deliveries created for Dispatch.")).catch(e => alert("Error unloading: " + e.message));
+  }
 </script>
 </body>
 </html>
