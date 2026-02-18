@@ -702,7 +702,7 @@
                </div>
                <div class="time-stack"><div class="job-time-stamp">${formatTime12(p.timestamp)}</div><div class="job-date-stamp">${formatDateShort(p.timestamp)}</div></div>
                <button class="info-btn" onclick="dndJob('${id}', '${escapedNotes}')">${dndText}</button>
-               <button class="done-btn" onclick="markDone('${id}')">DONE</button>
+               <button class="done-btn" onclick="markAction('${id}')">${p.jobType === 'pickup' ? 'PICKED UP' : 'DONE'}</button>
             </div>
           </div>
           <div id="driver-note-display-${id}"></div>`;
@@ -733,12 +733,22 @@
     }
   }
 
-  function markDone(id) {
-    if(!confirm("Complete?")) return;
-    document.getElementById(`card-${id}`)?.classList.add('card-exit-success'); closeJobCard();
-    const job = globalJobs[id];
-    sessionStorage.setItem('last_completed_job', id);
-    setTimeout(() => { db.ref(job ? (job.jobType === 'pickup' ? 'pickups' : 'dropoffs') : 'dropoffs').child(id).update({ status: 'completed', completed_at: Date.now() }); }, 500); 
+  function markAction(id) {
+    const job = globalJobs[id]; if(!job) return;
+    const isPickup = job.jobType === 'pickup';
+    if(!confirm(isPickup ? "Confirm Picked Up?" : "Complete Delivery?")) return;
+    
+    document.getElementById(`card-${id}`)?.classList.add('card-exit-success'); 
+    closeJobCard();
+    
+    setTimeout(() => { 
+        if(isPickup) {
+            db.ref('pickups').child(id).update({ status: 'in_transit' }); 
+        } else {
+            sessionStorage.setItem('last_completed_job', id);
+            db.ref('dropoffs').child(id).update({ status: 'completed', completed_at: Date.now() }); 
+        }
+    }, 500); 
   }
 
   function updateClock() { document.getElementById('clock').innerText = formatTime12(); }
