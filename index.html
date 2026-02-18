@@ -662,7 +662,7 @@
 
       if (p.status === 'completed') {
         item.classList.add('done-slash'); item.onclick = () => restoreToQueue(id); rLog.appendChild(item);
-      } else {
+      } else if (p.status === 'pending') {
         pendingCount++; seqIndex++; uniqueStops.add((p.jobType === 'pickup' ? p.pickup_location : p.destination).trim()); item.onclick = () => scrollToCard(id); qLog.appendChild(item);
 
         const card = document.createElement("div"); card.className = "active-card"; card.style.display = 'none'; card.id = `card-${id}`;
@@ -743,7 +743,7 @@
     
     setTimeout(() => { 
         if(isPickup) {
-            db.ref('pickups').child(id).update({ status: 'in_transit' }); 
+            db.ref('pickups').child(id).update({ status: 'in_transit' }).then(() => { delete pickupData[id]; mergeAndRender(); }); 
         } else {
             sessionStorage.setItem('last_completed_job', id);
             db.ref('dropoffs').child(id).update({ status: 'completed', completed_at: Date.now() }); 
@@ -790,7 +790,7 @@
           }
       });
       if (count === 0) { alert("No 'In Transit' pickups found to unload."); return; }
-      db.ref().update(updates).then(() => alert("Inventory Unloaded. Deliveries created for Dispatch.")).catch(e => alert("Error unloading: " + e.message));
+      db.ref().update(updates).then(() => { alert("Inventory Unloaded. Deliveries created for Dispatch."); location.reload(); }).catch(e => alert("Error unloading: " + e.message));
   }
 </script>
 </body>
