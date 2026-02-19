@@ -787,6 +787,7 @@
           if (job.status === 'in_transit' && job.assigned_to === currentDriver) {
               count++;
               updates[`jobs/${key}/status`] = 'pending_delivery';
+              updates[`jobs/${key}/assigned_to`] = 'Unassigned';
               updates[`jobs/${key}/other_info`] = (job.other_info || '') + ` | Arrived at Depot (Retained by ${currentDriver})`;
           }
       });
