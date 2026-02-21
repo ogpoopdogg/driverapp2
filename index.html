@@ -511,7 +511,12 @@
     const tag = job.status === 'pending_pickup' ? "DNP" : "DND";
     const newEntry = `${tag} (${currentDriver}): ${reason}`;
     
-    db.ref(refPath).child(id).update({ status: tag, other_info: existingNotes ? `${existingNotes} | ${newEntry}` : newEntry }).then(() => closeJobCard()).catch(err => alert("Error: " + err.message));
+    document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
+    closeJobCard();
+    setTimeout(() => {
+      db.ref(refPath).child(id).update({ status: tag, completed_at: Date.now(), other_info: existingNotes ? `${existingNotes} | ${newEntry}` : newEntry }).catch(err => alert("Error: " + err.message));
+    }, 500);
+
     if (job.customer_email) fetch("https://script.google.com/macros/s/AKfycbyQDC4eq3YiiDLuY42Y7rBpWa1FBkPTaCUMQJTSw8qAEzW5sfBA4hR4WNNwzdxMFLij/exec", { method: "POST", mode: "no-cors", body: JSON.stringify({ email: job.customer_email, notes: newEntry, type: job.status }) });
   }
 
@@ -629,7 +634,7 @@
 
     sortedEntries.forEach(([id, p]) => {
       if (p.assigned_to !== currentDriver) return;
-      if (p.status === 'completed' && (p.completed_at || 0) < startOfToday) return;
+      if ((p.status === 'completed' || p.status === 'DND' || p.status === 'DNP') && (p.completed_at || 0) < startOfToday) return;
 
       const cf = { addr: p.pickup_location, dest: p.destination, contact: p.name, dropName: p.delivery_name, po: p.po_number, notes: p.other_info, details: p.package_details, status: p.status, assigned: p.assigned_to };
       if (fieldSnapshots[id]) {
@@ -659,7 +664,7 @@
 
       item.innerHTML = `<div style="background:${badgeColor}; width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px;"></div><span class="history-contact" style="font-size:12px; margin-bottom:1px; display:inline;">${p.name || 'No Name'}</span><div style="font-weight:700; font-size:11px; line-height:1.2; color:#ccc;">${p.pickup_location || 'No Address'}</div><span class="history-package">${(p.package_details || '').replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</span>`;
 
-      if (p.status === 'completed') {
+      if (p.status === 'completed' || p.status === 'DND' || p.status === 'DNP') {
         item.classList.add('done-slash'); item.onclick = () => restoreToQueue(id); rLog.appendChild(item);
       } else {
         if (p.status !== 'in_transit') pendingCount++;
