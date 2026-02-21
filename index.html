@@ -429,6 +429,14 @@
     } catch(e) { console.error("Routing Error", e); }
   }
 
+  function clearAllNotifications() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg && reg.getNotifications) reg.getNotifications().then(notifications => notifications.forEach(n => n.close()));
+      });
+    }
+  }
+
   firebase.auth().onAuthStateChanged((user) => {
     if (user && user.email) {
       const rawName = user.email.split('@')[0];
@@ -438,8 +446,8 @@
       document.getElementById('header-name').innerHTML = `
         <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
         <span class="driver-name-display" onclick="location.reload()" style="cursor:pointer; font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
-        <span style="white-space: nowrap;"><span id="stop-counter" class="stop-badge" style="margin-left: 0;">0 STOPS</span></span>
       `;
+      clearAllNotifications();
       startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
     } else { document.getElementById('login-overlay').style.display = 'flex'; }
   });
@@ -777,7 +785,10 @@
   async function installPWA() {
     if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') installBtn.style.display = 'none'; deferredPrompt = null; }
   }
-  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.log));
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.log));
+    navigator.serviceWorker.addEventListener('message', event => { if (event.data && event.data.jobId) showJobGroup(event.data.jobId); });
+  }
   
   let touchStart = 0;
   const feedUi = document.getElementById('live-feed');
