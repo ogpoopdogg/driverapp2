@@ -344,7 +344,7 @@
             const key = isCoords ? addr.replace(/\s+/g, '') : `${name}|${addr}|${city}`.toLowerCase();
             const displayStr = isCoords ? addr.trim() : `${name} ${addr}, ${city}`;
             if(!groupMap.has(key)) {
-                const group = { key: key, masterJob: j, jobs: [], addrString: displayStr };
+                const group = { key: key, masterJob: j, jobs: [], addrString: displayStr, isCoords: isCoords };
                 groupMap.set(key, group); groups.push(group);
             }
             groupMap.get(key).jobs.push(j);
@@ -360,7 +360,7 @@
             body: JSON.stringify({
                 origin: lastGps ? { location: { latLng: { latitude: lastGps.lat, longitude: lastGps.lng } } } : { address: "1604 Moreland Ave, Brandon MB" },
                 destination: { address: "1604 Moreland Ave, Brandon MB" }, 
-                intermediates: groups.map(g => ({ address: g.addrString })),
+                intermediates: groups.map(g => g.isCoords ? { location: { latLng: { latitude: parseFloat(g.addrString.split(',')[0]), longitude: parseFloat(g.addrString.split(',')[1]) } } } : { address: g.addrString }),
                 travelMode: "DRIVE", optimizeWaypointOrder: groups.length > 1
             })
         });
@@ -735,7 +735,7 @@
         item.classList.add('done-slash'); item.onclick = () => restoreToQueue(id); rLog.appendChild(item);
       } else {
         if (p.status !== 'in_transit') pendingCount++;
-        seqIndex++; uniqueStops.add((p.status === 'pending_pickup' ? p.pickup_location : p.destination).trim()); item.onclick = () => scrollToCard(id); qLog.appendChild(item);
+        seqIndex++; uniqueStops.add((p.status === 'pending_pickup' ? (p.pickup_location||"") : (p.destination||"")).trim()); item.onclick = () => scrollToCard(id); qLog.appendChild(item);
 
         const card = document.createElement("div"); card.className = "active-card"; card.style.display = 'none'; card.id = `card-${id}`;
         if (!p.seen_by || !p.seen_by[currentDriver]) card.classList.add('new-job-highlight');
