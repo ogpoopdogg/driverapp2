@@ -255,8 +255,8 @@
         const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
         const name = job.status === 'pending_pickup' ? job.name : job.delivery_name;
         const city = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
-        const isCoords = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test((addr||'').trim());
-        const key = isCoords ? addr.trim() : `${name} ${addr}, ${city}`;
+        const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
+        const key = isCoords ? addr.replace(/\s+/g, '') : `${name} ${addr}, ${city}`;
         if(seenLocs.has(key)) return "";
         seenLocs.add(key);
         return encodeURIComponent(key);
@@ -336,17 +336,21 @@
 
     const groups = [], groupMap = new Map();
     jobs.forEach(j => {
-        const addr = j.status === 'pending_pickup' ? j.pickup_location : j.destination;
-        const name = j.status === 'pending_pickup' ? j.name : j.delivery_name;
-        const city = j.status === 'pending_pickup' ? (j.pickup_city || j.city || "Brandon") : (j.delivery_city || j.city || "Brandon");
-        const isCoords = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test((addr||'').trim());
-        const key = isCoords ? addr.trim().toLowerCase() : `${name}|${addr}|${city}`.toLowerCase();
-        const displayStr = isCoords ? addr.trim() : `${name} ${addr}, ${city}`;
-        if(!groupMap.has(key)) {
-            const group = { key: key, masterJob: j, jobs: [], addrString: displayStr };
-            groupMap.set(key, group); groups.push(group);
+        try {
+            const addr = j.status === 'pending_pickup' ? j.pickup_location : j.destination;
+            const name = j.status === 'pending_pickup' ? j.name : j.delivery_name;
+            const city = j.status === 'pending_pickup' ? (j.pickup_city || j.city || "Brandon") : (j.delivery_city || j.city || "Brandon");
+            const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
+            const key = isCoords ? addr.replace(/\s+/g, '') : `${name}|${addr}|${city}`.toLowerCase();
+            const displayStr = isCoords ? addr.trim() : `${name} ${addr}, ${city}`;
+            if(!groupMap.has(key)) {
+                const group = { key: key, masterJob: j, jobs: [], addrString: displayStr };
+                groupMap.set(key, group); groups.push(group);
+            }
+            groupMap.get(key).jobs.push(j);
+        } catch (e) {
+            console.warn("Skipped coordinate card error:", e);
         }
-        groupMap.get(key).jobs.push(j);
     });
 
     try {
@@ -633,7 +637,7 @@
   }
 
   function getNavUrl(name, loc, city) { 
-      const isCoords = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test((loc||'').trim()); 
+      const isCoords = loc ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(loc.trim()) : false; 
       if(isCoords) return `https://www.google.com/maps/dir/?api=1&destination=$${encodeURIComponent(loc.trim())}&travelmode=driving`; 
       return `https://www.google.com/maps/dir/?api=1&destination=$${encodeURIComponent((name ? name + ' ' : '') + loc + ', ' + city)}&travelmode=driving`; 
   }
