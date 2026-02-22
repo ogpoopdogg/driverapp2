@@ -266,11 +266,11 @@
     updateRoute();
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     if (/android/i.test(userAgent)) {
-        window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=$${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+        window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
     } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-        window.location.href = `comgooglemapsurl://www.google.com/maps/dir/?api=1&origin=$${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`;
+        window.location.href = `comgooglemaps://?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&waypoints=${waypoints}&directionsmode=driving`;
     } else {
-        window.open(`https://www.google.com/maps/dir/?api=1&origin=$${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`, '_blank');
+        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`, '_blank');
     }
   }
 
@@ -638,8 +638,8 @@
 
   function getNavUrl(name, loc, city) { 
       const isCoords = loc ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(loc.trim()) : false; 
-      if(isCoords) return `https://www.google.com/maps/dir/?api=1&destination=$${encodeURIComponent(loc.trim())}&travelmode=driving`; 
-      return `https://www.google.com/maps/dir/?api=1&destination=$${encodeURIComponent((name ? name + ' ' : '') + loc + ', ' + city)}&travelmode=driving`; 
+      if(isCoords) return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.trim())}&travelmode=driving`; 
+      return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((name ? name + ' ' : '') + loc + ', ' + city)}&travelmode=driving`; 
   }
 
   function routeOptimized() { enableAutoCenter(); }
