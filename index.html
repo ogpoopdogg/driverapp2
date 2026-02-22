@@ -154,7 +154,7 @@
     E&C PORTAL
   </h1>
   <button id="install-btn" class="install-btn" onclick="installPWA()">Install App</button>
-  <div id="clock"></div>
+  <button id="logout-btn" onclick="logoutDriver()" style="cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #ffffff; padding: 2px 8px; border-radius: 4px; white-space: nowrap; background: transparent;">LOGOUT</button>
 </header>
 
 <div id="map-container"><div id="map"></div></div>
@@ -737,57 +737,59 @@
         if (p.status !== 'in_transit') pendingCount++;
         seqIndex++; uniqueStops.add((p.status === 'pending_pickup' ? (p.pickup_location||"") : (p.destination||"")).trim()); item.onclick = () => scrollToCard(id); qLog.appendChild(item);
 
-        const card = document.createElement("div"); card.className = "active-card"; card.style.display = 'none'; card.id = `card-${id}`;
-        if (!p.seen_by || !p.seen_by[currentDriver]) card.classList.add('new-job-highlight');
-        if(needsAlert) card.classList.add('has-update');
+        if (p.status !== 'in_transit') {
+          const card = document.createElement("div"); card.className = "active-card"; card.style.display = 'none'; card.id = `card-${id}`;
+          if (!p.seen_by || !p.seen_by[currentDriver]) card.classList.add('new-job-highlight');
+          if(needsAlert) card.classList.add('has-update');
 
-        const escapedNotes = (p.other_info || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-        const isEdited = (p.other_info || "").match(/(Edited by|DND \(|DNP \(|Driver Note \()/);
-        const noteWithTags = (p.other_info || "").replace(/\[([^\]]+)\]:/g, '<span style="color:var(--update-blue); font-weight:900; text-shadow:0 0 5px rgba(0,212,255,0.3);">[$1]:</span>');
-        const phone = p.phone || p.phone_number || p.customer_phone;
+          const escapedNotes = (p.other_info || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+          const isEdited = (p.other_info || "").match(/(Edited by|DND \(|DNP \(|Driver Note \()/);
+          const noteWithTags = (p.other_info || "").replace(/\[([^\]]+)\]:/g, '<span style="color:var(--update-blue); font-weight:900; text-shadow:0 0 5px rgba(0,212,255,0.3);">[$1]:</span>');
+          const phone = p.phone || p.phone_number || p.customer_phone;
 
-        card.innerHTML = `
-          <div class="flex-row">
-            <div class="col-main"> 
-               <div class="card-top">
-                  <div class="card-date-badge" onclick="closeJobCard()">
-                     <div class="seq-badge" style="border:2px solid ${badgeColor};">${seqIndex}</div>
-                     <div class="type-badge" style="background:${badgeColor};">${badgeText}</div>
-                     ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
-                  </div>
-                  <a href="${getNavUrl(p.status==='pending_pickup'?p.name:p.delivery_name, p.status==='pending_pickup'?p.pickup_location:p.destination, displayCity)}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${displayCity}</div></a>
-               </div>
-               <div style="opacity:${topOpacity}">
-                   <div class="card-label">FROM</div>
-                   <div class="tech-info ${needsAlert && changed.includes('contact') ? 'field-highlight' : ''}" style="margin-bottom:2px; color: var(--queue-orange); font-size:16px; line-height:1.1;">${p.name || 'N/A'}</div>
-                   <a href="${getNavUrl(p.name, p.pickup_location, p.pickup_city || p.city || 'Brandon')}" target="_blank" class="nav-link"><div class="pickup-value ${needsAlert && changed.includes('addr') ? 'field-highlight' : ''}">${p.pickup_location}</div></a>
-               </div>
-               <div class="pkg-wrapper"><div class="tech-info ${needsAlert && changed.includes('details') ? 'field-highlight' : ''}" style="font-size:12px; color:#ddd; text-transform:uppercase;">${(p.package_details || "-").replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</div></div>
-               <div style="opacity:${botOpacity}">
-                   <div class="card-label" style="margin-top:4px;">TO</div>
-                   <div class="tech-info ${needsAlert && changed.includes('dropName') ? 'field-highlight' : ''}" style="color: #bbb; font-size:13px;">${p.delivery_name || 'N/A'}</div>
-                   <a href="${getNavUrl(p.delivery_name, p.destination, p.delivery_city || p.city || 'Brandon')}" target="_blank" class="nav-link"><div class="drop-value ${needsAlert && changed.includes('dest') ? 'field-highlight' : ''}" style="font-size:13px; color:#999;">${p.destination}</div></a>
-               </div>
-               ${(p.po_number && p.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" class="po-wrapper">PO: <span class="${needsAlert && changed.includes('po') ? 'field-highlight' : ''}" style="color:var(--accent);">${p.po_number}</span></div>` : ''}
-               ${(p.other_info && p.other_info.trim() !== "") ? `<div class="note-box ${isEdited ? 'notes-edited' : ''} ${needsAlert && changed.includes('notes') ? 'field-highlight' : ''}">${noteWithTags}</div>` : ''}
-               ${phone ? `<a href="tel:${phone}" class="phone-link" onclick="event.stopPropagation()">📞 ${phone}</a>` : ''}
+          card.innerHTML = `
+            <div class="flex-row">
+              <div class="col-main"> 
+                 <div class="card-top">
+                    <div class="card-date-badge" onclick="closeJobCard()">
+                       <div class="seq-badge" style="border:2px solid ${badgeColor};">${seqIndex}</div>
+                       <div class="type-badge" style="background:${badgeColor};">${badgeText}</div>
+                       ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
+                    </div>
+                    <a href="${getNavUrl(p.status==='pending_pickup'?p.name:p.delivery_name, p.status==='pending_pickup'?p.pickup_location:p.destination, displayCity)}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${displayCity}</div></a>
+                 </div>
+                 <div style="opacity:${topOpacity}">
+                     <div class="card-label">FROM</div>
+                     <div class="tech-info ${needsAlert && changed.includes('contact') ? 'field-highlight' : ''}" style="margin-bottom:2px; color: var(--queue-orange); font-size:16px; line-height:1.1;">${p.name || 'N/A'}</div>
+                     <a href="${getNavUrl(p.name, p.pickup_location, p.pickup_city || p.city || 'Brandon')}" target="_blank" class="nav-link"><div class="pickup-value ${needsAlert && changed.includes('addr') ? 'field-highlight' : ''}">${p.pickup_location}</div></a>
+                 </div>
+                 <div class="pkg-wrapper"><div class="tech-info ${needsAlert && changed.includes('details') ? 'field-highlight' : ''}" style="font-size:12px; color:#ddd; text-transform:uppercase;">${(p.package_details || "-").replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</div></div>
+                 <div style="opacity:${botOpacity}">
+                     <div class="card-label" style="margin-top:4px;">TO</div>
+                     <div class="tech-info ${needsAlert && changed.includes('dropName') ? 'field-highlight' : ''}" style="color: #bbb; font-size:13px;">${p.delivery_name || 'N/A'}</div>
+                     <a href="${getNavUrl(p.delivery_name, p.destination, p.delivery_city || p.city || 'Brandon')}" target="_blank" class="nav-link"><div class="drop-value ${needsAlert && changed.includes('dest') ? 'field-highlight' : ''}" style="font-size:13px; color:#999;">${p.destination}</div></a>
+                 </div>
+                 ${(p.po_number && p.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" class="po-wrapper">PO: <span class="${needsAlert && changed.includes('po') ? 'field-highlight' : ''}" style="color:var(--accent);">${p.po_number}</span></div>` : ''}
+                 ${(p.other_info && p.other_info.trim() !== "") ? `<div class="note-box ${isEdited ? 'notes-edited' : ''} ${needsAlert && changed.includes('notes') ? 'field-highlight' : ''}">${noteWithTags}</div>` : ''}
+                 ${phone ? `<a href="tel:${phone}" class="phone-link" onclick="event.stopPropagation()">📞 ${phone}</a>` : ''}
+              </div>
+              <div class="col-side"> 
+                 <div style="display:flex; justify-content:center; gap:10px; margin-bottom:5px;">
+                    <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverTransfer(event, '${id}')">
+                       <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: #fff; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M8 10V7L4 11l4 4v-3h8v-2H8zm8 4v3l4-4-4-4v3H8v2h8z"/></svg>
+                    </div>
+                    <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverNoteEdit(event, '${id}')">
+                       <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    </div>
+                 </div>
+                 <div class="time-stack"><div class="job-time-stamp">${formatTime12(p.timestamp)}</div><div class="job-date-stamp">${formatDateShort(p.timestamp)}</div></div>
+                 <button class="info-btn" onclick="dndJob('${id}', '${escapedNotes}')">${p.status==='pending_pickup'?'DNP':'DND'}</button>
+                 ${p.status === 'in_transit' ? '' : `<button class="done-btn" onclick="markAction('${id}')">${btnText}</button>`}
+              </div>
             </div>
-            <div class="col-side"> 
-               <div style="display:flex; justify-content:center; gap:10px; margin-bottom:5px;">
-                  <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverTransfer(event, '${id}')">
-                     <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: #fff; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M8 10V7L4 11l4 4v-3h8v-2H8zm8 4v3l4-4-4-4v3H8v2h8z"/></svg>
-                  </div>
-                  <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverNoteEdit(event, '${id}')">
-                     <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                  </div>
-               </div>
-               <div class="time-stack"><div class="job-time-stamp">${formatTime12(p.timestamp)}</div><div class="job-date-stamp">${formatDateShort(p.timestamp)}</div></div>
-               <button class="info-btn" onclick="dndJob('${id}', '${escapedNotes}')">${p.status==='pending_pickup'?'DNP':'DND'}</button>
-               ${p.status === 'in_transit' ? '' : `<button class="done-btn" onclick="markAction('${id}')">${btnText}</button>`}
-            </div>
-          </div>
-          <div id="driver-note-display-${id}"></div>`;
-        feed.appendChild(card); if (observer) observer.observe(card);
+            <div id="driver-note-display-${id}"></div>`;
+          feed.appendChild(card); if (observer) observer.observe(card);
+        }
       }
     });
 
@@ -834,8 +836,7 @@
     }
   }
 
-  function updateClock() { document.getElementById('clock').innerText = formatTime12(); }
-  setInterval(updateClock, 1000); updateClock();
+  function logoutDriver() { firebase.auth().signOut().then(() => { localStorage.removeItem('ec_driver_name'); location.reload(); }); }
 
   document.addEventListener('click', e => { 
       if(e.target.id && e.target.id.startsWith('note-display-')) { 
