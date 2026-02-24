@@ -805,12 +805,13 @@
 
     const miniList = document.getElementById('mini-map-list');
     if (pendingCount === 0) {
-        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && j.status === 'completed' && (j.completed_at || 0) >= startOfToday).sort((a,b) => b.completed_at - a.completed_at);
+        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.status === 'completed' || j.status === 'in_transit') && (j.completed_at || j.timestamp || 0) >= startOfToday).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
         let html = `<div class="perf-header"><div class="score-title">DAILY PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
-             const color = '#4caf50';
-             html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">COMPLETED</span><span class="perf-time">${formatTime12(j.completed_at)}</span></div><div class="perf-name">${j.delivery_name}</div><div class="perf-addr">${j.destination}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
+             const color = j.status === 'in_transit' ? '#2196f3' : '#4caf50';
+             const typeText = j.status === 'in_transit' ? 'PICKED UP' : 'COMPLETED';
+             html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">${typeText}</span><span class="perf-time">${formatTime12(j.completed_at || j.timestamp)}</span></div><div class="perf-name">${j.status === 'in_transit' ? (j.name || '') : (j.delivery_name || '')}</div><div class="perf-addr">${j.status === 'in_transit' ? (j.pickup_location || '') : (j.destination || '')}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
         });
         const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
         if(transitCount > 0) html += `<button id="unload-depot-btn" style="display:block" onclick="unloadAtDepot()">DEPOT CHECK-IN (${transitCount})</button>`;
