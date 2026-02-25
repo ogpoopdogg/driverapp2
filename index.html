@@ -880,5 +880,65 @@
       db.ref().update(updates).then(() => { alert("Inventory Unloaded. Jobs set to Pending Delivery."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
   }
 </script>
+  <button id="dev-btn" onclick="document.getElementById('dev-modal').style.display='flex'">Dev Notes</button>
+
+<div id="dev-modal">
+  <div id="dev-box">
+    <h3 style="margin:0 0 10px 0; color:#ffd700; text-transform:uppercase;">Developer Notes</h3>
+    <div id="dev-list"></div>
+    <div id="dev-editor"></div>
+    <div class="dev-row">
+      <button class="dev-action" style="background:#333; color:#fff;" onclick="document.getElementById('dev-modal').style.display='none'">Close</button>
+      <button class="dev-action" style="background:#00b32d; color:#000;" onclick="saveDevNote()">Save Note</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let devQuill;
+  
+  // Wait for the app's main Firebase script to load first
+  setTimeout(() => {
+    devQuill = new Quill('#dev-editor', {
+      theme: 'snow',
+      modules: { toolbar: [ ['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], [{ 'align': [] }] ] }
+    });
+
+    // Load notes from Firebase
+    firebase.database().ref('developer').on('value', snap => {
+      const list = document.getElementById('dev-list');
+      list.innerHTML = '';
+      const notes = snap.val() || {};
+      Object.values(notes).forEach(note => {
+        list.innerHTML += `<div class="dev-item"><div class="dev-hdr">${note.user} • ${note.date}</div><div>${note.text}</div></div>`;
+      });
+      list.scrollTop = list.scrollHeight; // Auto-scroll to bottom
+    });
+  }, 1000); 
+
+  function saveDevNote() {
+    if (devQuill.getText().trim() === "") return;
+    
+    // Get user or fallback to Unknown
+    let user = "Unknown User";
+    if (firebase.auth().currentUser) {
+      user = firebase.auth().currentUser.email.split('@')[0];
+    }
+    
+    // Get formatted date and time
+    const now = new Date();
+    const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+    // Save to database
+    firebase.database().ref('developer').push({
+      text: devQuill.root.innerHTML,
+      user: user,
+      date: dateStr,
+      timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    devQuill.setText(''); // Clear typing area
+  }
+</script>
 </body>
 </html>
