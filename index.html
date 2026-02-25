@@ -459,13 +459,32 @@
           `;
           clearAllNotifications();
           startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
+          
+          const list = document.getElementById('dev-list');
+          firebase.database().ref('developer').on('value', snap => {
+            list.innerHTML = '';
+            const notes = snap.val() || {};
+            Object.values(notes).forEach(note => {
+              list.innerHTML += `
+                <div class="dev-item">
+                  <div class="dev-hdr">${note.user} • ${note.date}</div>
+                  <div>${note.text}</div>
+                </div>`;
+            });
+            list.scrollTop = list.scrollHeight;
+          });
+
         } else {
           alert("ACCESS DENIED");
           firebase.auth().signOut();
           document.getElementById('login-overlay').style.display = 'flex';
+          document.getElementById('dev-list').innerHTML = '<p style="text-align:center; color:#888; margin-top:20px;">Access Denied. Please log in to view notes.</p>';
         }
       });
-    } else { document.getElementById('login-overlay').style.display = 'flex'; }
+    } else { 
+        document.getElementById('login-overlay').style.display = 'flex'; 
+        document.getElementById('dev-list').innerHTML = '<p style="text-align:center; color:#888; margin-top:20px;">Access Denied. Please log in to view notes.</p>';
+    }
   });
 
   function setupIntersectionObserver() {
@@ -933,33 +952,6 @@
         [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
         [{ 'align': [] }] 
       ] 
-    }
-  });
-
-  // Listener for Login Status - This fixes the "must refresh" issue
-  firebase.auth().onAuthStateChanged(user => {
-    const list = document.getElementById('dev-list');
-    
-    if (user) {
-      // User is logged in, start the real-time database listener
-      firebase.database().ref('developer').on('value', snap => {
-        list.innerHTML = '';
-        const notes = snap.val() || {};
-        
-        // Loop through notes and display them
-        Object.values(notes).forEach(note => {
-          list.innerHTML += `
-            <div class="dev-item">
-              <div class="dev-hdr">${note.user} • ${note.date}</div>
-              <div>${note.text}</div>
-            </div>`;
-        });
-        
-        list.scrollTop = list.scrollHeight; // Auto-scroll to latest
-      });
-    } else {
-      // User is logged out, clear the list
-      list.innerHTML = '<p style="text-align:center; color:#888; margin-top:20px;">Access Denied. Please log in to view notes.</p>';
     }
   });
 
