@@ -881,7 +881,7 @@
               count++;
               updates[`jobs/${key}/status`] = 'pending_delivery';
               updates[`jobs/${key}/assigned_to`] = 'Unassigned';
-              updates[`jobs/${key}/other_info`] = (job.other_info || '') + ` | Arrived at Depot (Retained by ${currentDriver})`;
+              updates[`jobs/${key}/other_info`] = (job.other_info || '') + ` | Arrived at Depot (Pick-Up by ${currentDriver})`;
           }
       });
       if (count === 0) { alert("No 'In Transit' jobs found."); return; }
