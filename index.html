@@ -447,16 +447,24 @@
 
   firebase.auth().onAuthStateChanged((user) => {
     if (user && user.email) {
-      const rawName = user.email.split('@')[0];
-      currentDriver = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-      localStorage.setItem('ec_driver_name', currentDriver);
-      document.getElementById('login-overlay').style.display = 'none';
-      document.getElementById('header-name').innerHTML = `
-        <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
-        <span class="driver-name-display" onclick="location.reload()" style="cursor:pointer; font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
-      `;
-      clearAllNotifications();
-      startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
+      const rawName = user.email.split('@')[0].toLowerCase();
+      db.ref(`roles/${rawName}/driver`).once('value').then(snap => {
+        if (snap.val() === true) {
+          currentDriver = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+          localStorage.setItem('ec_driver_name', currentDriver);
+          document.getElementById('login-overlay').style.display = 'none';
+          document.getElementById('header-name').innerHTML = `
+            <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
+            <span class="driver-name-display" onclick="location.reload()" style="cursor:pointer; font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
+          `;
+          clearAllNotifications();
+          startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
+        } else {
+          alert("ACCESS DENIED");
+          firebase.auth().signOut();
+          document.getElementById('login-overlay').style.display = 'flex';
+        }
+      });
     } else { document.getElementById('login-overlay').style.display = 'flex'; }
   });
 
