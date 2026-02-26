@@ -849,7 +849,7 @@
 
     const miniList = document.getElementById('mini-map-list');
     if (pendingCount === 0) {
-        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.status === 'completed' || j.status === 'in_transit') && ((j.completed_at && j.completed_at >= startOfToday) || (!j.completed_at && j.timestamp >= startOfToday))).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
+        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
         let html = `<div class="perf-header"><div class="score-title">DAILY PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
