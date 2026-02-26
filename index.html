@@ -464,11 +464,10 @@
           db.ref(`driver_locations/${currentDriver}/shift_active`).on('value', snap => {
             const btn = document.getElementById('shift-toggle-btn');
             if(btn) {
-              btn.style.display = 'inline-block';
               if(snap.val() === true) {
-                btn.innerText = 'END SHIFT';
-                btn.style.background = 'var(--decline-red)';
+                btn.style.display = 'none';
               } else {
+                btn.style.display = 'inline-block';
                 btn.innerText = 'START SHIFT';
                 btn.style.background = 'var(--active-green)';
               }
@@ -850,7 +849,7 @@
 
     const miniList = document.getElementById('mini-map-list');
     if (pendingCount === 0) {
-        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.status === 'completed' || j.status === 'in_transit') && (j.completed_at || j.timestamp || 0) >= startOfToday).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
+        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.status === 'completed' || j.status === 'in_transit') && ((j.completed_at && j.completed_at >= startOfToday) || (!j.completed_at && j.timestamp >= startOfToday))).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
         let html = `<div class="perf-header"><div class="score-title">DAILY PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
@@ -859,7 +858,7 @@
              html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">${typeText}</span><span class="perf-time">${formatTime12(j.completed_at || j.timestamp)}</span></div><div class="perf-name">${j.status === 'in_transit' ? (j.name || '') : (j.delivery_name || '')}</div><div class="perf-addr">${j.status === 'in_transit' ? (j.pickup_location || '') : (j.destination || '')}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
         });
         const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
-        if(transitCount > 0) html += `<button id="unload-depot-btn" style="display:block" onclick="unloadAtDepot()">DEPOT CHECK-IN (${transitCount})</button>`;
+        html += `<button id="unload-depot-btn" style="display:block" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         miniList.innerHTML = html + `</div><div style="height:60px;"></div>`; miniList.style.display = 'block';
     }
   }
@@ -907,7 +906,7 @@
   feedUi.addEventListener('touchend', e => { if(e.changedTouches[0].screenX > touchStart + 75) closeJobCard(); }, {passive: true});
 
   function unloadAtDepot() {
-      if(!confirm("Are you back at the Depot? This will move all 'In Transit' packages to the Unassigned Delivery list.")) return;
+      if(!confirm("Are you sure you want to End Shift and Check-In at Depot?")) return;
       const updates = {}; let count = 0;
       Object.keys(globalJobs).forEach(key => {
           const job = globalJobs[key];
@@ -918,15 +917,13 @@
               updates[`jobs/${key}/other_info`] = (job.other_info || '') + ` | Arrived at Depot (Pick-Up by ${currentDriver})`;
           }
       });
-      if (count === 0) { alert("No 'In Transit' jobs found."); return; }
-      db.ref().update(updates).then(() => { alert("Inventory Unloaded. Jobs set to Pending Delivery."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
+      updates[`driver_locations/${currentDriver}/shift_active`] = false;
+      db.ref().update(updates).then(() => { alert(count > 0 ? "Inventory Unloaded and Shift Ended." : "Shift Ended."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
   }
 
   function toggleShift() {
     if(!currentDriver) return;
-    const btn = document.getElementById('shift-toggle-btn');
-    const isStarting = btn.innerText === 'START SHIFT';
-    db.ref(`driver_locations/${currentDriver}`).update({ shift_active: isStarting });
+    db.ref(`driver_locations/${currentDriver}`).update({ shift_active: true });
   }
 </script>
    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
