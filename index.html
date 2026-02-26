@@ -154,6 +154,7 @@
     E&C PORTAL
   </h1>
   <button id="install-btn" class="install-btn" onclick="installPWA()">Install App</button>
+  <button id="shift-toggle-btn" style="display:none; cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: none; padding: 4px 10px; border-radius: 4px; white-space: nowrap; background: var(--active-green); margin-right: 10px;" onclick="toggleShift()">START SHIFT</button>
   <button id="logout-btn" onclick="logoutDriver()" style="cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #ffffff; padding: 2px 8px; border-radius: 4px; white-space: nowrap; background: transparent;">LOGOUT</button>
 </header>
 
@@ -460,6 +461,20 @@
           clearAllNotifications();
           startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
           
+          db.ref(`driver_locations/${currentDriver}/shift_active`).on('value', snap => {
+            const btn = document.getElementById('shift-toggle-btn');
+            if(btn) {
+              btn.style.display = 'inline-block';
+              if(snap.val() === true) {
+                btn.innerText = 'END SHIFT';
+                btn.style.background = 'var(--decline-red)';
+              } else {
+                btn.innerText = 'START SHIFT';
+                btn.style.background = 'var(--active-green)';
+              }
+            }
+          });
+
           const list = document.getElementById('dev-list');
           firebase.database().ref('developer').on('value', snap => {
             list.innerHTML = '';
@@ -905,6 +920,13 @@
       });
       if (count === 0) { alert("No 'In Transit' jobs found."); return; }
       db.ref().update(updates).then(() => { alert("Inventory Unloaded. Jobs set to Pending Delivery."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
+  }
+
+  function toggleShift() {
+    if(!currentDriver) return;
+    const btn = document.getElementById('shift-toggle-btn');
+    const isStarting = btn.innerText === 'START SHIFT';
+    db.ref(`driver_locations/${currentDriver}`).update({ shift_active: isStarting });
   }
 </script>
    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
