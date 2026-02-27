@@ -712,7 +712,7 @@
           document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
           closeJobCard();
           setTimeout(() => {
-              db.ref(`jobs/${id}`).update({ assigned_to: targetDriver, other_info: `${globalJobs[id].other_info ? globalJobs[id].other_info + ' | ' : ''}Transferred by ${currentDriver} to ${targetDriver}` });
+              db.ref(`jobs/${id}`).update({ assigned_to: targetDriver, job_history: `${globalJobs[id].job_history ? globalJobs[id].job_history + ' | ' : ''}Transferred by ${currentDriver} to ${targetDriver}` });
           }, 500);
       }
   }
@@ -809,10 +809,10 @@
       if (p.assigned_to !== currentDriver) return;
       if ((p.status === 'completed' || p.status === 'DND' || p.status === 'DNP') && (p.completed_at || 0) < startOfToday) return;
 
-      const cf = { addr: p.pickup_location, dest: p.destination, contact: p.name, dropName: p.delivery_name, po: p.po_number, notes: p.other_info, details: p.package_details, status: p.status, assigned: p.assigned_to };
+      const cf = { addr: p.pickup_location, dest: p.destination, contact: p.name, dropName: p.delivery_name, po: p.po_number, notes: p.other_info, details: p.package_details, status: p.status, assigned: p.assigned_to, job_history: p.job_history };
       if (fieldSnapshots[id]) {
           Object.keys(cf).forEach(k => {
-              if (fieldSnapshots[id][k] !== cf[k]) {
+              if (k !== 'job_history' && fieldSnapshots[id][k] !== cf[k]) {
                   if (selfEdited.has(`${id}_${k}`)) selfEdited.delete(`${id}_${k}`);
                   else { if (!pendingAlerts[id]) pendingAlerts[id] = []; if (!pendingAlerts[id].includes(k)) pendingAlerts[id].push(k); sessionStorage.removeItem(`ack_update_${id}`); }
               }
@@ -879,6 +879,7 @@
                  ${(p.po_number && p.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" class="po-wrapper">PO: <span class="${needsAlert && changed.includes('po') ? 'field-highlight' : ''}" style="color:var(--accent);">${p.po_number}</span></div>` : ''}
                  ${(p.other_info && p.other_info.trim() !== "") ? `<div class="note-box ${isEdited ? 'notes-edited' : ''} ${needsAlert && changed.includes('notes') ? 'field-highlight' : ''}">${noteWithTags}</div>` : ''}
                  ${phone ? `<a href="tel:${phone}" class="phone-link" onclick="event.stopPropagation()">📞 ${phone}</a>` : ''}
+                 ${(p.job_history && p.job_history.trim() !== "") ? `<div style="font-size:10px; color:#666; margin-top:8px; text-align:center; font-style:italic;">${p.job_history}</div>` : ''}
               </div>
               <div class="col-side"> 
                  <div style="display:flex; justify-content:center; gap:10px; margin-bottom:5px;">
@@ -959,7 +960,7 @@
          closeJobCard();
          setTimeout(() => {
             sessionStorage.setItem('last_completed_job', id);
-            db.ref('jobs').child(id).update({ status: 'completed', completed_at: Date.now(), other_info: (job.other_info || '') + " | Delivered by " + currentDriver });
+            db.ref('jobs').child(id).update({ status: 'completed', completed_at: Date.now(), job_history: (job.job_history || '') + " | Delivered by " + currentDriver });
          }, 500);
     }
   }
@@ -997,7 +998,7 @@
               count++;
               updates[`jobs/${key}/status`] = 'pending_delivery';
               updates[`jobs/${key}/assigned_to`] = 'Unassigned';
-              updates[`jobs/${key}/other_info`] = (job.other_info || '') + ` | Arrived at Depot (Pick-Up by ${currentDriver})`;
+              updates[`jobs/${key}/job_history`] = (job.job_history || '') + ` | Arrived at Depot (Pick-Up by ${currentDriver})`;
           }
       });
       updates[`driver_locations/${currentDriver}/shift_active`] = false;
