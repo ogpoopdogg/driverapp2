@@ -154,7 +154,7 @@
     E&C PORTAL
   </h1>
   <button id="install-btn" class="install-btn" onclick="installPWA()">Install App</button>
-  <button id="shift-toggle-btn" style="display:none; cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: none; padding: 4px 10px; border-radius: 4px; white-space: nowrap; background: var(--active-green); margin-right: 10px;" onclick="toggleShift()">START SHIFT</button>
+  <button id="shift-toggle-btn" style="display:none; cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: none; padding: 4px 10px; border-radius: 4px; white-space: nowrap; background: var(--active-green); margin-right: 10px;" onclick="toggleShift()">START RUN</button>
   <button id="logout-btn" onclick="logoutDriver()" style="cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #ffffff; padding: 2px 8px; border-radius: 4px; white-space: nowrap; background: transparent;">LOGOUT</button>
 </header>
 
@@ -468,7 +468,7 @@
                 btn.style.display = 'none';
               } else {
                 btn.style.display = 'inline-block';
-                btn.innerText = 'START SHIFT';
+                btn.innerText = 'START RUN';
                 btn.style.background = 'var(--active-green)';
               }
             }
@@ -724,7 +724,10 @@
     
     const currentPending = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver).length;
     if (currentPending !== lastPendingCount) {
-         if (currentPending > lastPendingCount) lastAnnouncedId = null;
+         if (currentPending > lastPendingCount) {
+              lastAnnouncedId = null;
+              if (!isFirstLoad && lastPendingCount === 0) db.ref(`driver_locations/${currentDriver}`).update({ shift_active: false });
+         }
          if (!isFirstLoad) document.getElementById('route-toggle-btn').classList.add('route-glow-update');
     }
     isFirstLoad = false; lastPendingCount = currentPending;
