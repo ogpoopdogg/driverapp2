@@ -116,6 +116,9 @@
     #unload-depot-btn { display: none; width: 90%; margin: 20px auto; padding: 15px; background: #0056b3; color: #ffffff; font-weight: 800; border: none; border-radius: 8px; font-size: 16px; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0, 86, 179, 0.4); cursor: pointer; }
     #unload-depot-btn:active { transform: scale(0.98); }
 
+    .glow-depot { animation: depot-pulse 1.5s infinite alternate; border: 2px solid var(--update-blue) !important; }
+    @keyframes depot-pulse { from { box-shadow: 0 0 5px var(--update-blue); } to { box-shadow: 0 0 20px var(--update-blue); } }
+
     /* REFACTORED UTILITY CLASSES */
     .flex-row { display: flex; gap: 10px; }
     .col-main { flex: 1; min-width: 0; }
@@ -221,7 +224,7 @@
   let isNavigating = false, autoCenter = true, lastGps = null, optimizedOrder = [];
   let lastPendingCount = 0, lastAnnouncedId = null, isFirstLoad = true, hasRoutedWithGps = false, hasInitialRoute = false;
   let lastGpsUpdate = 0, wakeLock = null, lastRouteClick = Date.now();
-  let manualOrderIds = [];
+  let manualOrderIds = []; let isManualMode = false;
   const gpsInterval = 30000;
   let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
 
@@ -263,13 +266,14 @@
   function openManualRoute() {
     hasInitialRoute = true;
     document.getElementById('manual-route-btn').classList.remove('route-glow-update');
-    const targetIds = manualOrderIds.length > 0 ? manualOrderIds : Array.from(document.querySelectorAll('#live-feed .active-card')).map(c => c.id.replace('card-', ''));
-    if(targetIds.length === 0) { alert("No stops to route."); return; }
+    const listItems = document.querySelectorAll('#mini-map-list .mini-list-item');
+    if(listItems.length === 0) { alert("No stops to route."); return; }
     
     const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
     const destination = "1604 Moreland Ave, Brandon MB";
     const seenLocs = new Set();
-    const waypoints = targetIds.map(id => {
+    const waypoints = Array.from(listItems).map(item => {
+        const id = item.id.replace('mini-', '').split(',')[0];
         const job = globalJobs[id];
         if(!job) return "";
         const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
@@ -292,7 +296,9 @@
     }
   }
 
-  function openExternalRoute() {
+  async function openExternalRoute() {
+    isManualMode = false;
+    await updateRoute();
     hasInitialRoute = true;
     document.getElementById('route-toggle-btn').classList.remove('route-glow-update');
     document.querySelectorAll('.mini-flash').forEach(el => el.classList.remove('mini-flash')); 
@@ -376,6 +382,7 @@
   }
 
   async function updateRoute() {
+    if (isManualMode) return;
     const jobs = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver);
     if(mapPolyline) mapPolyline.setMap(null);
     if (mapMarkers.length > 0) { mapMarkers.forEach(m => m.setMap(null)); mapMarkers = []; }
@@ -907,23 +914,29 @@
     if (pendingCount === 0) {
         const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
         let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
+        const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
+        html += `<button id="unload-depot-btn" class="glow-depot" style="display:block; margin-bottom: 20px;" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
              const color = j.status === 'in_transit' ? '#2196f3' : '#4caf50';
              const typeText = j.status === 'in_transit' ? 'PICKED UP' : 'COMPLETED';
              html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">${typeText}</span><span class="perf-time">${formatTime12(j.completed_at || j.timestamp)}</span></div><div class="perf-name">${j.status === 'in_transit' ? (j.name || '') : (j.delivery_name || '')}</div><div class="perf-addr">${j.status === 'in_transit' ? (j.pickup_location || '') : (j.destination || '')}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
         });
-        const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
-        html += `<button id="unload-depot-btn" style="display:block" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         miniList.innerHTML = html + `</div><div style="height:60px;"></div>`; miniList.style.display = 'block';
     }
 
+    const miniListContainer = document.getElementById('mini-map-list');
     if (window.sortableFeed) window.sortableFeed.destroy();
-    window.sortableFeed = new Sortable(feed, {
-        animation: 150, delay: 400, delayOnTouchOnly: true, draggable: '.active-card',
+    window.sortableFeed = new Sortable(miniListContainer, {
+        animation: 150, delay: 400, delayOnTouchOnly: true, draggable: '.mini-list-item',
         ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
         onEnd: function() {
-            manualOrderIds = Array.from(feed.querySelectorAll('.active-card')).map(c => c.id.replace('card-', ''));
+            isManualMode = true;
+            const items = miniListContainer.querySelectorAll('.mini-list-item');
+            items.forEach((item, index) => {
+                const numEl = item.querySelector('.mini-num');
+                if (numEl) numEl.innerText = index + 1;
+            });
             const manBtn = document.getElementById('manual-route-btn');
             if(manBtn) { manBtn.classList.add('route-glow-update'); setTimeout(() => manBtn.classList.remove('route-glow-update'), 3000); }
         }
