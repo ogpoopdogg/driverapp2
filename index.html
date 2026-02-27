@@ -47,10 +47,15 @@
     .active-card { background: var(--card-bg); padding: 15px; border-radius: 16px; border: 1px solid var(--border-soft); width: 100%; max-width: 600px; display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 -10px 40px rgba(0,0,0,0.6); margin-bottom: 30px; flex-shrink: 0; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-    #route-toggle-btn { position: absolute; bottom: 30px; right: 20px; width: 60px; height: 60px; padding: 0; border-radius: 50%; background: #222; color: #fff; border: 2px solid var(--accent); z-index: 100; box-shadow: 0 6px 20px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+    #route-btns-wrap { position: absolute; bottom: 30px; right: 20px; z-index: 100; display: flex; gap: 15px; }
+    #route-toggle-btn { position: relative; width: 60px; height: 60px; padding: 0; border-radius: 50%; background: #222; color: #fff; border: 2px solid var(--accent); box-shadow: 0 6px 20px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
     #route-toggle-btn svg { width: 30px; height: 30px; fill: #fff; }
+    #manual-route-btn { position: relative; width: 60px; height: 60px; padding: 0; border-radius: 50%; background: #222; color: #fff; border: 2px solid #00aaff; box-shadow: 0 6px 20px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
     .route-glow-update { animation: proUpdatePulse 2s infinite ease-in-out !important; border-color: #ff9800 !important; background: linear-gradient(135deg, #222 0%, #553300 100%) !important; }
     @keyframes proUpdatePulse { 0% { box-shadow: 0 0 5px rgba(255, 152, 0, 0.2); border-color: #777; } 50% { box-shadow: 0 0 20px rgba(255, 152, 0, 0.6); border-color: #ff9800; } 100% { box-shadow: 0 0 5px rgba(255, 152, 0, 0.2); border-color: #777; } }
+
+    .sortable-ghost { opacity: 0.3; filter: grayscale(1); }
+    .sortable-chosen { transform: scale(0.95); box-shadow: 0 0 30px rgba(0,0,0,0.8); z-index: 3000; }
 
     .has-update { border: 2px solid var(--update-blue) !important; animation: update-glow 1.5s infinite alternate !important; }
     .field-highlight { color: var(--update-blue) !important; text-shadow: 0 0 10px rgba(0, 212, 255, 0.6); font-weight: bold; animation: field-pulse 1s infinite alternate; display: inline-block; }
@@ -164,9 +169,20 @@
 <div id="main-container">
   <div id="mini-map-list"></div>
   <div id="live-feed" onclick="if(event.target === this) closeJobCard()"></div>
-  <button id="route-toggle-btn" onclick="openExternalRoute()">
-    <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-  </button>
+  <div id="route-btns-wrap">
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <button id="manual-route-btn" onclick="openManualRoute()">
+        <svg viewBox="0 0 24 24" style="width: 30px; height: 30px; fill: #fff;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      </button>
+      <span style="font-size:10px; font-weight:800; color:#00aaff; margin-top:5px; text-transform:uppercase;">manual</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <button id="route-toggle-btn" onclick="openExternalRoute()">
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      </button>
+      <span style="font-size:10px; font-weight:800; color:var(--accent); margin-top:5px; text-transform:uppercase;">auto</span>
+    </div>
+  </div>
   <div id="history-sidebar" style="display:none;">
     <div id="queue-log"></div>
     <div id="recent-log"></div>
@@ -179,6 +195,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ&libraries=places,geometry&callback=initMap" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <script>
   const savedTheme = localStorage.getItem('ec_theme') || 'dark';
@@ -204,6 +221,7 @@
   let isNavigating = false, autoCenter = true, lastGps = null, optimizedOrder = [];
   let lastPendingCount = 0, lastAnnouncedId = null, isFirstLoad = true, hasRoutedWithGps = false, hasInitialRoute = false;
   let lastGpsUpdate = 0, wakeLock = null, lastRouteClick = Date.now();
+  let manualOrderIds = [];
   const gpsInterval = 30000;
   let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
 
@@ -240,6 +258,38 @@
   function enableAutoCenter() {
       autoCenter = true;
       if(lastGps) { map.setCenter({lat: lastGps.lat, lng: lastGps.lng}); map.setZoom(17); map.setTilt(45); }
+  }
+
+  function openManualRoute() {
+    hasInitialRoute = true;
+    document.getElementById('manual-route-btn').classList.remove('route-glow-update');
+    const targetIds = manualOrderIds.length > 0 ? manualOrderIds : Array.from(document.querySelectorAll('#live-feed .active-card')).map(c => c.id.replace('card-', ''));
+    if(targetIds.length === 0) { alert("No stops to route."); return; }
+    
+    const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
+    const destination = "1604 Moreland Ave, Brandon MB";
+    const seenLocs = new Set();
+    const waypoints = targetIds.map(id => {
+        const job = globalJobs[id];
+        if(!job) return "";
+        const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
+        const name = job.status === 'pending_pickup' ? job.name : job.delivery_name;
+        const city = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
+        const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
+        const key = isCoords ? addr.replace(/\s+/g, '') : `${name} ${addr}, ${city}`;
+        if(seenLocs.has(key)) return "";
+        seenLocs.add(key);
+        return encodeURIComponent(key);
+    }).filter(w => w !== "").join("|");
+
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    if (/android/i.test(userAgent)) {
+        window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+    } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+        window.location.href = `comgooglemaps://?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&waypoints=${waypoints}&directionsmode=driving`;
+    } else {
+        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`, '_blank');
+    }
   }
 
   function openExternalRoute() {
@@ -462,15 +512,12 @@
           startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
           
           db.ref(`driver_locations/${currentDriver}/shift_active`).on('value', snap => {
+            window.isShiftActive = snap.val() === true;
             const btn = document.getElementById('shift-toggle-btn');
             if(btn) {
-              if(snap.val() === true) {
-                btn.style.display = 'none';
-              } else {
-                btn.style.display = 'inline-block';
-                btn.innerText = 'START RUN';
-                btn.style.background = 'var(--active-green)';
-              }
+              btn.style.display = (lastPendingCount > 0 && !window.isShiftActive) ? 'inline-block' : 'none';
+              btn.innerText = 'START RUN';
+              btn.style.background = 'var(--active-green)';
             }
           });
 
@@ -731,6 +778,10 @@
          if (!isFirstLoad) document.getElementById('route-toggle-btn').classList.add('route-glow-update');
     }
     isFirstLoad = false; lastPendingCount = currentPending;
+    
+    const shiftBtn = document.getElementById('shift-toggle-btn');
+    if (shiftBtn) shiftBtn.style.display = (currentPending > 0 && !window.isShiftActive) ? 'inline-block' : 'none';
+
     renderUnifiedFeed(); updateRoute();
   }
 
@@ -741,9 +792,11 @@
     const startOfToday = new Date().setHours(0,0,0,0), lastDoneId = sessionStorage.getItem('last_completed_job'), uniqueStops = new Set();
     let pendingCount = 0, seqIndex = 0;
 
-    const sortedEntries = optimizedOrder.length > 0 
-      ? [...optimizedOrder.map(id => [id, globalJobs[id]]).filter(e => e[1]), ...Object.entries(globalJobs).filter(([id]) => !optimizedOrder.includes(id)).sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0))]
-      : Object.entries(globalJobs).sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+    const sortedEntries = manualOrderIds.length > 0 
+      ? [...manualOrderIds.map(id => [id, globalJobs[id]]).filter(e => e[1]), ...Object.entries(globalJobs).filter(([id]) => !manualOrderIds.includes(id)).sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0))]
+      : (optimizedOrder.length > 0 
+        ? [...optimizedOrder.map(id => [id, globalJobs[id]]).filter(e => e[1]), ...Object.entries(globalJobs).filter(([id]) => !optimizedOrder.includes(id)).sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0))]
+        : Object.entries(globalJobs).sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0)));
 
     sortedEntries.forEach(([id, p]) => {
       if (p.assigned_to !== currentDriver) return;
@@ -853,7 +906,7 @@
     const miniList = document.getElementById('mini-map-list');
     if (pendingCount === 0) {
         const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
-        let html = `<div class="perf-header"><div class="score-title">DAILY PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
+        let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
              const color = j.status === 'in_transit' ? '#2196f3' : '#4caf50';
@@ -864,9 +917,21 @@
         html += `<button id="unload-depot-btn" style="display:block" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         miniList.innerHTML = html + `</div><div style="height:60px;"></div>`; miniList.style.display = 'block';
     }
+
+    if (window.sortableFeed) window.sortableFeed.destroy();
+    window.sortableFeed = new Sortable(feed, {
+        animation: 150, delay: 400, delayOnTouchOnly: true, draggable: '.active-card',
+        ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+        onEnd: function() {
+            manualOrderIds = Array.from(feed.querySelectorAll('.active-card')).map(c => c.id.replace('card-', ''));
+            const manBtn = document.getElementById('manual-route-btn');
+            if(manBtn) { manBtn.classList.add('route-glow-update'); setTimeout(() => manBtn.classList.remove('route-glow-update'), 3000); }
+        }
+    });
   }
 
   function markAction(id) {
+    if (!window.isShiftActive) { alert("Please click START RUN before completing your first job."); return; }
     const job = globalJobs[id]; if(!job) return;
     if (job.status === 'pending_pickup') {
          if(!confirm("Confirm Picked Up?")) return;
