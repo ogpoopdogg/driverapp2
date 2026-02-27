@@ -116,8 +116,8 @@
     #unload-depot-btn { display: none; width: 90%; margin: 20px auto; padding: 15px; background: #0056b3; color: #ffffff; font-weight: 800; border: none; border-radius: 8px; font-size: 16px; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0, 86, 179, 0.4); cursor: pointer; }
     #unload-depot-btn:active { transform: scale(0.98); }
 
-    .glow-depot { animation: depot-pulse 1.5s infinite alternate; border: 2px solid var(--update-blue) !important; }
-    @keyframes depot-pulse { from { box-shadow: 0 0 5px var(--update-blue); } to { box-shadow: 0 0 20px var(--update-blue); } }
+    .glow-depot { animation: depot-pulse 0.8s infinite alternate; border: 2px solid var(--update-blue) !important; }
+    @keyframes depot-pulse { from { box-shadow: 0 0 5px var(--update-blue); transform: scale(1); } to { box-shadow: 0 0 25px var(--update-blue); transform: scale(1.05); background: #007bff; } }
 
     /* REFACTORED UTILITY CLASSES */
     .flex-row { display: flex; gap: 10px; }
@@ -915,7 +915,9 @@
         const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
         let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
-        html += `<button id="unload-depot-btn" class="glow-depot" style="display:block; margin-bottom: 20px;" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
+        const depotClass = transitCount > 0 ? "glow-depot" : "";
+        const depotStyle = transitCount > 0 ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none;";
+        html += `<button id="unload-depot-btn" class="${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
              const color = j.status === 'in_transit' ? '#2196f3' : '#4caf50';
