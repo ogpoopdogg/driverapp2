@@ -143,6 +143,8 @@
     .perf-sub { color: #777; font-size: 11px; margin-top: 2px; font-style: italic; }
     .note-box { text-align:center; width:100%; margin-top:10px; color:#ddd; font-size:12px; word-wrap:break-word; font-style:italic; }
     .icon-wrap { align-self: center; cursor: pointer; margin-bottom: 5px; }
+    @keyframes pulse-glow-btn { 0% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 204, 0, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 204, 0, 1); } 100% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 204, 0, 0.5); } }
+    .pulse-glow-btn { animation: pulse-glow-btn 1.5s infinite alternate !important; }
   </style>
 </head>
 <body>
@@ -162,7 +164,7 @@
     E&C PORTAL
   </h1>
   <button id="install-btn" class="install-btn" onclick="installPWA()">Install App</button>
-  <button id="shift-toggle-btn" style="display:none; cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: none; padding: 4px 10px; border-radius: 4px; white-space: nowrap; background: var(--active-green); margin-right: 10px;" onclick="toggleShift()">START RUN</button>
+  <button id="shift-toggle-btn" class="pulse-glow-btn" style="display:none; cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: none; padding: 4px 10px; border-radius: 4px; white-space: nowrap; background: var(--active-green); margin-right: 10px;" onclick="toggleShift()">START RUN</button>
   <button id="logout-btn" onclick="logoutDriver()" style="cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #ffffff; padding: 2px 8px; border-radius: 4px; white-space: nowrap; background: transparent;">LOGOUT</button>
 </header>
 
@@ -677,7 +679,7 @@
     if(confirm("Are you sure you want to decline this job?")) db.ref('jobs').child(id).update({ assigned_to: "", status: "pending_pickup" }).catch(err => alert("Error: " + err.message));
   }
 
-  function dndJob(id, existingNotes) {
+  function dndJob(id) {
     const job = globalJobs[id]; if(!job) return;
     const refPath = 'jobs';
     const reason = prompt(job.status === 'pending_pickup' ? "Reason for DNP:" : "Reason for DND:");
@@ -689,7 +691,7 @@
     document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
     closeJobCard();
     setTimeout(() => {
-      db.ref(refPath).child(id).update({ status: tag, completed_at: Date.now(), other_info: existingNotes ? `${existingNotes} | ${newEntry}` : newEntry, driver_edited_note: true, last_edit_by: currentDriver }).catch(err => alert("Error: " + err.message));
+      db.ref(refPath).child(id).update({ status: tag, completed_at: Date.now(), job_history: job.job_history ? `${job.job_history} | ${newEntry}` : newEntry, driver_edited_note: true, last_edit_by: currentDriver }).catch(err => alert("Error: " + err.message));
     }, 500);
 
     const targetEmail = job.status === 'pending_pickup' ? (job.p_email || job.customer_email) : (job.d_email || job.customer_email);
@@ -958,7 +960,7 @@
                     </div>
                  </div>
                  <div class="time-stack"><div class="job-time-stamp">${formatTime12(p.timestamp)}</div><div class="job-date-stamp">${formatDateShort(p.timestamp)}</div></div>
-                 <button class="info-btn" onclick="dndJob('${id}', '${escapedNotes}')">${p.status==='pending_pickup'?'DNP':'DND'}</button>
+                 <button class="info-btn" onclick="dndJob('${id}')">${p.status==='pending_pickup'?'DNP':'DND'}</button>
                  ${p.status === 'in_transit' ? '' : `<button class="done-btn" onclick="markAction('${id}')">${btnText}</button>`}
               </div>
             </div>
@@ -985,7 +987,7 @@
         const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
         const depotClass = (transitCount > 0 && window.isShiftActive) ? "glow-depot" : "";
         const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none;";
-        html += `<button id="unload-depot-btn" class="${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
+        html += `<button id="unload-depot-btn" class="pulse-glow-btn ${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
              const color = j.status === 'in_transit' ? '#2196f3' : '#4caf50';
