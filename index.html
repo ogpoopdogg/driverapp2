@@ -586,9 +586,9 @@
             window.isShiftActive = snap.val() === true;
             const btn = document.getElementById('shift-toggle-btn');
             if(btn) {
-              btn.style.display = 'inline-block';
-              btn.innerText = window.isShiftActive ? 'END RUN' : 'START RUN';
-              btn.style.background = window.isShiftActive ? '#e60000' : 'var(--active-green)';
+              btn.style.display = (!window.isShiftActive && lastPendingCount > 0) ? 'inline-block' : 'none';
+              btn.innerText = 'START RUN';
+              btn.style.background = 'var(--active-green)';
             }
           });
 
@@ -853,9 +853,9 @@
     
     const shiftBtn = document.getElementById('shift-toggle-btn');
     if (shiftBtn) {
-        shiftBtn.style.display = 'inline-block';
-        shiftBtn.innerText = window.isShiftActive ? 'END RUN' : 'START RUN';
-        shiftBtn.style.background = window.isShiftActive ? '#e60000' : 'var(--active-green)';
+        shiftBtn.style.display = (!window.isShiftActive && currentPending > 0) ? 'inline-block' : 'none';
+        shiftBtn.innerText = 'START RUN';
+        shiftBtn.style.background = 'var(--active-green)';
     }
 
     renderUnifiedFeed(); updateRoute();
