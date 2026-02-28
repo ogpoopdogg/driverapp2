@@ -691,7 +691,7 @@
     document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
     closeJobCard();
     setTimeout(() => {
-      db.ref(refPath).child(id).update({ status: tag, completed_at: Date.now(), job_history: job.job_history ? `${job.job_history} | ${newEntry}` : newEntry, last_edit_by: currentDriver }).catch(err => alert("Error: " + err.message));
+      db.ref(refPath).child(id).update({ status: tag, completed_at: Date.now(), job_history: job.job_history ? `${job.job_history} | ${newEntry}` : newEntry, last_edit_by: currentDriver, assigned_to: 'Unassigned', other_info: job.other_info ? `${job.other_info} | ${newEntry}` : newEntry }).catch(err => alert("Error: " + err.message));
     }, 500);
 
     const targetEmail = job.status === 'pending_pickup' ? (job.p_email || job.customer_email) : (job.d_email || job.customer_email);
