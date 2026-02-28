@@ -379,11 +379,11 @@
 
       const userAgent = navigator.userAgent || navigator.vendor || window.opera;
       if (/android/i.test(userAgent)) {
-          window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypointsStr}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+          window.location.href = `intent://http://googleusercontent.com/maps.google.com/${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypointsStr}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
       } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
           window.location.href = `comgooglemaps://?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&waypoints=${waypointsStr}&directionsmode=driving`;
       } else {
-          window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypointsStr}&travelmode=driving`, '_blank');
+          window.open(`http://googleusercontent.com/maps.google.com/${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypointsStr}&travelmode=driving`, '_blank');
       }
   }
 
@@ -415,11 +415,11 @@
     updateRoute();
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     if (/android/i.test(userAgent)) {
-        window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+        window.location.href = `intent://http://googleusercontent.com/maps.google.com/${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
     } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
         window.location.href = `comgooglemaps://?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&waypoints=${waypoints}&directionsmode=driving`;
     } else {
-        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`, '_blank');
+        window.open(`http://googleusercontent.com/maps.google.com/${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`, '_blank');
     }
   }
 
@@ -834,8 +834,8 @@
 
   function getNavUrl(name, loc, city) { 
       const isCoords = loc ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(loc.trim()) : false; 
-      if(isCoords) return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.trim())}&travelmode=driving`; 
-      return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((name ? name + ' ' : '') + loc + ', ' + city)}&travelmode=driving`; 
+      if(isCoords) return `http://googleusercontent.com/maps.google.com/${encodeURIComponent(loc.trim())}&travelmode=driving`; 
+      return `http://googleusercontent.com/maps.google.com/${encodeURIComponent((name ? name + ' ' : '') + loc + ', ' + city)}&travelmode=driving`; 
   }
 
   function routeOptimized() { enableAutoCenter(); }
@@ -1093,7 +1093,7 @@
   async function installPWA() {
     if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') installBtn.style.display = 'none'; deferredPrompt = null; }
   }
-  if ('serviceWorker in navigator') {
+  if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.log));
     navigator.serviceWorker.addEventListener('message', event => { if (event.data && event.data.jobId) showJobGroup(event.data.jobId); });
   }
