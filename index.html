@@ -535,7 +535,7 @@
             Object.values(notes).forEach(note => {
               list.innerHTML += `
                 <div class="dev-item">
-                  <div class="dev-hdr">${note.user} • ${note.date}</div>
+                  <div class="dev-hdr">${note.user} - <span style="color: orange;">${note.app || 'Database'}</span> - ${note.date}</div>
                   <div>${note.text}</div>
                 </div>`;
             });
@@ -1076,7 +1076,8 @@
       text: devQuill.root.innerHTML,
       user: user,
       date: dateStr,
-      timestamp: firebase.database.ServerValue.TIMESTAMP
+      timestamp: firebase.database.ServerValue.TIMESTAMP,
+      app: "E&C Dispatch"
     }).then(() => {
       devQuill.setText(''); // Clear editor on success
     }).catch(err => {
