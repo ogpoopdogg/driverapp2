@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -219,7 +219,7 @@
     messagingSenderId: "931221081541",
     appId: "1:1067680083511:android:22d1eb3757302492bd19b2",
   }); 
-  firebase.auth().setPersistence('local');
+  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
   const db = firebase.database();
   let messaging = null;
@@ -489,7 +489,7 @@
         try {
             const addr = j.status === 'pending_pickup' ? j.pickup_location : j.destination;
             const name = j.status === 'pending_pickup' ? j.name : j.delivery_name;
-            const city = j.status === 'pending_pickup' ? (j.pickup_city || job.city || "Brandon") : (j.delivery_city || job.city || "Brandon");
+            const city = j.status === 'pending_pickup' ? (j.pickup_city || j.city || "Brandon") : (j.delivery_city || j.city || "Brandon");
             const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
             const key = isCoords ? addr.replace(/\s+/g, '') : `${name}|${addr}|${city}`.toLowerCase();
             const displayStr = isCoords ? addr.trim() : `${name} ${addr}, ${city}`;
@@ -601,6 +601,11 @@
         if (snap.val() === true) {
           currentDriver = rawName.charAt(0).toUpperCase() + rawName.slice(1);
           localStorage.setItem('ec_driver_name', currentDriver);
+          if (localStorage.getItem('ec_shift_active') === 'true') {
+              window.isShiftActive = true;
+              const btn = document.getElementById('shift-toggle-btn');
+              if(btn) btn.style.display = 'none';
+          }
           document.getElementById('login-overlay').style.display = 'none';
           document.getElementById('header-name').innerHTML = `
             <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
@@ -683,7 +688,7 @@
     const pass = document.getElementById('login-pin').value.trim();
     if (!email || !pass) { alert("Please enter both Email and Password"); return; }
     if (!email.includes('@')) email += '@ec.com';
-    firebase.auth().setPersistence('local').then(() => {
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
       return firebase.auth().signInWithEmailAndPassword(email, pass);
     }).catch(e => alert("Login Failed: " + e.code + "\n" + e.message));
   }
@@ -1088,7 +1093,7 @@
   async function installPWA() {
     if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') installBtn.style.display = 'none'; deferredPrompt = null; }
   }
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker in navigator') {
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.log));
     navigator.serviceWorker.addEventListener('message', event => { if (event.data && event.data.jobId) showJobGroup(event.data.jobId); });
   }
@@ -1111,11 +1116,13 @@
           }
       });
       updates[`driver_locations/${currentDriver}/shift_active`] = false;
+      localStorage.removeItem('ec_shift_active');
       db.ref().update(updates).then(() => { alert(count > 0 ? "Inventory Unloaded and Shift Ended." : "Shift Ended."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
   }
 
   function toggleShift() {
     if(!currentDriver) return;
+    localStorage.setItem('ec_shift_active', 'true');
     db.ref(`driver_locations/${currentDriver}`).update({ shift_active: true });
     updateRoute();
   }
