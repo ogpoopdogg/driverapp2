@@ -263,7 +263,7 @@
       if(lastGps) { map.setCenter({lat: lastGps.lat, lng: lastGps.lng}); map.setZoom(17); map.setTilt(45); }
   }
 
-  function openManualRoute() {
+  async function openManualRoute() {
     hasInitialRoute = true;
     document.getElementById('manual-route-btn').classList.remove('route-glow-update');
     const listItems = document.querySelectorAll('#mini-map-list .mini-list-item');
@@ -272,19 +272,65 @@
     const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
     const destination = "1604 Moreland Ave, Brandon MB";
     const seenLocs = new Set();
-    const waypoints = Array.from(listItems).map(item => {
+    const rawWaypoints = [];
+    
+    Array.from(listItems).forEach(item => {
         const id = item.id.replace('mini-', '').split(',')[0];
         const job = globalJobs[id];
-        if(!job) return "";
+        if(!job) return;
         const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
         const name = job.status === 'pending_pickup' ? job.name : job.delivery_name;
         const city = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
         const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
         const key = isCoords ? addr.replace(/\s+/g, '') : `${name} ${addr}, ${city}`;
-        if(seenLocs.has(key)) return "";
-        seenLocs.add(key);
-        return encodeURIComponent(key);
-    }).filter(w => w !== "").join("|");
+        if(!seenLocs.has(key)) {
+            seenLocs.add(key);
+            rawWaypoints.push({ key: key, isCoords: isCoords, addr: addr ? addr.trim() : "" });
+        }
+    });
+
+    if(rawWaypoints.length === 0) return;
+
+    let waypoints = "";
+    if (rawWaypoints.length === 1) {
+        waypoints = encodeURIComponent(rawWaypoints[0].key);
+    } else {
+        const anchor = rawWaypoints[0];
+        const rest = rawWaypoints.slice(1);
+        
+        try {
+            const originPayload = anchor.isCoords ? 
+                { location: { latLng: { latitude: parseFloat(anchor.addr.split(',')[0]), longitude: parseFloat(anchor.addr.split(',')[1]) } } } : 
+                { address: anchor.key };
+                
+            const intermediatesPayload = rest.map(w => w.isCoords ? 
+                { location: { latLng: { latitude: parseFloat(w.addr.split(',')[0]), longitude: parseFloat(w.addr.split(',')[1]) } } } : 
+                { address: w.key }
+            );
+
+            const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ", "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex" },
+                body: JSON.stringify({
+                    origin: originPayload,
+                    destination: { address: destination }, 
+                    intermediates: intermediatesPayload,
+                    travelMode: "DRIVE", 
+                    optimizeWaypointOrder: intermediatesPayload.length > 1
+                })
+            });
+            const result = await response.json();
+            
+            let optimizedRest = rest;
+            if (result.routes && result.routes[0] && result.routes[0].optimizedIntermediateWaypointIndex) {
+                optimizedRest = result.routes[0].optimizedIntermediateWaypointIndex.map(idx => rest[idx]);
+            }
+            waypoints = [anchor, ...optimizedRest].map(w => encodeURIComponent(w.key)).join("|");
+        } catch (e) {
+            console.error("Manual Route Optimization Error", e);
+            waypoints = rawWaypoints.map(w => encodeURIComponent(w.key)).join("|");
+        }
+    }
 
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     if (/android/i.test(userAgent)) {
