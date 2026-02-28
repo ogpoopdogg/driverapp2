@@ -586,9 +586,9 @@
             window.isShiftActive = snap.val() === true;
             const btn = document.getElementById('shift-toggle-btn');
             if(btn) {
-              btn.style.display = (lastPendingCount > 0 && !window.isShiftActive) ? 'inline-block' : 'none';
-              btn.innerText = 'START RUN';
-              btn.style.background = 'var(--active-green)';
+              btn.style.display = (lastPendingCount > 0) ? 'inline-block' : 'none';
+              btn.innerText = window.isShiftActive ? 'END RUN' : 'START RUN';
+              btn.style.background = window.isShiftActive ? '#e60000' : 'var(--active-green)';
             }
           });
 
@@ -853,7 +853,11 @@
     isFirstLoad = false; lastPendingCount = currentPending;
     
     const shiftBtn = document.getElementById('shift-toggle-btn');
-    if (shiftBtn) shiftBtn.style.display = (currentPending > 0 && !window.isShiftActive) ? 'inline-block' : 'none';
+    if (shiftBtn) {
+        shiftBtn.style.display = (currentPending > 0) ? 'inline-block' : 'none';
+        shiftBtn.innerText = window.isShiftActive ? 'END RUN' : 'START RUN';
+        shiftBtn.style.background = window.isShiftActive ? '#e60000' : 'var(--active-green)';
+    }
 
     renderUnifiedFeed(); updateRoute();
   }
@@ -1018,65 +1022,11 @@
             const manBtn = document.getElementById('manual-route-btn');
             if(manBtn) { manBtn.classList.add('route-glow-update'); setTimeout(() => manBtn.classList.remove('route-glow-update'), 3000); }
 
-            const listItems = Array.from(document.querySelectorAll('#mini-map-list .mini-list-item'));
-            if(listItems.length === 0) return;
-
-            let anchors = [];
-            let rest = [];
-
-            listItems.forEach(item => {
-                const id = item.id.replace('mini-', '').split(',')[0];
-                const job = globalJobs[id];
-                if(!job) return;
-                const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
-                const name = job.status === 'pending_pickup' ? job.name : job.delivery_name;
-                const city = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
-                const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
-                const key = isCoords ? addr.replace(/\s+/g, '') : `${name} ${addr}, ${city}`;
-
-                const groupIds = item.id.replace('mini-', '').split(',');
-                const isManual = groupIds.some(gid => globalJobs[gid] && globalJobs[gid].manual_priority);
-                const waypointData = { id, key, isCoords, addrString: isCoords ? addr.trim() : key, groupIds, masterJob: job };
-
-                if (isManual) anchors.push(waypointData);
-                else rest.push(waypointData);
-            });
-
-            let finalOrderGroups = [...anchors];
-
-            if (rest.length > 0) {
-                const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
-                const destination = "1604 Moreland Ave, Brandon MB";
-                let routeOrigin;
-                if (anchors.length > 0) {
-                    const lastAnchor = anchors[anchors.length - 1];
-                    routeOrigin = lastAnchor.isCoords ? { location: { latLng: { latitude: parseFloat(lastAnchor.addrString.split(',')[0]), longitude: parseFloat(lastAnchor.addrString.split(',')[1]) } } } : { address: lastAnchor.addrString };
-                } else {
-                    routeOrigin = lastGps ? { location: { latLng: { latitude: lastGps.lat, longitude: lastGps.lng } } } : { address: origin };
-                }
-
-                try {
-                    const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ", "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex" },
-                        body: JSON.stringify({
-                            origin: routeOrigin,
-                            destination: { address: destination },
-                            intermediates: rest.map(r => r.isCoords ? { location: { latLng: { latitude: parseFloat(r.addrString.split(',')[0]), longitude: parseFloat(r.addrString.split(',')[1]) } } } : { address: r.addrString }),
-                            travelMode: "DRIVE", optimizeWaypointOrder: rest.length > 1
-                        })
-                    });
-                    const result = await response.json();
-                    let orderedRest = rest;
-                    if (result.routes && result.routes[0] && result.routes[0].optimizedIntermediateWaypointIndex) {
-                        orderedRest = result.routes[0].optimizedIntermediateWaypointIndex.map(idx => rest[idx]);
-                    }
-                    finalOrderGroups = finalOrderGroups.concat(orderedRest);
-                } catch(e) { console.warn("Optimization failed:", e); finalOrderGroups = finalOrderGroups.concat(rest); }
-            }
-
             manualOrderIds = [];
-            finalOrderGroups.forEach(g => g.groupIds.forEach(gid => manualOrderIds.push(gid)));
+            items.forEach(item => {
+                const groupIds = item.id.replace('mini-', '').split(',');
+                groupIds.forEach(gid => manualOrderIds.push(gid));
+            });
 
             if(currentDriver) {
                 await db.ref(`driver_locations/${currentDriver}`).update({ manual_order: manualOrderIds, is_manual_mode: true });
@@ -1147,7 +1097,8 @@
 
   function toggleShift() {
     if(!currentDriver) return;
-    db.ref(`driver_locations/${currentDriver}`).update({ shift_active: true });
+    const newState = !window.isShiftActive;
+    db.ref(`driver_locations/${currentDriver}`).update({ shift_active: newState });
     updateRoute();
   }
 </script>
