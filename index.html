@@ -340,7 +340,8 @@
         if (job.status === 'pending' && job.lat && job.lng && job.assigned_to === currentDriver) {
           if (getDistance(pos.coords.latitude, pos.coords.longitude, job.lat, job.lng) < 50) {
             document.getElementById('card-' + jid)?.classList.add('arrival-highlight');
-            document.getElementById('mini-' + jid)?.classList.add('arrival-green-tint');
+            const mini = document.querySelector(`[id^="mini-"][id*="${jid}"]`);
+            if(mini) mini.classList.add('arrival-green-tint');
           }
         }
       });
@@ -360,18 +361,14 @@
     if (mapMarkers.length > 0) { mapMarkers.forEach(m => m.setMap(null)); mapMarkers = []; }
     mapLabels.forEach(l => l.close()); mapLabels = [];
     optimizedOrder = []; 
-    if(jobs.length === 0) {
-        document.getElementById('mini-map-list').style.display = 'none';
-        document.getElementById('mini-map-list').innerHTML = "";
-        return;
-    }
+    if(jobs.length === 0) return;
 
     const groups = [], groupMap = new Map();
     jobs.forEach(j => {
         try {
             const addr = j.status === 'pending_pickup' ? j.pickup_location : j.destination;
             const name = j.status === 'pending_pickup' ? j.name : j.delivery_name;
-            const city = j.status === 'pending_pickup' ? (j.pickup_city || j.city || "Brandon") : (j.delivery_city || j.city || "Brandon");
+            const city = j.status === 'pending_pickup' ? (j.pickup_city || job.city || "Brandon") : (j.delivery_city || job.city || "Brandon");
             const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
             const key = isCoords ? addr.replace(/\s+/g, '') : `${name}|${addr}|${city}`.toLowerCase();
             const displayStr = isCoords ? addr.trim() : `${name} ${addr}, ${city}`;
@@ -494,7 +491,7 @@
                    const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>` : '';
                    
                    listHtml += `
-                    <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds[0]}" style="position:relative;">
+                    <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds.join(',')}" style="position:relative;">
                         ${starHtml}
                         ${hasUpdate ? `<div class="list-update-badge">NEW INFO</div>` : ''}
                         <div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div>
@@ -510,6 +507,7 @@
             });
             document.getElementById('mini-map-list').innerHTML = listHtml;
             document.getElementById('mini-map-list').style.display = 'block';
+            if(observer) document.querySelectorAll('.mini-list-item').forEach(item => observer.observe(item));
             isNavigating = true;
             renderUnifiedFeed(); 
             if(Object.keys(globalJobs).length > 0) localStorage.setItem('ec_known_jobs', JSON.stringify(Object.keys(globalJobs)));
@@ -579,7 +577,49 @@
 
   function setupIntersectionObserver() {
     observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => { if (entry.isIntersecting) { /* Logic removed */ } });
+      entries.forEach(entry => { 
+        if (entry.isIntersecting) { 
+            const el = entry.target;
+            if(el.classList.contains('mini-flash') || el.classList.contains('has-update') || el.classList.contains('new-job-highlight')) {
+                setTimeout(() => {
+                    let ids = [];
+                    if(el.id.startsWith('mini-')) {
+                        el.classList.remove('mini-flash');
+                        const badge = el.querySelector('.list-update-badge');
+                        if(badge) badge.remove();
+                        ids = el.id.replace('mini-', '').split(',');
+                    } else if(el.id.startsWith('card-')) {
+                        el.classList.remove('has-update', 'new-job-highlight');
+                        ids = [el.id.replace('card-', '')];
+                    }
+                    ids.forEach(gid => {
+                        sessionStorage.setItem(`ack_update_${gid}`, 'true');
+                        delete pendingAlerts[gid];
+                        if(!previouslyKnown.includes(gid)) previouslyKnown.push(gid);
+                        const job = globalJobs[gid];
+                        if(job && (!job.seen_by || !job.seen_by[currentDriver])) {
+                            db.ref(`jobs/${gid}/seen_by/${currentDriver}`).set(true);
+                        }
+                        const card = document.getElementById(`card-${gid}`);
+                        if(card) {
+                            card.classList.remove('has-update', 'new-job-highlight');
+                            const bdg = document.getElementById(`badge-${gid}`);
+                            if(bdg) bdg.style.display = 'none';
+                        }
+                        const mini = document.querySelector(`[id^="mini-"][id*="${gid}"]`);
+                        if(mini) {
+                            mini.classList.remove('mini-flash');
+                            const mBdg = mini.querySelector('.list-update-badge');
+                            if(mBdg) mBdg.remove();
+                        }
+                    });
+                    localStorage.setItem('ec_known_jobs', JSON.stringify(previouslyKnown));
+                    updateNewStopsCountUI();
+                }, 3000);
+                observer.unobserve(el);
+            }
+        } 
+      });
     }, { threshold: 0.5 });
   }
 
@@ -593,7 +633,7 @@
   function acknowledgeUpdate(id) {
     setTimeout(() => {
       sessionStorage.setItem(`ack_update_${id}`, 'true'); delete pendingAlerts[id];
-      const card = document.getElementById(`card-${id}`), mini = document.getElementById(`mini-${id}`);
+      const card = document.getElementById(`card-${id}`), mini = document.querySelector(`[id^="mini-"][id*="${id}"]`);
       if(card) { card.classList.remove('has-update', 'arrival-highlight'); card.querySelectorAll('.field-highlight').forEach(el => el.classList.remove('field-highlight')); card.querySelector('.info-btn')?.classList.remove('info-btn-animate'); }
       if(mini) mini.classList.remove('has-update');
       document.getElementById(`badge-${id}`)?.style.setProperty('display', 'none');
@@ -942,8 +982,8 @@
         const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
         let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
-        const depotClass = transitCount > 0 ? "glow-depot" : "";
-        const depotStyle = transitCount > 0 ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none;";
+        const depotClass = (transitCount > 0 && window.isShiftActive) ? "glow-depot" : "";
+        const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none;";
         html += `<button id="unload-depot-btn" class="${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
@@ -1037,6 +1077,7 @@
 
   function unloadAtDepot() {
       if(!confirm("Are you sure you want to End Shift and Check-In at Depot?")) return;
+      window.isShiftActive = false;
       const updates = {}; let count = 0;
       Object.keys(globalJobs).forEach(key => {
           const job = globalJobs[key];
