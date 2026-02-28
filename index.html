@@ -586,7 +586,7 @@
             window.isShiftActive = snap.val() === true;
             const btn = document.getElementById('shift-toggle-btn');
             if(btn) {
-              btn.style.display = (lastPendingCount > 0) ? 'inline-block' : 'none';
+              btn.style.display = 'inline-block';
               btn.innerText = window.isShiftActive ? 'END RUN' : 'START RUN';
               btn.style.background = window.isShiftActive ? '#e60000' : 'var(--active-green)';
             }
@@ -846,7 +846,6 @@
     if (currentPending !== lastPendingCount) {
          if (currentPending > lastPendingCount) {
               lastAnnouncedId = null;
-              if (!isFirstLoad && lastPendingCount === 0) db.ref(`driver_locations/${currentDriver}`).update({ shift_active: false });
          }
          if (!isFirstLoad) document.getElementById('route-toggle-btn').classList.add('route-glow-update');
     }
@@ -854,7 +853,7 @@
     
     const shiftBtn = document.getElementById('shift-toggle-btn');
     if (shiftBtn) {
-        shiftBtn.style.display = (currentPending > 0) ? 'inline-block' : 'none';
+        shiftBtn.style.display = 'inline-block';
         shiftBtn.innerText = window.isShiftActive ? 'END RUN' : 'START RUN';
         shiftBtn.style.background = window.isShiftActive ? '#e60000' : 'var(--active-green)';
     }
@@ -1005,32 +1004,35 @@
         ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
         onEnd: async function(evt) {
             isManualMode = true;
-            if(evt.item && evt.item.id) {
-                const draggedIds = evt.item.id.replace('mini-', '').split(',');
-                draggedIds.forEach(id => { 
-                    if (globalJobs[id]) {
-                        globalJobs[id].manual_priority = true; 
-                        db.ref(`jobs/${id}/manual_priority`).set(true);
-                    }
-                });
-            }
+            
             const items = miniListContainer.querySelectorAll('.mini-list-item');
+            manualOrderIds = [];
             items.forEach((item, index) => {
                 const numEl = item.querySelector('.mini-num');
                 if (numEl) numEl.innerText = index + 1;
-            });
-            const manBtn = document.getElementById('manual-route-btn');
-            if(manBtn) { manBtn.classList.add('route-glow-update'); setTimeout(() => manBtn.classList.remove('route-glow-update'), 3000); }
-
-            manualOrderIds = [];
-            items.forEach(item => {
                 const groupIds = item.id.replace('mini-', '').split(',');
                 groupIds.forEach(gid => manualOrderIds.push(gid));
             });
 
             if(currentDriver) {
-                await db.ref(`driver_locations/${currentDriver}`).update({ manual_order: manualOrderIds, is_manual_mode: true });
+                db.ref(`driver_locations/${currentDriver}`).update({ manual_order: manualOrderIds, is_manual_mode: true });
             }
+
+            if(evt.item && evt.item.id) {
+                const draggedIds = evt.item.id.replace('mini-', '').split(',');
+                let updates = {};
+                draggedIds.forEach(id => { 
+                    if (globalJobs[id]) {
+                        globalJobs[id].manual_priority = true; 
+                        updates[`${id}/manual_priority`] = true;
+                    }
+                });
+                if(Object.keys(updates).length > 0) db.ref('jobs').update(updates);
+            }
+
+            const manBtn = document.getElementById('manual-route-btn');
+            if(manBtn) { manBtn.classList.add('route-glow-update'); setTimeout(() => manBtn.classList.remove('route-glow-update'), 3000); }
+            
             updateRoute();
         }
     });
