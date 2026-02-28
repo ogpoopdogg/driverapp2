@@ -219,7 +219,7 @@
     messagingSenderId: "931221081541",
     appId: "1:1067680083511:android:22d1eb3757302492bd19b2",
   }); 
-  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+  firebase.auth().setPersistence('local');
 
   const db = firebase.database();
   let messaging = null;
@@ -679,9 +679,11 @@
   }
 
   function attemptLogin() {
-    const email = document.getElementById('login-user').value.trim(), pass = document.getElementById('login-pin').value.trim();
+    let email = document.getElementById('login-user').value.trim();
+    const pass = document.getElementById('login-pin').value.trim();
     if (!email || !pass) { alert("Please enter both Email and Password"); return; }
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+    if (!email.includes('@')) email += '@ec.com';
+    firebase.auth().setPersistence('local').then(() => {
       return firebase.auth().signInWithEmailAndPassword(email, pass);
     }).catch(e => alert("Login Failed: " + e.code + "\n" + e.message));
   }
