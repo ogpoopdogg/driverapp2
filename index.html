@@ -691,7 +691,7 @@
     document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
     closeJobCard();
     setTimeout(() => {
-      db.ref(refPath).child(id).update({ status: tag, completed_at: Date.now(), job_history: job.job_history ? `${job.job_history} | ${newEntry}` : newEntry, driver_edited_note: true, last_edit_by: currentDriver }).catch(err => alert("Error: " + err.message));
+      db.ref(refPath).child(id).update({ status: tag, completed_at: Date.now(), job_history: job.job_history ? `${job.job_history} | ${newEntry}` : newEntry, last_edit_by: currentDriver }).catch(err => alert("Error: " + err.message));
     }, 500);
 
     const targetEmail = job.status === 'pending_pickup' ? (job.p_email || job.customer_email) : (job.d_email || job.customer_email);
@@ -986,7 +986,7 @@
         let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
         const depotClass = (transitCount > 0 && window.isShiftActive) ? "glow-depot" : "";
-        const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none;";
+        const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none; animation: none !important;";
         html += `<button id="unload-depot-btn" class="pulse-glow-btn ${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
