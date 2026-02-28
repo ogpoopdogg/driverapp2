@@ -263,29 +263,79 @@
       if(lastGps) { map.setCenter({lat: lastGps.lat, lng: lastGps.lng}); map.setZoom(17); map.setTilt(45); }
   }
 
-  function openManualRoute() {
+  async function openManualRoute() {
     hasInitialRoute = true;
     document.getElementById('manual-route-btn').classList.remove('route-glow-update');
-    const listItems = document.querySelectorAll('#mini-map-list .mini-list-item');
+    const listItems = Array.from(document.querySelectorAll('#mini-map-list .mini-list-item'));
     if(listItems.length === 0) { alert("No stops to route."); return; }
     
-    const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
-    const destination = "1604 Moreland Ave, Brandon MB";
-    const seenLocs = new Set();
-    const waypoints = Array.from(listItems).map(item => {
+    let anchors = [];
+    let rest = [];
+    
+    listItems.forEach(item => {
         const id = item.id.replace('mini-', '').split(',')[0];
         const job = globalJobs[id];
-        if(!job) return "";
+        if(!job) return;
         const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
         const name = job.status === 'pending_pickup' ? job.name : job.delivery_name;
         const city = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
         const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
         const key = isCoords ? addr.replace(/\s+/g, '') : `${name} ${addr}, ${city}`;
-        if(seenLocs.has(key)) return "";
-        seenLocs.add(key);
-        return encodeURIComponent(key);
-    }).filter(w => w !== "").join("|");
+        
+        const groupIds = item.id.replace('mini-', '').split(',');
+        const isManual = groupIds.some(gid => globalJobs[gid] && globalJobs[gid].manual_priority);
+        const waypointData = { id, key, isCoords, addrString: isCoords ? addr.trim() : key };
+        
+        if (isManual) anchors.push(waypointData);
+        else rest.push(waypointData);
+    });
 
+    const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
+    const destination = "1604 Moreland Ave, Brandon MB";
+    let finalWaypoints = [];
+    const seenLocs = new Set();
+
+    anchors.forEach(a => {
+        if(!seenLocs.has(a.key)) { seenLocs.add(a.key); finalWaypoints.push(encodeURIComponent(a.key)); }
+    });
+
+    if (rest.length > 0) {
+        let routeOrigin;
+        if (anchors.length > 0) {
+            const lastAnchor = anchors[anchors.length - 1];
+            routeOrigin = lastAnchor.isCoords ? { location: { latLng: { latitude: parseFloat(lastAnchor.addrString.split(',')[0]), longitude: parseFloat(lastAnchor.addrString.split(',')[1]) } } } : { address: lastAnchor.addrString };
+        } else {
+            routeOrigin = lastGps ? { location: { latLng: { latitude: lastGps.lat, longitude: lastGps.lng } } } : { address: origin };
+        }
+
+        try {
+            const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ", "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex" },
+                body: JSON.stringify({
+                    origin: routeOrigin,
+                    destination: { address: destination },
+                    intermediates: rest.map(r => r.isCoords ? { location: { latLng: { latitude: parseFloat(r.addrString.split(',')[0]), longitude: parseFloat(r.addrString.split(',')[1]) } } } : { address: r.addrString }),
+                    travelMode: "DRIVE", optimizeWaypointOrder: rest.length > 1
+                })
+            });
+            const result = await response.json();
+            let orderedRest = rest;
+            if (result.routes && result.routes[0] && result.routes[0].optimizedIntermediateWaypointIndex) {
+                orderedRest = result.routes[0].optimizedIntermediateWaypointIndex.map(idx => rest[idx]);
+            }
+            orderedRest.forEach(r => {
+                if(!seenLocs.has(r.key)) { seenLocs.add(r.key); finalWaypoints.push(encodeURIComponent(r.key)); }
+            });
+        } catch(e) {
+            console.warn("Optimization failed:", e);
+            rest.forEach(r => {
+                if(!seenLocs.has(r.key)) { seenLocs.add(r.key); finalWaypoints.push(encodeURIComponent(r.key)); }
+            });
+        }
+    }
+
+    const waypoints = finalWaypoints.join("|");
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     if (/android/i.test(userAgent)) {
         window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
@@ -933,8 +983,12 @@
     window.sortableFeed = new Sortable(miniListContainer, {
         animation: 150, delay: 400, delayOnTouchOnly: true, draggable: '.mini-list-item',
         ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
-        onEnd: function() {
+        onEnd: function(evt) {
             isManualMode = true;
+            if(evt.item && evt.item.id) {
+                const draggedIds = evt.item.id.replace('mini-', '').split(',');
+                draggedIds.forEach(id => { if (globalJobs[id]) globalJobs[id].manual_priority = true; });
+            }
             const items = miniListContainer.querySelectorAll('.mini-list-item');
             items.forEach((item, index) => {
                 const numEl = item.querySelector('.mini-num');
