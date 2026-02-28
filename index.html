@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="google" content="notranslate">
   <title>E&C Dispatch | Driver Portal</title>
   <link rel="manifest" href="manifest.json">
   <style>
@@ -174,6 +175,12 @@
   <div id="live-feed" onclick="if(event.target === this) closeJobCard()"></div>
   <div id="route-btns-wrap">
     <div style="display:flex; flex-direction:column; align-items:center;">
+      <button id="reset-route-btn" onclick="resetPriorities()" style="position: relative; width: 60px; height: 60px; padding: 0; border-radius: 50%; background: #222; color: #fff; border: 2px solid #ff3333; box-shadow: 0 6px 20px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+        <svg viewBox="0 0 24 24" style="width: 30px; height: 30px; fill: #ff3333;"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+      </button>
+      <span style="font-size:10px; font-weight:800; color:#ff3333; margin-top:5px; text-transform:uppercase;">reset</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center;">
       <button id="manual-route-btn" onclick="openManualRoute()">
         <svg viewBox="0 0 24 24" style="width: 30px; height: 30px; fill: #fff;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
       </button>
@@ -212,7 +219,7 @@
     messagingSenderId: "931221081541",
     appId: "1:1067680083511:android:22d1eb3757302492bd19b2",
   }); 
-  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
+  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
   const db = firebase.database();
   let messaging = null;
@@ -225,7 +232,7 @@
   let lastPendingCount = 0, lastAnnouncedId = null, isFirstLoad = true, hasRoutedWithGps = false, hasInitialRoute = false;
   let lastGpsUpdate = 0, wakeLock = null, lastRouteClick = Date.now();
   let manualOrderIds = []; let isManualMode = false;
-  const gpsInterval = 30000;
+  let manualPriorities = JSON.parse(localStorage.getItem('ec_manual_priorities') || '[]');
   let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
 
   const darkMapStyles = [
@@ -263,83 +270,121 @@
       if(lastGps) { map.setCenter({lat: lastGps.lat, lng: lastGps.lng}); map.setZoom(17); map.setTilt(45); }
   }
 
+  function resetPriorities() {
+      localStorage.removeItem('ec_manual_priorities');
+      manualPriorities = [];
+      Object.values(globalJobs).forEach(j => j.isManualPriority = false);
+      isManualMode = false;
+      updateRoute();
+  }
+
   async function openManualRoute() {
-    hasInitialRoute = true;
-    document.getElementById('manual-route-btn').classList.remove('route-glow-update');
-    const listItems = document.querySelectorAll('#mini-map-list .mini-list-item');
-    if(listItems.length === 0) { alert("No stops to route."); return; }
-    
-    const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
-    const destination = "1604 Moreland Ave, Brandon MB";
-    const seenLocs = new Set();
-    const rawWaypoints = [];
-    
-    Array.from(listItems).forEach(item => {
-        const id = item.id.replace('mini-', '').split(',')[0];
-        const job = globalJobs[id];
-        if(!job) return;
-        const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
-        const name = job.status === 'pending_pickup' ? job.name : job.delivery_name;
-        const city = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
-        const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
-        const key = isCoords ? addr.replace(/\s+/g, '') : `${name} ${addr}, ${city}`;
-        if(!seenLocs.has(key)) {
-            seenLocs.add(key);
-            rawWaypoints.push({ key: key, isCoords: isCoords, addr: addr ? addr.trim() : "" });
-        }
-    });
+      hasInitialRoute = true;
+      document.getElementById('manual-route-btn').classList.remove('route-glow-update');
+      
+      const jobs = Object.entries(globalJobs).filter(([id, j]) => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver);
+      if(jobs.length === 0) { alert("No stops to route."); return; }
 
-    if(rawWaypoints.length === 0) return;
+      const priorityJobs = [];
+      const standardJobs = [];
+      
+      manualPriorities.forEach(id => {
+          if (globalJobs[id] && (globalJobs[id].status === 'pending_pickup' || globalJobs[id].status === 'pending_delivery') && globalJobs[id].assigned_to === currentDriver) {
+              priorityJobs.push(globalJobs[id]);
+          }
+      });
 
-    let waypoints = "";
-    if (rawWaypoints.length === 1) {
-        waypoints = encodeURIComponent(rawWaypoints[0].key);
-    } else {
-        const anchor = rawWaypoints[0];
-        const rest = rawWaypoints.slice(1);
-        
-        try {
-            const originPayload = anchor.isCoords ? 
-                { location: { latLng: { latitude: parseFloat(anchor.addr.split(',')[0]), longitude: parseFloat(anchor.addr.split(',')[1]) } } } : 
-                { address: anchor.key };
-                
-            const intermediatesPayload = rest.map(w => w.isCoords ? 
-                { location: { latLng: { latitude: parseFloat(w.addr.split(',')[0]), longitude: parseFloat(w.addr.split(',')[1]) } } } : 
-                { address: w.key }
-            );
+      jobs.forEach(([id, j]) => {
+          if (!j.isManualPriority) standardJobs.push(j);
+      });
 
-            const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ", "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex" },
-                body: JSON.stringify({
-                    origin: originPayload,
-                    destination: { address: destination }, 
-                    intermediates: intermediatesPayload,
-                    travelMode: "DRIVE", 
-                    optimizeWaypointOrder: intermediatesPayload.length > 1
-                })
-            });
-            const result = await response.json();
-            
-            let optimizedRest = rest;
-            if (result.routes && result.routes[0] && result.routes[0].optimizedIntermediateWaypointIndex) {
-                optimizedRest = result.routes[0].optimizedIntermediateWaypointIndex.map(idx => rest[idx]);
-            }
-            waypoints = [anchor, ...optimizedRest].map(w => encodeURIComponent(w.key)).join("|");
-        } catch (e) {
-            console.error("Manual Route Optimization Error", e);
-            waypoints = rawWaypoints.map(w => encodeURIComponent(w.key)).join("|");
-        }
-    }
+      const origin = lastGps ? `${lastGps.lat},${lastGps.lng}` : "1604 Moreland Ave, Brandon MB";
+      const destination = "1604 Moreland Ave, Brandon MB";
+      
+      const seenLocs = new Set();
+      const mapJobToWaypoint = (job) => {
+          const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
+          const name = job.status === 'pending_pickup' ? job.name : job.delivery_name;
+          const city = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
+          const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
+          return { key: isCoords ? addr.replace(/\s+/g, '') : `${name} ${addr}, ${city}`, isCoords: isCoords, addr: addr ? addr.trim() : "" };
+      };
 
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-    if (/android/i.test(userAgent)) {
-        window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
-    } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-        window.location.href = `comgooglemaps://?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&waypoints=${waypoints}&directionsmode=driving`;
-    } else {
-        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`, '_blank');
-    }
+      const uniqueWaypoints = (jobList) => {
+          const wps = [];
+          jobList.forEach(job => {
+              const wp = mapJobToWaypoint(job);
+              if (!seenLocs.has(wp.key)) {
+                  seenLocs.add(wp.key);
+                  wps.push(wp);
+              }
+          });
+          return wps;
+      };
+
+      const priorityWps = uniqueWaypoints(priorityJobs);
+      const standardWps = uniqueWaypoints(standardJobs);
+
+      let finalWaypoints = [...priorityWps];
+
+      if (standardWps.length > 0) {
+          let optOrigin;
+          if (priorityWps.length > 0) {
+              optOrigin = priorityWps[priorityWps.length - 1];
+          } else if (standardWps.length > 0) {
+              optOrigin = standardWps[0];
+              standardWps.shift(); 
+              finalWaypoints.push(optOrigin);
+          }
+
+          if (standardWps.length > 0) {
+              try {
+                  const originPayload = optOrigin.isCoords ? 
+                      { location: { latLng: { latitude: parseFloat(optOrigin.addr.split(',')[0]), longitude: parseFloat(optOrigin.addr.split(',')[1]) } } } : 
+                      { address: optOrigin.key };
+                      
+                  const intermediatesPayload = standardWps.map(w => w.isCoords ? 
+                      { location: { latLng: { latitude: parseFloat(w.addr.split(',')[0]), longitude: parseFloat(w.addr.split(',')[1]) } } } : 
+                      { address: w.key }
+                  );
+
+                  const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ", "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex" },
+                      body: JSON.stringify({
+                          origin: originPayload,
+                          destination: { address: destination }, 
+                          intermediates: intermediatesPayload,
+                          travelMode: "DRIVE", 
+                          optimizeWaypointOrder: intermediatesPayload.length > 1
+                      })
+                  });
+                  const result = await response.json();
+                  
+                  let optimizedRest = standardWps;
+                  if (result.routes && result.routes[0] && result.routes[0].optimizedIntermediateWaypointIndex) {
+                      optimizedRest = result.routes[0].optimizedIntermediateWaypointIndex.map(idx => standardWps[idx]);
+                  }
+                  finalWaypoints = finalWaypoints.concat(optimizedRest);
+              } catch (e) {
+                  console.error("Optimization Error", e);
+                  finalWaypoints = finalWaypoints.concat(standardWps);
+              }
+          }
+      }
+
+      if(finalWaypoints.length === 0) return;
+
+      const waypointsStr = finalWaypoints.map(w => encodeURIComponent(w.key)).join("|");
+
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      if (/android/i.test(userAgent)) {
+          window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypointsStr}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+      } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+          window.location.href = `comgooglemaps://?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&waypoints=${waypointsStr}&directionsmode=driving`;
+      } else {
+          window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypointsStr}&travelmode=driving`, '_blank');
+      }
   }
 
   async function openExternalRoute() {
@@ -519,7 +564,7 @@
                    const isNew = groupIds.some(id => !previouslyKnown.includes(id));
                    
                    listHtml += `
-                    <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds[0]}">
+                    <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds.join(',')}">
                         ${hasUpdate ? `<div class="list-update-badge">NEW INFO</div>` : ''}
                         <div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div>
                         <div style="flex:1; overflow:hidden;">
@@ -636,7 +681,7 @@
   function attemptLogin() {
     const email = document.getElementById('login-user').value.trim(), pass = document.getElementById('login-pin').value.trim();
     if (!email || !pass) { alert("Please enter both Email and Password"); return; }
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION).then(() => {
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
       return firebase.auth().signInWithEmailAndPassword(email, pass);
     }).catch(e => alert("Login Failed: " + e.code + "\n" + e.message));
   }
@@ -822,6 +867,8 @@
     const prevTop = optimizedOrder[0];
     globalJobs = jobsData;
     
+    manualPriorities.forEach(id => { if (globalJobs[id]) globalJobs[id].isManualPriority = true; });
+    
     const currentPending = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver).length;
     if (currentPending !== lastPendingCount) {
          if (currentPending > lastPendingCount) {
@@ -894,11 +941,13 @@
           const card = document.createElement("div"); card.className = "active-card"; card.style.display = 'none'; card.id = `card-${id}`;
           if (!p.seen_by || !p.seen_by[currentDriver]) card.classList.add('new-job-highlight');
           if(needsAlert) card.classList.add('has-update');
+          if (p.isManualPriority) card.style.border = "2px solid #39FF14";
 
           const escapedNotes = (p.other_info || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
           const isEdited = (p.other_info || "").match(/(Edited by|DND \(|DNP \(|Driver Note \()/);
           const noteWithTags = (p.other_info || "").replace(/\[([^\]]+)\]:/g, '<span style="color:var(--update-blue); font-weight:900; text-shadow:0 0 5px rgba(0,212,255,0.3);">[$1]:</span>');
           const phone = p.phone || p.phone_number || p.customer_phone;
+          const priorityBadge = p.isManualPriority ? `<span style="background:#39FF14; color:#000; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; margin-left:6px;">PRIORITY</span>` : '';
 
           card.innerHTML = `
             <div class="flex-row">
@@ -907,6 +956,7 @@
                     <div class="card-date-badge" onclick="closeJobCard()">
                        <div class="seq-badge" style="border:2px solid ${badgeColor};">${seqIndex}</div>
                        <div class="type-badge" style="background:${badgeColor};">${badgeText}</div>
+                       ${priorityBadge}
                        ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
                     </div>
                     <a href="${getNavUrl(p.status==='pending_pickup'?p.name:p.delivery_name, p.status==='pending_pickup'?p.pickup_location:p.destination, displayCity)}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${displayCity}</div></a>
@@ -982,12 +1032,23 @@
         onEnd: function() {
             isManualMode = true;
             const items = miniListContainer.querySelectorAll('.mini-list-item');
+            const newPriorities = [];
             items.forEach((item, index) => {
                 const numEl = item.querySelector('.mini-num');
                 if (numEl) numEl.innerText = index + 1;
+                const idStr = item.id.replace('mini-', '');
+                const ids = idStr.split(',');
+                ids.forEach(id => {
+                    if (globalJobs[id]) globalJobs[id].isManualPriority = true;
+                    newPriorities.push(id);
+                });
             });
+            manualPriorities = newPriorities;
+            localStorage.setItem('ec_manual_priorities', JSON.stringify(manualPriorities));
+            
             const manBtn = document.getElementById('manual-route-btn');
             if(manBtn) { manBtn.classList.add('route-glow-update'); setTimeout(() => manBtn.classList.remove('route-glow-update'), 3000); }
+            renderUnifiedFeed();
         }
     });
   }
