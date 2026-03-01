@@ -413,7 +413,7 @@
         try {
             const optRes = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ", "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex" },
+                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI", "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex" },
                 body: JSON.stringify({
                     origin: routeOrigin,
                     destination: { address: "1604 Moreland Ave, Brandon MB" },
@@ -433,7 +433,7 @@
     try {
         const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyDltbEbiqlyQjyaGth0AzIkfLpOYr96YeQ", "X-Goog-FieldMask": "routes.duration,routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs" },
+            headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI", "X-Goog-FieldMask": "routes.duration,routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs" },
             body: JSON.stringify({
                 origin: lastGps ? { location: { latLng: { latitude: lastGps.lat, longitude: lastGps.lng } } } : { address: "1604 Moreland Ave, Brandon MB" },
                 destination: { address: "1604 Moreland Ave, Brandon MB" }, 
