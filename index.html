@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang=en>
 <head>
-  <meta charset="UTF-8">
-  <meta name="google" content="notranslate">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset=UTF-8>
+  <meta name=google content=notranslate>
+  <meta name=viewport content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>E&C Dispatch | Driver Portal</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel=manifest href=manifest.json>
   <style>
     :root {
       --accent: #ffcc00; --queue-orange: #ff9800; --active-green: #4caf50;
       --review-blue: #2196f3; --decline-red: #f44336; --update-blue: #00d4ff;
       --bg-core: #050505; --bg-panel: #1e1e1e; --bg-header: #0a0a0a; --bg-input: #222;
-      --text-main: #ffffff; --text-sec: #bbb; --border-soft: #333; --card-bg: #1e1e1e;
+      --text-main: #fff; --text-sec: #bbb; --border-soft: #333; --card-bg: #1e1e1e;
     }
     [data-theme="light"] {
-      --accent: #d6a400; --bg-core: #f0f2f5; --bg-panel: #ffffff; --bg-header: #ffffff;
-      --bg-input: #eef; --text-main: #111111; --text-sec: #555555; --border-soft: #ccc; --card-bg: #ffffff;
+      --accent: #d6a400; --bg-core: #f0f2f5; --bg-panel: #fff; --bg-header: #fff;
+      --bg-input: #eef; --text-main: #111111; --text-sec: #555555; --border-soft: #ccc; --card-bg: #fff;
     }
     [data-theme="light"] #clock, [data-theme="light"] .city-tag, [data-theme="light"] .stop-badge,
     [data-theme="light"] .pickup-value, [data-theme="light"] .drop-value, [data-theme="light"] .mini-address,
@@ -33,7 +33,7 @@
     .mini-list-item { font-size: 16px; color: var(--text-main); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; line-height: 1.3; padding: 12px 15px; background: var(--bg-panel); border: 1px solid var(--border-soft); border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: transform 0.1s, background 0.2s; }
     .mini-list-item:active { transform: scale(0.98); background: var(--bg-input); }
     .mini-num { font-weight: 900; color: #000; background: #fff; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-    .mini-address { font-size: 13px; color: #ffffff; text-align: right; margin-left: 10px; line-height: 1.3; display: block; }
+    .mini-address { font-size: 13px; color: #fff; text-align: right; margin-left: 10px; line-height: 1.3; display: block; }
     .list-update-badge { background: var(--update-blue); color: #000; font-size: 9px; font-weight: 900; padding: 3px 6px; border-radius: 4px; margin-right: 8px; animation: pulse-update 0.5s infinite alternate; display: flex; align-items: center; box-shadow: 0 0 5px var(--update-blue); }
     .mini-flash { animation: mini-pulse-anim 1s infinite alternate; border: 1px solid var(--update-blue); }
     @keyframes mini-pulse-anim { from { box-shadow: 0 0 2px var(--update-blue); } to { box-shadow: 0 0 10px var(--update-blue); } }
@@ -67,7 +67,7 @@
     .header-logo { height: 28px; width: auto; margin-right: 12px; vertical-align: middle; filter: drop-shadow(0 0 5px var(--accent)); animation: logo-glow 2s infinite alternate; cursor: pointer; }
     @keyframes logo-glow { from { filter: drop-shadow(0 0 2px var(--accent)); transform: scale(1); } to { filter: drop-shadow(0 0 8px var(--accent)); transform: scale(1.05); } }
     .stop-badge { background: rgba(0, 212, 255, 0.1); color: var(--update-blue); border: 1px solid var(--update-blue); padding: 4px 10px; border-radius: 6px; font-size: 12px; margin-left: 10px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 0 10px rgba(0, 212, 255, 0.1); text-shadow: 0 0 5px rgba(0, 212, 255, 0.3); animation: pro-pulse-blue 3s infinite ease-in-out; display: inline-block; vertical-align: middle; }
-    .new-stops-badge { background: #ff0000; color: #fff; border: 2px solid #fff; padding: 4px 12px; border-radius: 50px; font-size: 16px; margin-left: 15px; font-weight: 900; display: none; vertical-align: middle; box-shadow: 0 0 15px rgba(255, 0, 0, 0.8); animation: static-glow 2s infinite alternate; }
+    .new-stops-badge { background: red; color: #fff; border: 2px solid #fff; padding: 4px 12px; border-radius: 50px; font-size: 16px; margin-left: 15px; font-weight: 900; display: none; vertical-align: middle; box-shadow: 0 0 15px rgba(255, 0, 0, 0.8); animation: static-glow 2s infinite alternate; }
     @keyframes static-glow { from { box-shadow: 0 0 5px rgba(255, 0, 0, 0.5); } to { box-shadow: 0 0 15px rgba(255, 0, 0, 1); } }
     @keyframes pro-pulse-blue { 0% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); background: rgba(0, 212, 255, 0.05); } 50% { box-shadow: 0 0 15px rgba(0, 212, 255, 0.4); border-color: var(--update-blue); background: rgba(0, 212, 255, 0.1); } 100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3); background: rgba(0, 212, 255, 0.05); } }
 
@@ -110,10 +110,10 @@
     .glow-yellow { border: 1px solid var(--accent) !important; box-shadow: 0 0 10px var(--accent) !important; outline: none; }
     .cancel-note-btn { position: absolute; bottom: 15px; right: 10px; background: #e60000; color: #fff; border: 1px solid #fff; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; cursor: pointer; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
     .cancel-note-btn:active { transform: scale(0.95); background: #ff3333; }
-    @keyframes heavy-flash { 0% { color: #ff3333; text-shadow: 0 0 5px #ff0000; transform: scale(1); } 50% { color: #ff0000; text-shadow: 0 0 15px #ff0000; transform: scale(1.1); } 100% { color: #ff3333; text-shadow: 0 0 5px #ff0000; transform: scale(1); } }
+    @keyframes heavy-flash { 0% { color: #ff3333; text-shadow: 0 0 5px red; transform: scale(1); } 50% { color: red; text-shadow: 0 0 15px red; transform: scale(1.1); } 100% { color: #ff3333; text-shadow: 0 0 5px red; transform: scale(1); } }
     .heavy-word { display: inline-block; animation: heavy-flash 0.8s infinite; font-weight: 900; text-transform: uppercase; }
     
-    #unload-depot-btn { display: none; width: 90%; margin: 20px auto; padding: 15px; background: #0056b3; color: #ffffff; font-weight: 800; border: none; border-radius: 8px; font-size: 16px; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0, 86, 179, 0.4); cursor: pointer; }
+    #unload-depot-btn { display: none; width: 90%; margin: 20px auto; padding: 15px; background: #0056b3; color: #fff; font-weight: 800; border: none; border-radius: 8px; font-size: 16px; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0, 86, 179, 0.4); cursor: pointer; }
     #unload-depot-btn:active { transform: scale(0.98); }
 
     .glow-depot { animation: depot-pulse 0.8s infinite alternate; border: 2px solid var(--update-blue) !important; }
@@ -149,52 +149,52 @@
 </head>
 <body>
 
-<div id="login-overlay">
-    <div class="login-box">
+<div id=login-overlay>
+    <div class=login-box>
         <h2>E&C PORTAL</h2>
-        <input type="email" id="login-user" class="login-input" placeholder="Email (DriverName@ec.com)" autofocus>
-        <input type="password" id="login-pin" class="login-input" placeholder="Password">
-        <button class="login-submit" onclick="attemptLogin()">Enter</button>
+        <input type=email id=login-user class=login-input placeholder="Email (DriverName@ec.com)" autofocus>
+        <input type=password id=login-pin class=login-input placeholder=Password>
+        <button class=login-submit onclick=attemptLogin()>Enter</button>
     </div>
 </div>
 
 <header>
-  <h1 id="header-name">
-    <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
+  <h1 id=header-name>
+    <img src=icon-512.png class=header-logo alt=Logo onclick=toggleTheme()>
     E&C PORTAL
   </h1>
-  <button id="install-btn" class="install-btn" onclick="installPWA()">Install App</button>
-  <button id="shift-toggle-btn" class="pulse-glow-btn" style="display:none; cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: none; padding: 4px 10px; border-radius: 4px; white-space: nowrap; background: var(--active-green); margin-right: 10px;" onclick="toggleShift()">START RUN</button>
-  <button id="logout-btn" onclick="logoutDriver()" style="cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #ffffff; padding: 2px 8px; border-radius: 4px; white-space: nowrap; background: transparent;">LOGOUT</button>
+  <button id=install-btn class=install-btn onclick=installPWA()>Install App</button>
+  <button id=shift-toggle-btn class=pulse-glow-btn style="display:none; cursor:pointer; font-size: 14px; color: #fff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: none; padding: 4px 10px; border-radius: 4px; white-space: nowrap; background: var(--active-green); margin-right: 10px;" onclick=toggleShift()>START RUN</button>
+  <button id=logout-btn onclick=logoutDriver() style="cursor:pointer; font-size: 14px; color: #fff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #fff; padding: 2px 8px; border-radius: 4px; white-space: nowrap; background: transparent;">LOGOUT</button>
 </header>
 
-<div id="map-container"><div id="map"></div></div>
-<div id="drag-resizer"></div>
+<div id=map-container><div id=map></div></div>
+<div id=drag-resizer></div>
 
-<div id="main-container">
-  <div id="mini-map-list"></div>
-  <div id="live-feed" onclick="if(event.target === this) closeJobCard()"></div>
-  <div id="route-btns-wrap">
+<div id=main-container>
+  <div id=mini-map-list></div>
+  <div id=live-feed onclick="if(event.target === this) closeJobCard()"></div>
+  <div id=route-btns-wrap>
     <div style="display:flex; flex-direction:column; align-items:center;">
-      <button id="route-toggle-btn" onclick="openExternalRoute()">
+      <button id=route-toggle-btn onclick=openExternalRoute()>
         <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
       </button>
       <span style="font-size:10px; font-weight:800; color:var(--accent); margin-top:5px; text-transform:uppercase;">auto</span>
     </div>
   </div>
-  <div id="history-sidebar" style="display:none;">
-    <div id="queue-log"></div>
-    <div id="recent-log"></div>
-    <button id="multi-route-btn" onclick="routeOptimized()">ROUTE NAV</button>
+  <div id=history-sidebar style="display:none;">
+    <div id=queue-log></div>
+    <div id=recent-log></div>
+    <button id=multi-route-btn onclick=routeOptimized()>ROUTE NAV</button>
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=places,geometry&callback=initMap" async defer></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script src=//www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js></script>
+<script src=//www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js></script>
+<script src=//www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js></script>
+<script src=//www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js></script>
+<script src="//maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=places,geometry&callback=initMap" async defer></script>
+<script src=//cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js></script>
 
 <script>
   const savedTheme = localStorage.getItem('ec_theme') || 'dark';
@@ -212,7 +212,7 @@
 
   const db = firebase.database();
   let messaging = null;
-  try { if (firebase.messaging.isSupported()) messaging = firebase.messaging(); } catch(e) { console.warn("Msg not supported"); }
+  try { if (firebase.messaging.isSupported()) messaging = firebase.messaging(); } catch(e) {}
 
   let currentDriver = localStorage.getItem('ec_driver_name'), observer = null, fieldSnapshots = {}, pendingAlerts = {}, selfEdited = new Set(), globalJobs = {}, map, directionsService, directionsRenderer, driverMarker = null, mapMarkers = [], mapLabels = [], mapPolyline = null, isNavigating = false, autoCenter = true, lastGps = null, optimizedOrder = [], lastPendingCount = 0, lastAnnouncedId = null, isFirstLoad = true, hasRoutedWithGps = false, hasInitialRoute = false, lastGpsUpdate = 0, wakeLock = null, lastRouteClick = Date.now(), manualOrderIds = [], previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
   const gpsInterval = 30000;
@@ -292,11 +292,11 @@
     lastRouteClick = Date.now();
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     if (/android/i.test(userAgent)) {
-        window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+        window.location.href = `intent://googleusercontent.com/maps.google.com/0{encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
     } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
         window.location.href = `comgooglemaps://?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&waypoints=${waypoints}&directionsmode=driving`;
     } else {
-        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`, '_blank');
+        window.open(`//googleusercontent.com/maps.google.com/1{encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`, '_blank');
     }
   }
 
@@ -326,27 +326,29 @@
     }
     if ('wakeLock' in navigator) try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
     if (!navigator.geolocation) return;
-    navigator.geolocation.watchPosition((pos) => {
-      lastGps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      const latLng = new google.maps.LatLng(lastGps.lat, lastGps.lng);
-      Object.keys(globalJobs).forEach(jid => {
-        const job = globalJobs[jid];
-        if (job.status === 'pending' && job.lat && job.lng && job.assigned_to === currentDriver) {
-          if (getDistance(pos.coords.latitude, pos.coords.longitude, job.lat, job.lng) < 50) {
-            document.getElementById('card-' + jid)?.classList.add('arrival-highlight');
-            const mini = document.querySelector(`[id^="mini-"][id*="${jid}"]`);
-            if(mini) mini.classList.add('arrival-green-tint');
+    navigator.geolocation.watchPosition(pos => {
+      with(pos.coords) {
+        lastGps = { lat: latitude, lng: longitude };
+        const latLng = new google.maps.LatLng(latitude, longitude);
+        Object.keys(globalJobs).forEach(jid => {
+          const job = globalJobs[jid];
+          if (job.status === 'pending' && job.lat && job.lng && job.assigned_to === currentDriver) {
+            if (getDistance(latitude, longitude, job.lat, job.lng) < 50) {
+              document.getElementById('card-' + jid)?.classList.add('arrival-highlight');
+              const mini = document.querySelector(`[id^="mini-"][id*="${jid}"]`);
+              if(mini) mini.classList.add('arrival-green-tint');
+            }
           }
+        });
+        if(driverMarker) {
+          driverMarker.setPosition(latLng);
+          if(heading) { const icon = driverMarker.getIcon(); icon.rotation = heading; driverMarker.setIcon(icon); }
         }
-      });
-      if(driverMarker) {
-        driverMarker.setPosition(latLng);
-        if(pos.coords.heading) { const icon = driverMarker.getIcon(); icon.rotation = pos.coords.heading; driverMarker.setIcon(icon); }
+        if(autoCenter && map) { map.setCenter(latLng); map.setHeading(heading || 0); }
       }
-      if(autoCenter && map) { map.setCenter(latLng); map.setHeading(pos.coords.heading || 0); }
       if (!hasRoutedWithGps && Object.keys(globalJobs).length > 0) { hasRoutedWithGps = true; updateRoute(); }
       if (lastGpsUpdate === 0) broadcastLocation();
-    }, (err) => console.warn("GPS Error:", err.message), { enableHighAccuracy: true, maximumAge: 0 });
+    }, err => {}, { enableHighAccuracy: true, maximumAge: 0 });
   }
 
   async function updateRoute() {
@@ -371,9 +373,7 @@
                 groupMap.set(key, group); groups.push(group);
             }
             groupMap.get(key).jobs.push(j);
-        } catch (e) {
-            console.warn("Skipped coordinate card error:", e);
-        }
+        } catch (e) {}
     });
 
     let priorityGroups = [];
@@ -403,7 +403,7 @@
             routeOrigin = lastPrio.isCoords ? { location: { latLng: { latitude: +lastPrio.addrString.split(',')[0], longitude: +lastPrio.addrString.split(',')[1] } } } : { address: lastPrio.addrString };
         }
         try {
-            const optRes = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+            const optRes = await fetch("//routes.googleapis.com/directions/v2:computeRoutes", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI", "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex" },
                 body: JSON.stringify({
@@ -417,13 +417,13 @@
             if (optData.routes && optData.routes[0] && optData.routes[0].optimizedIntermediateWaypointIndex) {
                 orderedNormalGroups = optData.routes[0].optimizedIntermediateWaypointIndex.map(idx => normalGroups[idx]);
             }
-        } catch(e) { console.warn("Optimization of rest failed:", e); }
+        } catch(e) {}
     }
 
     const finalGroups = priorityGroups.concat(orderedNormalGroups);
 
     try {
-        const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+        const response = await fetch("//routes.googleapis.com/directions/v2:computeRoutes", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Goog-Api-Key": "AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI", "X-Goog-FieldMask": "routes.duration,routes.optimizedIntermediateWaypointIndex,routes.polyline.encodedPolyline,routes.legs" },
             body: JSON.stringify({
@@ -436,69 +436,70 @@
         const result = await response.json();
         
         if (result.routes && result.routes[0]) {
-            if(result.routes[0].polyline) {
-                const path = google.maps.geometry.encoding.decodePath(result.routes[0].polyline.encodedPolyline);
-                mapPolyline = new google.maps.Polyline({ path: path, geodesic: true, strokeColor: "#00d4ff", strokeOpacity: 0.8, strokeWeight: 6, map: map });
-            }
-            const order = result.routes[0].optimizedIntermediateWaypointIndex;
-            let orderedGroups = finalGroups;
-            if(order && order.length > 0) orderedGroups = order.map(idx => finalGroups[idx]);
-            
-            optimizedOrder = [];
-            orderedGroups.forEach(g => g.jobs.forEach(j => { const jId = Object.keys(globalJobs).find(k => globalJobs[k] === j); if(jId) optimizedOrder.push(jId); }));
-
-            if(result.routes[0].polyline) {
-                 let dur = result.routes[0].duration ? +result.routes[0].duration : 0;
-                 let durStr = dur > 3600 ? `${Math.floor(dur/3600)} hr ${Math.floor((dur%3600)/60)} min` : `${Math.floor(dur/60)} min`;
-                 db.ref(`driver_locations/${currentDriver}`).update({ active_route: result.routes[0].polyline.encodedPolyline, route_string: orderedGroups.map((g, i) => `${i+1}. ${g.masterJob.status==='pending_pickup' ? (g.masterJob.name + ' ' + g.masterJob.pickup_location) : (g.masterJob.delivery_name + ' ' + g.masterJob.destination)}`).join(" | "), route_order: optimizedOrder, total_duration: durStr, route_timestamp: Date.now() });
-            }
-
-            const legs = result.routes[0].legs;
-            let listHtml = "";
-
-            orderedGroups.forEach((group, i) => {
-                const job = group.masterJob;
-                if(i < legs.length) {
-                   const loc = legs[i].endLocation ? legs[i].endLocation.latLng : null;
-                   if(loc) {
-                        group.jobs.forEach(gj => { 
-                            gj.lat = loc.latitude; gj.lng = loc.longitude;
-                            const jId = Object.keys(globalJobs).find(k => globalJobs[k] === gj);
-                            if(jId) db.ref('jobs').child(jId).update({ lat: loc.latitude, lng: loc.longitude });
-                        });
-                   }
-                   if(!loc) return;
-                   
-                   const isPickup = job.status === 'pending_pickup', colorHex = isPickup ? "#FE9800" : "#4CAF50";
-                   const bizName = isPickup ? job.name : job.delivery_name, addrText = isPickup ? job.pickup_location : job.destination;
-                   const cityText = isPickup ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
-                   
-                   mapMarkers.push(new google.maps.Marker({ position: { lat: loc.latitude, lng: loc.longitude }, map: map, label: { text: ''+(i+1), color: "white", fontWeight: "bold" }, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: colorHex, fillOpacity: 1, strokeColor: "white", strokeWeight: 2 }, zIndex: 100 }));
-                   const info = new google.maps.InfoWindow({ content: `<div>${bizName}</div>`, disableAutoPan: true, position: { lat: loc.latitude, lng: loc.longitude }, pixelOffset: new google.maps.Size(0, -25) });
-                   info.open(map); mapLabels.push(info);
-
-                   const groupIds = group.jobs.map(j => Object.keys(globalJobs).find(k => globalJobs[k] === j));
-                   const countBadge = group.jobs.length > 1 ? `<span style="background:var(--accent); color:#000; font-size:10px; font-weight:900; padding:1px 6px; border-radius:8px; margin-left:6px; vertical-align:middle;">${group.jobs.length} ORDERS</span>` : "";
-                   const hasUpdate = groupIds.some(id => pendingAlerts[id] && pendingAlerts[id].length > 0);
-                   const isNew = groupIds.some(id => !previouslyKnown.includes(id));
-                   const isPriority = group.jobs.some(j => j.manual_priority);
-                   const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>` : '';
-                   
-                   listHtml += `
-                    <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds.join(',')}" style="position:relative;">
-                        ${starHtml}
-                        ${hasUpdate ? `<div class="list-update-badge">NEW INFO</div>` : ''}
-                        <div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div>
-                        <div style="flex:1; overflow:hidden;">
-                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right: 25px;">${bizName} ${countBadge}</div>
-                            <div style="border:1px solid #333; border-radius:6px; padding:6px; margin-top:5px; background:rgba(0,0,0,0.2);">
-                                <div class="mini-address" style="text-align:left; margin:0;">${addrText}</div>
-                                <div style="font-size:13px; font-weight:700; color:#888; margin-top:2px;">${cityText}</div>
-                            </div>
-                        </div>
-                    </div>`;
+            with(result.routes[0]) {
+                if(polyline) {
+                    const path = google.maps.geometry.encoding.decodePath(polyline.encodedPolyline);
+                    mapPolyline = new google.maps.Polyline({ path: path, geodesic: true, strokeColor: "#00d4ff", strokeOpacity: 0.8, strokeWeight: 6, map: map });
                 }
-            });
+                const order = optimizedIntermediateWaypointIndex;
+                let orderedGroups = finalGroups;
+                if(order && order.length > 0) orderedGroups = order.map(idx => finalGroups[idx]);
+                
+                optimizedOrder = [];
+                orderedGroups.forEach(g => g.jobs.forEach(j => { const jId = Object.keys(globalJobs).find(k => globalJobs[k] === j); if(jId) optimizedOrder.push(jId); }));
+
+                if(polyline) {
+                     let dur = duration ? +duration : 0;
+                     let durStr = dur > 3600 ? `${Math.floor(dur/3600)} hr ${Math.floor((dur%3600)/60)} min` : `${Math.floor(dur/60)} min`;
+                     db.ref(`driver_locations/${currentDriver}`).update({ active_route: polyline.encodedPolyline, route_string: orderedGroups.map((g, i) => `${i+1}. ${g.masterJob.status==='pending_pickup' ? (g.masterJob.name + ' ' + g.masterJob.pickup_location) : (g.masterJob.delivery_name + ' ' + g.masterJob.destination)}`).join(" | "), route_order: optimizedOrder, total_duration: durStr, route_timestamp: Date.now() });
+                }
+
+                let listHtml = "";
+
+                orderedGroups.forEach((group, i) => {
+                    const job = group.masterJob;
+                    if(i < legs.length) {
+                       const loc = legs[i].endLocation ? legs[i].endLocation.latLng : null;
+                       if(loc) {
+                            group.jobs.forEach(gj => { 
+                                gj.lat = loc.latitude; gj.lng = loc.longitude;
+                                const jId = Object.keys(globalJobs).find(k => globalJobs[k] === gj);
+                                if(jId) db.ref('jobs').child(jId).update({ lat: loc.latitude, lng: loc.longitude });
+                            });
+                       }
+                       if(!loc) return;
+                       
+                       const isPickup = job.status === 'pending_pickup', colorHex = isPickup ? "#FE9800" : "#4CAF50";
+                       const bizName = isPickup ? job.name : job.delivery_name, addrText = isPickup ? job.pickup_location : job.destination;
+                       const cityText = isPickup ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
+                       
+                       mapMarkers.push(new google.maps.Marker({ position: { lat: loc.latitude, lng: loc.longitude }, map: map, label: { text: ''+(i+1), color: "white", fontWeight: "bold" }, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: colorHex, fillOpacity: 1, strokeColor: "white", strokeWeight: 2 }, zIndex: 100 }));
+                       const info = new google.maps.InfoWindow({ content: `<div>${bizName}</div>`, disableAutoPan: true, position: { lat: loc.latitude, lng: loc.longitude }, pixelOffset: new google.maps.Size(0, -25) });
+                       info.open(map); mapLabels.push(info);
+
+                       const groupIds = group.jobs.map(j => Object.keys(globalJobs).find(k => globalJobs[k] === j));
+                       const countBadge = group.jobs.length > 1 ? `<span style="background:var(--accent); color:#000; font-size:10px; font-weight:900; padding:1px 6px; border-radius:8px; margin-left:6px; vertical-align:middle;">${group.jobs.length} ORDERS</span>` : "";
+                       const hasUpdate = groupIds.some(id => pendingAlerts[id] && pendingAlerts[id].length > 0);
+                       const isNew = groupIds.some(id => !previouslyKnown.includes(id));
+                       const isPriority = group.jobs.some(j => j.manual_priority);
+                       const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>` : '';
+                       
+                       listHtml += `
+                        <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds.join(',')}" style="position:relative;">
+                            ${starHtml}
+                            ${hasUpdate ? `<div class="list-update-badge">NEW INFO</div>` : ''}
+                            <div class="mini-num" style="background:${colorHex}; color:#000;">${i+1}</div>
+                            <div style="flex:1; overflow:hidden;">
+                                <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right: 25px;">${bizName} ${countBadge}</div>
+                                <div style="border:1px solid #333; border-radius:6px; padding:6px; margin-top:5px; background:rgba(0,0,0,0.2);">
+                                    <div class="mini-address" style="text-align:left; margin:0;">${addrText}</div>
+                                    <div style="font-size:13px; font-weight:700; color:#888; margin-top:2px;">${cityText}</div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }
+                });
+            }
             document.getElementById('mini-map-list').innerHTML = listHtml;
             document.getElementById('mini-map-list').style.display = 'block';
             if(observer) document.querySelectorAll('.mini-list-item').forEach(item => observer.observe(item));
@@ -506,7 +507,7 @@
             renderUnifiedFeed(); 
             if(Object.keys(globalJobs).length > 0) localStorage.setItem('ec_known_jobs', JSON.stringify(Object.keys(globalJobs)));
         }
-    } catch(e) { console.error("Routing Error", e); }
+    } catch(e) {}
   }
 
   function clearAllNotifications() {
@@ -517,7 +518,7 @@
     }
   }
 
-  firebase.auth().onAuthStateChanged((user) => {
+  firebase.auth().onAuthStateChanged(user => {
     if (user && user.email) {
       const rawName = user.email.split('@')[0].toLowerCase();
       db.ref(`roles/${rawName}/driver`).once('value').then(snap => {
@@ -526,8 +527,8 @@
           localStorage.setItem('ec_driver_name', currentDriver);
           document.getElementById('login-overlay').style.display = 'none';
           document.getElementById('header-name').innerHTML = `
-            <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
-            <span class="driver-name-display" onclick="location.reload()" style="cursor:pointer; font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
+            <img src=icon-512.png class=header-logo alt=Logo onclick=toggleTheme()>
+            <span class=driver-name-display onclick=location.reload() style="cursor:pointer; font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
           `;
           clearAllNotifications();
           startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
@@ -548,8 +549,8 @@
             const notes = snap.val() || {};
             Object.values(notes).forEach(note => {
               list.innerHTML += `
-                <div class="dev-item">
-                  <div class="dev-hdr">${note.user} - <span style="color: orange;">${note.app || 'Database'}</span> - ${note.date}</div>
+                <div class=dev-item>
+                  <div class=dev-hdr>${note.user} - <span style="color: orange;">${note.app || 'Database'}</span> - ${note.date}</div>
                   <div>${note.text}</div>
                 </div>`;
             });
@@ -570,7 +571,7 @@
   });
 
   function setupIntersectionObserver() {
-    observer = new IntersectionObserver((entries) => {
+    observer = new IntersectionObserver(entries => {
       entries.forEach(entry => { 
         if (entry.isIntersecting) { 
             const el = entry.target;
@@ -650,7 +651,7 @@
       return firebase.auth().signInWithEmailAndPassword(email, pass);
     }).catch(e => alert("Login Failed: " + e.code + "\n" + e.message));
   }
-  document.addEventListener('keypress', (e) => { if (e.key === 'Enter' && document.getElementById('login-overlay').style.display !== 'none') attemptLogin(); });
+  document.addEventListener('keypress', e => { if (e.key === 'Enter' && document.getElementById('login-overlay').style.display !== 'none') attemptLogin(); });
 
   function formatTime12(ts) { return (ts ? new Date(ts) : new Date()).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }); }
   function formatDateShort(ts) { return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric' }).toUpperCase(); }
@@ -687,12 +688,12 @@
     }, 500);
 
     const targetEmail = job.status === 'pending_pickup' ? (job.p_email || job.customer_email) : (job.d_email || job.customer_email);
-    if (targetEmail) fetch("https://script.google.com/macros/s/AKfycbyQDC4eq3YiiDLuY42Y7rBpWa1FBkPTaCUMQJTSw8qAEzW5sfBA4hR4WNNwzdxMFLij/exec", { method: "POST", mode: "no-cors", body: JSON.stringify({ email: targetEmail, notes: newEntry, type: job.status }) });
+    if (targetEmail) fetch("//script.google.com/macros/s/AKfycbyQDC4eq3YiiDLuY42Y7rBpWa1FBkPTaCUMQJTSw8qAEzW5sfBA4hR4WNNwzdxMFLij/exec", { method: "POST", mode: "no-cors", body: JSON.stringify({ email: targetEmail, notes: newEntry, type: job.status }) });
   }
 
   function enterNoteEdit(id, currentNotes) {
     if (event) event.stopPropagation();
-    document.getElementById(`note-display-${id}`).innerHTML = `<textarea id="edit-input-${id}" class="edit-note-input" onclick="event.stopPropagation()">${currentNotes.replace(/\\'/g, "'")}</textarea><button class="save-note-btn" onclick="event.stopPropagation(); saveNoteEdit('${id}')">SAVE</button>`;
+    document.getElementById(`note-display-${id}`).innerHTML = `<textarea id=edit-input-${id} class=edit-note-input onclick=event.stopPropagation()>${currentNotes.replace(/\\'/g, "'")}</textarea><button class=save-note-btn onclick="event.stopPropagation(); saveNoteEdit('${id}')">SAVE</button>`;
   }
 
   function saveNoteEdit(id) {
@@ -707,10 +708,10 @@
     if(container.innerHTML.trim() !== "" && !container.innerHTML.includes("transfer-select")) container.innerHTML = "";
     else {
         container.innerHTML = `
-          <div class="driver-modal">
-             <div class="flex-row" style="justify-content:space-between; margin-bottom:10px;"><span style="color:var(--accent); font-weight:900;">DRIVER NOTE</span></div>
-             <div style="position:relative;"><textarea id="driver-edit-input-${id}" class="edit-note-input glow-yellow" style="height:100px; margin-bottom:10px; padding-bottom: 30px;" onclick="event.stopPropagation()"></textarea><button onclick="document.getElementById('driver-note-display-${id}').innerHTML=''" class="cancel-note-btn">CANCEL</button></div>
-             <button class="save-note-btn" style="width: 100%; padding: 12px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND NOTE</button>
+          <div class=driver-modal>
+             <div class=flex-row style="justify-content:space-between; margin-bottom:10px;"><span style="color:var(--accent); font-weight:900;">DRIVER NOTE</span></div>
+             <div style="position:relative;"><textarea id=driver-edit-input-${id} class="edit-note-input glow-yellow" style="height:100px; margin-bottom:10px; padding-bottom: 30px;" onclick=event.stopPropagation()></textarea><button onclick="document.getElementById('driver-note-display-${id}').innerHTML=''" class=cancel-note-btn>CANCEL</button></div>
+             <button class=save-note-btn style="width: 100%; padding: 12px;" onclick="event.stopPropagation(); saveDriverNote('${id}')">SEND NOTE</button>
           </div>`;
         setTimeout(() => document.getElementById(`driver-edit-input-${id}`).focus(), 100);
     }
@@ -746,15 +747,15 @@
               });
           }
           container.innerHTML = `
-            <div class="driver-modal">
-               <div class="flex-row" style="justify-content:space-between; margin-bottom:10px;"><span style="color:var(--update-blue); font-weight:900;">TRANSFER JOB</span></div>
+            <div class=driver-modal>
+               <div class=flex-row style="justify-content:space-between; margin-bottom:10px;"><span style="color:var(--update-blue); font-weight:900;">TRANSFER JOB</span></div>
                <div style="position:relative;">
-                   <select id="transfer-select-${id}" class="login-input glow-yellow" style="margin-bottom:10px;" onclick="event.stopPropagation()" onchange="this.style.background='#222'; this.style.color='#00d4ff';">
+                   <select id=transfer-select-${id} class="login-input glow-yellow" style="margin-bottom:10px;" onclick=event.stopPropagation() onchange="this.style.background='#222'; this.style.color='#00d4ff';">
                       ${driversHtml}
                    </select>
                    <div style="display:flex; gap:10px;">
-                      <button onclick="document.getElementById('driver-note-display-${id}').innerHTML=''" class="cancel-note-btn" style="position:relative; right:auto; bottom:auto; flex:1;">CANCEL</button>
-                      <button class="save-note-btn" style="margin-top:0; flex:1; padding:12px; font-size:14px; background:var(--update-blue); color:#000;" onclick="event.stopPropagation(); executeTransfer('${id}')">TRANSFER JOB</button>
+                      <button onclick="document.getElementById('driver-note-display-${id}').innerHTML=''" class=cancel-note-btn style="position:relative; right:auto; bottom:auto; flex:1;">CANCEL</button>
+                      <button class=save-note-btn style="margin-top:0; flex:1; padding:12px; font-size:14px; background:var(--update-blue); color:#000;" onclick="event.stopPropagation(); executeTransfer('${id}')">TRANSFER JOB</button>
                    </div>
                </div>
             </div>`;
@@ -776,7 +777,7 @@
 
   function enterPoEdit(e, id, currentVal) {
     e.stopPropagation();
-    document.getElementById(`po-container-${id}`).innerHTML = `<div class="po-edit-box"><input type="text" id="po-input-${id}" class="login-input glow-yellow po-input" value="${currentVal.replace(/"/g, "")}" onclick="event.stopPropagation()"><button class="save-note-btn" style="margin:0;" onclick="savePoEdit(event, '${id}')">SAVE</button><button class="save-note-btn" style="background:#555; margin:0;" onclick="cancelPoEdit(event, '${id}', '${currentVal.replace(/"/g, "")}')">X</button></div>`;
+    document.getElementById(`po-container-${id}`).innerHTML = `<div class=po-edit-box><input type=text id=po-input-${id} class="login-input glow-yellow po-input" value="${currentVal.replace(/"/g, "")}" onclick=event.stopPropagation()><button class=save-note-btn style="margin:0;" onclick="savePoEdit(event, '${id}')">SAVE</button><button class=save-note-btn style="background:#555; margin:0;" onclick="cancelPoEdit(event, '${id}', '${currentVal.replace(/"/g, "")}')">X</button></div>`;
   }
 
   function savePoEdit(e, id) {
@@ -793,8 +794,8 @@
 
   function getNavUrl(name, loc, city) { 
       const isCoords = loc ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(loc.trim()) : false; 
-      if(isCoords) return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.trim())}&travelmode=driving`; 
-      return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((name ? name + ' ' : '') + loc + ', ' + city)}&travelmode=driving`; 
+      if(isCoords) return `//googleusercontent.com/maps.google.com/2{encodeURIComponent(loc.trim())}&travelmode=driving`; 
+      return `//googleusercontent.com/maps.google.com/2{encodeURIComponent((name ? name + ' ' : '') + loc + ', ' + city)}&travelmode=driving`; 
   }
 
   function routeOptimized() { enableAutoCenter(); }
@@ -831,7 +832,6 @@
 
   function mergeAndRender() {
     if(!currentDriver) return;
-    const prevTop = optimizedOrder[0];
     globalJobs = jobsData;
     
     const currentPending = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver).length;
@@ -882,14 +882,9 @@
       fieldSnapshots[id] = { ...cf };
       const changed = pendingAlerts[id] || [], needsAlert = changed.length > 0 && !sessionStorage.getItem(`ack_update_${id}`);
       
-      let badgeColor, badgeText, btnText, topOpacity = 1, botOpacity = 1, displayCity = p.status === 'pending_pickup' ? (p.pickup_city || p.city || "Brandon") : (p.delivery_city || p.city || "Brandon");
-      if (p.status === 'pending_pickup') {
-          badgeColor = "#ff9800"; badgeText = "PICK UP"; btnText = "PICKED UP"; botOpacity = 0.5;
-      } else if (p.status === 'in_transit') {
-          badgeColor = "#2196f3"; badgeText = "ON TRUCK"; btnText = "UNLOAD AT DEPOT"; topOpacity = 0.5;
-      } else {
-          badgeColor = "#4caf50"; badgeText = "DELIVERY"; btnText = "DONE"; topOpacity = 0.5;
-      }
+      let displayCity = p.status === 'pending_pickup' ? (p.pickup_city || p.city || "Brandon") : (p.delivery_city || p.city || "Brandon");
+      const statusMap = { 'pending_pickup': { badgeColor: "#ff9800", badgeText: "PICK UP", btnText: "PICKED UP", topOpacity: 1, botOpacity: 0.5 }, 'in_transit': { badgeColor: "#2196f3", badgeText: "ON TRUCK", btnText: "UNLOAD AT DEPOT", topOpacity: 0.5, botOpacity: 1 } };
+      let { badgeColor, badgeText, btnText, topOpacity, botOpacity } = statusMap[p.status] || { badgeColor: "#4caf50", badgeText: "DELIVERY", btnText: "DONE", topOpacity: 0.5, botOpacity: 1 };
       
       const item = document.createElement("div"); 
       item.className = "history-item"; item.id = `mini-${id}`;
@@ -915,47 +910,47 @@
           const phone = p.status === 'pending_pickup' ? (p.p_phone || p.phone || p.phone_number || p.customer_phone) : (p.d_phone || p.phone || p.phone_number || p.customer_phone);
 
           card.innerHTML = `
-            <div class="flex-row">
-              <div class="col-main"> 
-                 <div class="card-top">
-                    <div class="card-date-badge" onclick="closeJobCard()">
-                       <div class="seq-badge" style="border:2px solid ${badgeColor};">${seqIndex}</div>
-                       <div class="type-badge" style="background:${badgeColor};">${badgeText}</div>
-                       ${needsAlert ? `<span id="badge-${id}" class="update-badge">NEW INFO</span>` : ''}
+            <div class=flex-row>
+              <div class=col-main> 
+                 <div class=card-top>
+                    <div class=card-date-badge onclick=closeJobCard()>
+                       <div class=seq-badge style="border:2px solid ${badgeColor};">${seqIndex}</div>
+                       <div class=type-badge style="background:${badgeColor};">${badgeText}</div>
+                       ${needsAlert ? `<span id=badge-${id} class=update-badge>NEW INFO</span>` : ''}
                     </div>
-                    <a href="${getNavUrl(p.status==='pending_pickup'?p.name:p.delivery_name, p.status==='pending_pickup'?p.pickup_location:p.destination, displayCity)}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${displayCity}</div></a>
+                    <a href="${getNavUrl(p.status==='pending_pickup'?p.name:p.delivery_name, p.status==='pending_pickup'?p.pickup_location:p.destination, displayCity)}" target=_blank class=nav-link><div class=city-tag style="margin:0;">${displayCity}</div></a>
                  </div>
                  <div style="opacity:${topOpacity}">
-                     <div class="card-label">FROM</div>
+                     <div class=card-label>FROM</div>
                      <div class="tech-info ${needsAlert && changed.includes('contact') ? 'field-highlight' : ''}" style="margin-bottom:2px; color: var(--queue-orange); font-size:16px; line-height:1.1;">${p.name || 'N/A'}</div>
-                     <a href="${getNavUrl(p.name, p.pickup_location, p.pickup_city || p.city || 'Brandon')}" target="_blank" class="nav-link"><div class="pickup-value ${needsAlert && changed.includes('addr') ? 'field-highlight' : ''}">${p.pickup_location}</div></a>
+                     <a href="${getNavUrl(p.name, p.pickup_location, p.pickup_city || p.city || 'Brandon')}" target=_blank class=nav-link><div class="pickup-value ${needsAlert && changed.includes('addr') ? 'field-highlight' : ''}">${p.pickup_location}</div></a>
                  </div>
-                 <div class="pkg-wrapper"><div class="tech-info ${needsAlert && changed.includes('details') ? 'field-highlight' : ''}" style="font-size:12px; color:#ddd; text-transform:uppercase;">${(p.package_details || "-").replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</div></div>
+                 <div class=pkg-wrapper><div class="tech-info ${needsAlert && changed.includes('details') ? 'field-highlight' : ''}" style="font-size:12px; color:#ddd; text-transform:uppercase;">${(p.package_details || "-").replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</div></div>
                  <div style="opacity:${botOpacity}">
-                     <div class="card-label" style="margin-top:4px;">TO</div>
+                     <div class=card-label style="margin-top:4px;">TO</div>
                      <div class="tech-info ${needsAlert && changed.includes('dropName') ? 'field-highlight' : ''}" style="color: #bbb; font-size:13px;">${p.delivery_name || 'N/A'}</div>
-                     <a href="${getNavUrl(p.delivery_name, p.destination, p.delivery_city || p.city || 'Brandon')}" target="_blank" class="nav-link"><div class="drop-value ${needsAlert && changed.includes('dest') ? 'field-highlight' : ''}" style="font-size:13px; color:#999;">${p.destination}</div></a>
+                     <a href="${getNavUrl(p.delivery_name, p.destination, p.delivery_city || p.city || 'Brandon')}" target=_blank class=nav-link><div class="drop-value ${needsAlert && changed.includes('dest') ? 'field-highlight' : ''}" style="font-size:13px; color:#999;">${p.destination}</div></a>
                  </div>
-                 ${(p.po_number && p.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" class="po-wrapper">PO: <span class="${needsAlert && changed.includes('po') ? 'field-highlight' : ''}" style="color:var(--accent);">${p.po_number}</span></div>` : ''}
+                 ${(p.po_number && p.po_number.trim() !== "") ? `<div id=po-container-${id} onclick="enterPoEdit(event, '${id}', '${(p.po_number||"").replace(/'/g, "\\'")}')" class=po-wrapper>PO: <span class="${needsAlert && changed.includes('po') ? 'field-highlight' : ''}" style="color:var(--accent);">${p.po_number}</span></div>` : ''}
                  ${(p.other_info && p.other_info.trim() !== "") ? `<div class="note-box ${isEdited ? 'notes-edited' : ''} ${needsAlert && changed.includes('notes') ? 'field-highlight' : ''}">${noteWithTags}</div>` : ''}
-                 ${phone ? `<a href="tel:${phone}" class="phone-link" onclick="event.stopPropagation()">📞 ${phone}</a>` : ''}
+                 ${phone ? `<a href="tel:${phone}" class=phone-link onclick=event.stopPropagation()>📞 ${phone}</a>` : ''}
                  ${(p.job_history && p.job_history.trim() !== "") ? `<div style="font-size:10px; color:#666; margin-top:8px; text-align:center; font-style:italic;">${p.job_history}</div>` : ''}
               </div>
-              <div class="col-side"> 
+              <div class=col-side> 
                  <div style="display:flex; justify-content:center; gap:10px; margin-bottom:5px;">
-                    <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverTransfer(event, '${id}')">
+                    <div class=icon-wrap style="margin-bottom:0;" onclick="toggleDriverTransfer(event, '${id}')">
                        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: #fff; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M8 10V7L4 11l4 4v-3h8v-2H8zm8 4v3l4-4-4-4v3H8v2h8z"/></svg>
                     </div>
-                    <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverNoteEdit(event, '${id}')">
+                    <div class=icon-wrap style="margin-bottom:0;" onclick="toggleDriverNoteEdit(event, '${id}')">
                        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                     </div>
                  </div>
-                 <div class="time-stack"><div class="job-time-stamp">${formatTime12(p.timestamp)}</div><div class="job-date-stamp">${formatDateShort(p.timestamp)}</div></div>
-                 <button class="info-btn" onclick="dndJob('${id}')">${p.status==='pending_pickup'?'DNP':'DND'}</button>
-                 ${p.status === 'in_transit' ? '' : `<button class="done-btn" onclick="markAction('${id}')">${btnText}</button>`}
+                 <div class=time-stack><div class=job-time-stamp>${formatTime12(p.timestamp)}</div><div class=job-date-stamp>${formatDateShort(p.timestamp)}</div></div>
+                 <button class=info-btn onclick="dndJob('${id}')">${p.status==='pending_pickup'?'DNP':'DND'}</button>
+                 ${p.status === 'in_transit' ? '' : `<button class=done-btn onclick="markAction('${id}')">${btnText}</button>`}
               </div>
             </div>
-            <div id="driver-note-display-${id}"></div>`;
+            <div id=driver-note-display-${id}></div>`;
           feed.appendChild(card); if (observer) observer.observe(card);
         }
       }
@@ -974,16 +969,16 @@
     const miniList = document.getElementById('mini-map-list');
     if (pendingCount === 0) {
         const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
-        let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
+        let html = `<div class=perf-header><div class=score-title>RUN PERFORMANCE</div><div class=perf-stat>${completed.length}</div><div class=score-sub>STOPS COMPLETED</div></div><div style="padding:15px;">`;
         const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
         const depotClass = (transitCount > 0 && window.isShiftActive) ? "glow-depot" : "";
         const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none; animation: none !important;";
-        html += `<button id="unload-depot-btn" class="pulse-glow-btn ${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
+        html += `<button id=unload-depot-btn class="pulse-glow-btn ${depotClass}" style="${depotStyle}" onclick=unloadAtDepot()>DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
              const color = j.status === 'in_transit' ? '#2196f3' : '#4caf50';
              const typeText = j.status === 'in_transit' ? 'PICKED UP' : 'COMPLETED';
-             html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">${typeText}</span><span class="perf-time">${formatTime12(j.completed_at || j.timestamp)}</span></div><div class="perf-name">${j.status === 'in_transit' ? (j.name || '') : (j.delivery_name || '')}</div><div class="perf-addr">${j.status === 'in_transit' ? (j.pickup_location || '') : (j.destination || '')}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
+             html += `<div class=perf-item><div class=perf-row><span class=perf-type style="color:${color};">${typeText}</span><span class=perf-time>${formatTime12(j.completed_at || j.timestamp)}</span></div><div class=perf-name>${j.status === 'in_transit' ? (j.name || '') : (j.delivery_name || '')}</div><div class=perf-addr>${j.status === 'in_transit' ? (j.pickup_location || '') : (j.destination || '')}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class=perf-sub>${j.package_details}</div>` : ''}</div>`;
         });
         miniList.innerHTML = html + `</div><div style="height:60px;"></div>`; miniList.style.display = 'block';
     }
@@ -998,7 +993,7 @@
             if(evt.item && evt.item.id) {
                 const items = miniListContainer.querySelectorAll('.mini-list-item');
                 let newManualOrder = [];
-                items.forEach((item) => {
+                items.forEach(item => {
                     const groupIds = item.id.replace('mini-', '').split(',');
                     if (item === evt.item || groupIds.some(gid => globalJobs[gid] && globalJobs[gid].manual_priority)) {
                         groupIds.forEach(gid => newManualOrder.push(gid));
@@ -1055,12 +1050,12 @@
   });
 
   let deferredPrompt; const installBtn = document.getElementById('install-btn');
-  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'block'; });
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'block'; });
   async function installPWA() {
     if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') installBtn.style.display = 'none'; deferredPrompt = null; }
   }
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.log));
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(e=>{}));
     navigator.serviceWorker.addEventListener('message', event => { if (event.data && event.data.jobId) showJobGroup(event.data.jobId); });
   }
   
@@ -1093,8 +1088,8 @@
     updateRoute();
   }
 </script>
-   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+   <link href=//cdn.quilljs.com/1.3.6/quill.snow.css rel=stylesheet>
+<script src=//cdn.quilljs.com/1.3.6/quill.min.js></script>
 
 <style>
   #dev-btn { position: fixed; bottom: 20px; left: 20px; z-index: 9999; background: #ffd700; color: #000; border: none; padding: 12px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); font-size: 12px; text-transform: uppercase; }
@@ -1110,18 +1105,18 @@
   .ql-container { border-radius: 0 0 4px 4px; }
 </style>
 
-<button id="dev-btn" onclick="document.getElementById('dev-modal').style.display='flex'">Dev Notes</button>
+<button id=dev-btn onclick="document.getElementById('dev-modal').style.display='flex'">Dev Notes</button>
 
-<div id="dev-modal">
-  <div id="dev-box">
+<div id=dev-modal>
+  <div id=dev-box>
     <h3 style="margin:0 0 10px 0; color:#ffd700; text-transform:uppercase;">Developer Notes</h3>
-    <div id="dev-list">
+    <div id=dev-list>
       <p style="text-align:center; color:#888; margin-top:20px;">Checking authorization...</p>
     </div>
-    <div id="dev-editor"></div>
-    <div class="dev-row">
-      <button class="dev-action" style="background:#333; color:#fff;" onclick="document.getElementById('dev-modal').style.display='none'">Close</button>
-      <button class="dev-action" style="background:#00b32d; color:#000;" onclick="saveDevNote()">Save Note</button>
+    <div id=dev-editor></div>
+    <div class=dev-row>
+      <button class=dev-action style="background:#333; color:#fff;" onclick="document.getElementById('dev-modal').style.display='none'">Close</button>
+      <button class=dev-action style="background:#00b32d; color:#000;" onclick=saveDevNote()>Save Note</button>
     </div>
   </div>
 </div>
@@ -1163,7 +1158,6 @@
     }).then(() => {
       devQuill.setText(''); // Clear editor on success
     }).catch(err => {
-      console.error("Save failed:", err);
       alert("Permission denied: You must be logged in to save.");
     });
   }
