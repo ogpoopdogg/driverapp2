@@ -214,15 +214,8 @@
   let messaging = null;
   try { if (firebase.messaging.isSupported()) messaging = firebase.messaging(); } catch(e) { console.warn("Msg not supported"); }
 
-  let currentDriver = localStorage.getItem('ec_driver_name');
-  let observer = null, fieldSnapshots = {}, pendingAlerts = {}, selfEdited = new Set(), globalJobs = {};
-  let map, directionsService, directionsRenderer, driverMarker = null, mapMarkers = [], mapLabels = [], mapPolyline = null;
-  let isNavigating = false, autoCenter = true, lastGps = null, optimizedOrder = [];
-  let lastPendingCount = 0, lastAnnouncedId = null, isFirstLoad = true, hasRoutedWithGps = false, hasInitialRoute = false;
-  let lastGpsUpdate = 0, wakeLock = null, lastRouteClick = Date.now();
-  let manualOrderIds = []; 
+  let currentDriver = localStorage.getItem('ec_driver_name'), observer = null, fieldSnapshots = {}, pendingAlerts = {}, selfEdited = new Set(), globalJobs = {}, map, directionsService, directionsRenderer, driverMarker = null, mapMarkers = [], mapLabels = [], mapPolyline = null, isNavigating = false, autoCenter = true, lastGps = null, optimizedOrder = [], lastPendingCount = 0, lastAnnouncedId = null, isFirstLoad = true, hasRoutedWithGps = false, hasInitialRoute = false, lastGpsUpdate = 0, wakeLock = null, lastRouteClick = Date.now(), manualOrderIds = [], previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
   const gpsInterval = 30000;
-  let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
 
   const darkMapStyles = [
     { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -309,10 +302,9 @@
 
   function activateNewRoute() { document.getElementById('new-route-alert').style.display = 'none'; openExternalRoute(); }
 
-  function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371000, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  function getDistance(a, b, c, d) {
+    let e = 6371000, f = (c - a) * Math.PI / 180, g = (d - b) * Math.PI / 180, h = Math.sin(f / 2) * Math.sin(f / 2) + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(g / 2) * Math.sin(g / 2);
+    return e * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
   }
   
   function broadcastLocation() {
@@ -408,7 +400,7 @@
         let routeOrigin = lastGps ? { location: { latLng: { latitude: lastGps.lat, longitude: lastGps.lng } } } : { address: "1604 Moreland Ave, Brandon MB" };
         if (priorityGroups.length > 0) {
             const lastPrio = priorityGroups[priorityGroups.length - 1];
-            routeOrigin = lastPrio.isCoords ? { location: { latLng: { latitude: parseFloat(lastPrio.addrString.split(',')[0]), longitude: parseFloat(lastPrio.addrString.split(',')[1]) } } } : { address: lastPrio.addrString };
+            routeOrigin = lastPrio.isCoords ? { location: { latLng: { latitude: +lastPrio.addrString.split(',')[0], longitude: +lastPrio.addrString.split(',')[1] } } } : { address: lastPrio.addrString };
         }
         try {
             const optRes = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
@@ -417,7 +409,7 @@
                 body: JSON.stringify({
                     origin: routeOrigin,
                     destination: { address: "1604 Moreland Ave, Brandon MB" },
-                    intermediates: normalGroups.map(g => g.isCoords ? { location: { latLng: { latitude: parseFloat(g.addrString.split(',')[0]), longitude: parseFloat(g.addrString.split(',')[1]) } } } : { address: g.addrString }),
+                    intermediates: normalGroups.map(g => g.isCoords ? { location: { latLng: { latitude: +g.addrString.split(',')[0], longitude: +g.addrString.split(',')[1] } } } : { address: g.addrString }),
                     travelMode: "DRIVE", optimizeWaypointOrder: true
                 })
             });
@@ -437,7 +429,7 @@
             body: JSON.stringify({
                 origin: lastGps ? { location: { latLng: { latitude: lastGps.lat, longitude: lastGps.lng } } } : { address: "1604 Moreland Ave, Brandon MB" },
                 destination: { address: "1604 Moreland Ave, Brandon MB" }, 
-                intermediates: finalGroups.map(g => g.isCoords ? { location: { latLng: { latitude: parseFloat(g.addrString.split(',')[0]), longitude: parseFloat(g.addrString.split(',')[1]) } } } : { address: g.addrString }),
+                intermediates: finalGroups.map(g => g.isCoords ? { location: { latLng: { latitude: +g.addrString.split(',')[0], longitude: +g.addrString.split(',')[1] } } } : { address: g.addrString }),
                 travelMode: "DRIVE", optimizeWaypointOrder: false
             })
         });
@@ -456,7 +448,7 @@
             orderedGroups.forEach(g => g.jobs.forEach(j => { const jId = Object.keys(globalJobs).find(k => globalJobs[k] === j); if(jId) optimizedOrder.push(jId); }));
 
             if(result.routes[0].polyline) {
-                 let dur = result.routes[0].duration ? parseInt(result.routes[0].duration) : 0;
+                 let dur = result.routes[0].duration ? +result.routes[0].duration : 0;
                  let durStr = dur > 3600 ? `${Math.floor(dur/3600)} hr ${Math.floor((dur%3600)/60)} min` : `${Math.floor(dur/60)} min`;
                  db.ref(`driver_locations/${currentDriver}`).update({ active_route: result.routes[0].polyline.encodedPolyline, route_string: orderedGroups.map((g, i) => `${i+1}. ${g.masterJob.status==='pending_pickup' ? (g.masterJob.name + ' ' + g.masterJob.pickup_location) : (g.masterJob.delivery_name + ' ' + g.masterJob.destination)}`).join(" | "), route_order: optimizedOrder, total_duration: durStr, route_timestamp: Date.now() });
             }
@@ -481,7 +473,7 @@
                    const bizName = isPickup ? job.name : job.delivery_name, addrText = isPickup ? job.pickup_location : job.destination;
                    const cityText = isPickup ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
                    
-                   mapMarkers.push(new google.maps.Marker({ position: { lat: loc.latitude, lng: loc.longitude }, map: map, label: { text: (i+1).toString(), color: "white", fontWeight: "bold" }, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: colorHex, fillOpacity: 1, strokeColor: "white", strokeWeight: 2 }, zIndex: 100 }));
+                   mapMarkers.push(new google.maps.Marker({ position: { lat: loc.latitude, lng: loc.longitude }, map: map, label: { text: ''+(i+1), color: "white", fontWeight: "bold" }, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: colorHex, fillOpacity: 1, strokeColor: "white", strokeWeight: 2 }, zIndex: 100 }));
                    const info = new google.maps.InfoWindow({ content: `<div>${bizName}</div>`, disableAutoPan: true, position: { lat: loc.latitude, lng: loc.longitude }, pixelOffset: new google.maps.Size(0, -25) });
                    info.open(map); mapLabels.push(info);
 
@@ -890,8 +882,7 @@
       fieldSnapshots[id] = { ...cf };
       const changed = pendingAlerts[id] || [], needsAlert = changed.length > 0 && !sessionStorage.getItem(`ack_update_${id}`);
       
-      let badgeColor, badgeText, btnText, topOpacity = 1, botOpacity = 1;
-      let displayCity = p.status === 'pending_pickup' ? (p.pickup_city || p.city || "Brandon") : (p.delivery_city || p.city || "Brandon");
+      let badgeColor, badgeText, btnText, topOpacity = 1, botOpacity = 1, displayCity = p.status === 'pending_pickup' ? (p.pickup_city || p.city || "Brandon") : (p.delivery_city || p.city || "Brandon");
       if (p.status === 'pending_pickup') {
           badgeColor = "#ff9800"; badgeText = "PICK UP"; btnText = "PICKED UP"; botOpacity = 0.5;
       } else if (p.status === 'in_transit') {
