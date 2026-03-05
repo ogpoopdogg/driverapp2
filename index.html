@@ -145,6 +145,7 @@
     .icon-wrap { align-self: center; cursor: pointer; margin-bottom: 5px; }
     @keyframes pulse-glow-btn { 0% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 204, 0, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 204, 0, 1); } 100% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 204, 0, 0.5); } }
     .pulse-glow-btn { animation: pulse-glow-btn 1.5s infinite alternate !important; }
+    .note-icon-btn { background: transparent; border: none; cursor: pointer; padding: 8px; margin: 0; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 22px; transition: background 0.2s; } .note-icon-btn:hover { background: rgba(255,255,255,0.1); } .note-icon-btn svg { width: 20px; height: 20px; fill: var(--accent); }
   </style>
 </head>
 <body>
@@ -222,6 +223,8 @@
   let lastPendingCount = 0, lastAnnouncedId = null, isFirstLoad = true, hasRoutedWithGps = false, hasInitialRoute = false;
   let lastGpsUpdate = 0, wakeLock = null, lastRouteClick = Date.now();
   let manualOrderIds = []; 
+  // Initialize persistentCheckinRequired global variable
+  let persistentCheckinRequired = false;
   const gpsInterval = 30000;
   let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
 
@@ -491,7 +494,7 @@
                    const hasUpdate = groupIds.some(id => pendingAlerts[id] && pendingAlerts[id].length > 0);
                    const isNew = groupIds.some(id => !previouslyKnown.includes(id));
                    const isPriority = group.jobs.some(j => j.manual_priority);
-                   const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>` : '';
+                   const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '';
                    
                    listHtml += `
                     <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds.join(',')}" style="position:relative;">
@@ -549,6 +552,12 @@
               btn.innerText = 'START RUN';
               btn.style.background = 'var(--active-green)';
             }
+          });
+
+          // Add listener for depot_checkin_required
+          db.ref(`driver_locations/${currentDriver}/depot_checkin_required`).on('value', snap => {
+            persistentCheckinRequired = snap.val() === true;
+            mergeAndRender();
           });
 
           const list = document.getElementById('dev-list');
@@ -834,6 +843,10 @@
 
   function startDataListeners() {
     db.ref(`driver_locations/${currentDriver}/manual_order`).on('value', snap => { if(snap.exists()) manualOrderIds = snap.val() || []; });
+    db.ref(`driver_locations/${currentDriver}/depot_checkin_required`).on('value', snap => {
+      persistentCheckinRequired = snap.val() === true;
+      mergeAndRender();
+    });
     db.ref("jobs").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => { jobsData = snap.val() || {}; mergeAndRender(); });
   }
   let jobsData = {};
@@ -983,17 +996,43 @@
 
     const miniList = document.getElementById('mini-map-list');
     if (pendingCount === 0) {
-        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
+        // Modified filter to include DND and DNP
+        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.status === 'completed' || j.status === 'in_transit' || j.status === 'DND' || j.status === 'DNP') && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
         let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
-        const depotClass = (transitCount > 0 && window.isShiftActive) ? "glow-depot" : "";
+        // Modified depotClass calculation to use persistentCheckinRequired
+        const depotClass = (persistentCheckinRequired && window.isShiftActive) ? "glow-depot" : "";
         const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none; animation: none !important;";
         html += `<button id="unload-depot-btn" class="pulse-glow-btn ${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
-             const color = j.status === 'in_transit' ? '#2196f3' : '#4caf50';
-             const typeText = j.status === 'in_transit' ? 'PICKED UP' : 'COMPLETED';
-             html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">${typeText}</span><span class="perf-time">${formatTime12(j.completed_at || j.timestamp)}</span></div><div class="perf-name">${j.status === 'in_transit' ? (j.name || '') : (j.delivery_name || '')}</div><div class="perf-addr">${j.status === 'in_transit' ? (j.pickup_location || '') : (j.destination || '')}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
+             let color, typeText;
+             // Modified status mapping for DND and DNP
+             if (j.status === 'DNP') {
+                 color = 'var(--decline-red)';
+                 typeText = 'DNP (PICKUP)';
+             } else if (j.status === 'DND') {
+                 color = 'var(--decline-red)';
+                 typeText = 'DND (DELIVER)';
+             } else if (j.status === 'in_transit') {
+                 color = '#2196f3';
+                 typeText = 'PICKED UP';
+             } else {
+                 color = '#4caf50';
+                 typeText = 'COMPLETED';
+             }
+             // Modified address selection for DND/DNP
+             let displayAddr = '';
+             if (j.status === 'DNP') {
+                 displayAddr = j.pickup_location || '';
+             } else if (j.status === 'DND') {
+                 displayAddr = j.destination || '';
+             } else if (j.status === 'in_transit') {
+                 displayAddr = j.pickup_location || '';
+             } else {
+                 displayAddr = j.destination || '';
+             }
+             html += `<div class="perf-item" onclick="showJobGroup('${j.id}')"><div class="perf-row"><span class="perf-type" style="color:${color};">${typeText}</span><span class="perf-time">${formatTime12(j.completed_at || j.timestamp)}</span><button class="note-icon-btn" onclick="event.stopPropagation(); toggleDriverNoteEdit(event, '${j.id}')"><svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:var(--accent);"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></div><div class="perf-name">${j.status === 'in_transit' || j.status === 'DNP' ? (j.name || '') : (j.delivery_name || '')}</div><div class="perf-addr">${displayAddr}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
         });
         miniList.innerHTML = html + `</div><div style="height:60px;"></div>`; miniList.style.display = 'block';
     }
@@ -1043,7 +1082,11 @@
          if(!confirm("Confirm Picked Up?")) return;
          document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
          closeJobCard();
-         setTimeout(() => db.ref('jobs').child(id).update({ status: 'in_transit' }), 500);
+         setTimeout(() => {
+            // Add depot_checkin_required update
+            db.ref('jobs').child(id).update({ status: 'in_transit' });
+            db.ref(`driver_locations/${currentDriver}`).update({ depot_checkin_required: true });
+         }, 500);
     } else if (job.status === 'pending_delivery') {
          if(!confirm("Complete Delivery?")) return;
          document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
@@ -1092,7 +1135,9 @@
               updates[`jobs/${key}/job_history`] = (job.job_history || '') + ` | Arrived at Depot (Pick-Up by ${currentDriver})`;
           }
       });
+      // Add depot_checkin_required = false
       updates[`driver_locations/${currentDriver}/shift_active`] = false;
+      updates[`driver_locations/${currentDriver}/depot_checkin_required`] = false;
       db.ref().update(updates).then(() => { alert(count > 0 ? "Inventory Unloaded and Run Ended." : "Run Ended."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
   }
 
