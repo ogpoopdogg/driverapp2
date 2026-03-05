@@ -853,12 +853,15 @@
 }
   let jobsData = {};
 
-  function mergeAndRender() {
+ function mergeAndRender() {
     if(!currentDriver) return;
     const prevTop = optimizedOrder[0];
-    globalJobs = jobsData;
+    
+    // Merge assigned jobs and picked-up jobs (jobs that appear in both are deduplicated)
+    globalJobs = { ...assignedJobs, ...pickedUpJobs };
     
     const currentPending = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver).length;
+    // ... rest of the function remains exactly the same
     if (currentPending !== lastPendingCount) {
          if (currentPending > lastPendingCount) {
               lastAnnouncedId = null;
