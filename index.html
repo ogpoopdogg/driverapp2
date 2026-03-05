@@ -986,21 +986,54 @@
     if (feed.classList.contains('overlay-active') && feed.querySelectorAll('.active-card').length === 0) closeJobCard();
 
     const miniList = document.getElementById('mini-map-list');
-    if (pendingCount === 0) {
-        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
-        let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
-        const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
-        const depotClass = (transitCount > 0 && window.isShiftActive) ? "glow-depot" : "";
-        const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none; animation: none !important;";
-        html += `<button id="unload-depot-btn" class="pulse-glow-btn ${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
-        if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
-        else completed.forEach(j => {
-             const color = j.status === 'in_transit' ? '#2196f3' : (j.status === 'DND' || j.status === 'DNP' ? '#f44336' : '#4caf50');
-             const typeText = j.status === 'in_transit' ? 'PICKED UP' : (j.status === 'DND' || j.status === 'DNP' ? j.status : 'COMPLETED');
-             html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">${typeText}</span><span class="perf-time">${formatTime12(j.completed_at || j.timestamp)}</span></div><div class="perf-name">${j.status === 'in_transit' ? (j.name || '') : (j.status === 'DND' || j.status === 'DNP' ? (j.name || '') : (j.delivery_name || ''))}</div><div class="perf-addr">${j.status === 'in_transit' ? (j.pickup_location || '') : (j.status === 'DND' || j.status === 'DNP' ? (j.pickup_location || '') : (j.destination || ''))}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
+   if (pendingCount === 0) {
+    // Include jobs picked up by this driver even if unassigned now
+    const completed = Object.values(globalJobs).filter(j => 
+        (j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)) ||
+        (j.picked_up_by === currentDriver && j.picked_up_at >= startOfToday)
+    ).sort((a,b) => (b.completed_at || b.picked_up_at || b.timestamp) - (a.completed_at || a.picked_up_at || a.timestamp));
+    
+    let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
+    
+    const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
+    const depotClass = (transitCount > 0 && window.isShiftActive) ? "glow-depot" : "";
+    const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none; animation: none !important;";
+    html += `<button id="unload-depot-btn" class="pulse-glow-btn ${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
+    
+    if(completed.length === 0) {
+        html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
+    } else {
+        completed.forEach(j => {
+            // Determine correct color and label for picked‑up (but not delivered) jobs
+            let color, typeText;
+            if (j.picked_up_by === currentDriver && !j.completed_at) {
+                // This job was picked up by current driver and not yet delivered
+                color = '#2196f3';
+                typeText = 'PICKED UP';
+            } else {
+                color = j.status === 'in_transit' ? '#2196f3' : (j.status === 'DND' || j.status === 'DNP' ? '#f44336' : '#4caf50');
+                typeText = j.status === 'in_transit' ? 'PICKED UP' : (j.status === 'DND' || j.status === 'DNP' ? j.status : 'COMPLETED');
+            }
+            
+            // Choose the correct name and address to display
+            const displayName = (j.status === 'in_transit' || (j.picked_up_by && !j.completed_at)) ? (j.name || '') : (j.status === 'DND' || j.status === 'DNP' ? (j.name || '') : (j.delivery_name || ''));
+            const displayAddr = (j.status === 'in_transit' || (j.picked_up_by && !j.completed_at)) ? (j.pickup_location || '') : (j.status === 'DND' || j.status === 'DNP' ? (j.pickup_location || '') : (j.destination || ''));
+            
+            html += `<div class="perf-item">
+                <div class="perf-row">
+                    <span class="perf-type" style="color:${color};">${typeText}</span>
+                    <span class="perf-time">${formatTime12(j.completed_at || j.picked_up_at || j.timestamp)}</span>
+                </div>
+                <div class="perf-name">${displayName}</div>
+                <div class="perf-addr">${displayAddr}</div>
+                ${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}
+                ${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}
+            </div>`;
         });
-        miniList.innerHTML = html + `</div><div style="height:60px;"></div>`; miniList.style.display = 'block';
     }
+    miniList.innerHTML = html + `</div><div style="height:60px;"></div>`;
+    miniList.style.display = 'block';
+}
 
     const miniListContainer = document.getElementById('mini-map-list');
     if (window.sortableFeed) window.sortableFeed.destroy();
