@@ -155,7 +155,7 @@
         <h2>E&C PORTAL</h2>
         <input type="email" id="login-user" class="login-input" placeholder="Email (DriverName@ec.com)" autofocus>
         <input type="password" id="login-pin" class="login-input" placeholder="Password">
-        <button class="login-submit" onclick="attemptLogin()">Enter</button>
+        <button class="login-submit" onclick="window.attemptLogin()">Enter</button>
     </div>
 </div>
 
@@ -1184,19 +1184,27 @@
 <script>
   let devQuill;
 
-  // Initialize the editor immediately - FIXED: using 'new' keyword
-  devQuill = new Quill('#dev-editor', {
-    theme: 'snow',
-    modules: { 
-      toolbar: [ 
-        ['bold', 'italic', 'underline'], 
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
-        [{ 'align': [] }] 
-      ] 
+  // Wait for DOM and Quill to be ready
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Quill !== 'undefined') {
+      devQuill = new Quill('#dev-editor', {
+        theme: 'snow',
+        modules: { 
+          toolbar: [ 
+            ['bold', 'italic', 'underline'], 
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
+            [{ 'align': [] }] 
+          ] 
+        }
+      });
     }
   });
 
   function saveDevNote() {
+    if (!devQuill) {
+      alert("Editor not initialized yet");
+      return;
+    }
     // Only save if there is text and a user is logged in
     const currentUser = firebase.auth().currentUser;
     if (devQuill.getText().trim() === "" || !currentUser) return;
