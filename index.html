@@ -217,7 +217,7 @@
 
   let currentDriver = localStorage.getItem('ec_driver_name');
   let observer = null, fieldSnapshots = {}, pendingAlerts = {}, selfEdited = new Set(), globalJobs = {};
-  let map, directionsService, directionsRenderer, driverMarker = null, mapMarkers = [], mapLabels = [], mapPolyline = null;
+  let assignedJobs = {}, pickedUpJobs = {};  let map, directionsService, directionsRenderer, driverMarker = null, mapMarkers = [], mapLabels = [], mapPolyline = null;
   let isNavigating = false, autoCenter = true, lastGps = null, optimizedOrder = [];
   let lastPendingCount = 0, lastAnnouncedId = null, isFirstLoad = true, hasRoutedWithGps = false, hasInitialRoute = false;
   let lastGpsUpdate = 0, wakeLock = null, lastRouteClick = Date.now();
