@@ -834,10 +834,23 @@
       document.getElementById('live-feed').classList.remove('overlay-active');
   }
 
-  function startDataListeners() {
-    db.ref(`driver_locations/${currentDriver}/manual_order`).on('value', snap => { if(snap.exists()) manualOrderIds = snap.val() || []; });
-    db.ref("jobs").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => { jobsData = snap.val() || {}; mergeAndRender(); });
-  }
+ function startDataListeners() {
+    db.ref(`driver_locations/${currentDriver}/manual_order`).on('value', snap => { 
+        if(snap.exists()) manualOrderIds = snap.val() || []; 
+    });
+    
+    // Listener for jobs currently assigned to this driver
+    db.ref("jobs").orderByChild("assigned_to").equalTo(currentDriver).on("value", snap => { 
+        assignedJobs = snap.val() || {}; 
+        mergeAndRender(); 
+    });
+    
+    // Listener for jobs that were ever picked up by this driver
+    db.ref("jobs").orderByChild("picked_up_by").equalTo(currentDriver).on("value", snap => { 
+        pickedUpJobs = snap.val() || {}; 
+        mergeAndRender(); 
+    });
+}
   let jobsData = {};
 
   function mergeAndRender() {
