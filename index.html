@@ -542,14 +542,16 @@
           startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
           
           db.ref(`driver_locations/${currentDriver}/shift_active`).on('value', snap => {
-            window.isShiftActive = snap.val() === true;
-            const btn = document.getElementById('shift-toggle-btn');
-            if(btn) {
-              btn.style.display = (!window.isShiftActive && lastPendingCount > 0) ? 'inline-block' : 'none';
-              btn.innerText = 'START RUN';
-              btn.style.background = 'var(--active-green)';
-            }
-          });
+  window.isShiftActive = snap.val() === true;
+  const btn = document.getElementById('shift-toggle-btn');
+  if(btn) {
+    btn.style.display = (!window.isShiftActive && lastPendingCount > 0) ? 'inline-block' : 'none';
+    btn.innerText = 'START RUN';
+    btn.style.background = 'var(--active-green)';
+  }
+  // Force UI refresh to update depot button animation
+  mergeAndRender();
+});
 
           const list = document.getElementById('dev-list');
           firebase.database().ref('developer').on('value', snap => {
