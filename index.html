@@ -1044,10 +1044,11 @@
     if (!window.isShiftActive) { alert("Please click START RUN before completing your first job."); return; }
     const job = globalJobs[id]; if(!job) return;
     if (job.status === 'pending_pickup') {
-         if(!confirm("Confirm Picked Up?")) return;
-         document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
-         closeJobCard();
-         setTimeout(() => db.ref('jobs').child(id).update({ status: 'in_transit' }), 500);
+     if(!confirm("Confirm Picked Up?")) return;
+     document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
+     closeJobCard();
+     setTimeout(() => db.ref('jobs').child(id).update({ status: 'in_transit' }), 500);
+
     } else if (job.status === 'pending_delivery') {
          if(!confirm("Complete Delivery?")) return;
          document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
