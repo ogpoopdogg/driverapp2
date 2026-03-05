@@ -134,7 +134,8 @@
     .po-input { width: 120px; padding: 6px; margin: 0; font-size: 13px; }
     .perf-header { padding: 20px; text-align: center; border-bottom: 1px solid var(--border-soft); }
     .perf-stat { font-size: 48px; font-weight: 900; color: var(--text-main); margin: 10px 0; line-height: 1; }
-    .perf-item { background: var(--bg-panel); border: 1px solid var(--border-soft); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+    .perf-item { background: var(--bg-panel); border: 1px solid var(--border-soft); border-radius: 8px; padding: 12px; margin-bottom: 10px; cursor: pointer; }
+    .perf-item:active { transform: scale(0.98); background: var(--bg-input); }
     .perf-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
     .perf-type { font-weight: 900; font-size: 10px; text-transform: uppercase; }
     .perf-time { color: #888; font-size: 11px; font-weight: 700; }
@@ -143,6 +144,8 @@
     .perf-sub { color: #777; font-size: 11px; margin-top: 2px; font-style: italic; }
     .note-box { text-align:center; width:100%; margin-top:10px; color:#ddd; font-size:12px; word-wrap:break-word; font-style:italic; }
     .icon-wrap { align-self: center; cursor: pointer; margin-bottom: 5px; }
+    .icon-note { width: 20px; height: 20px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); cursor: pointer; }
+    .icon-note:active { transform: scale(0.95); }
     @keyframes pulse-glow-btn { 0% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 204, 0, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 204, 0, 1); } 100% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 204, 0, 0.5); } }
     .pulse-glow-btn { animation: pulse-glow-btn 1.5s infinite alternate !important; }
   </style>
@@ -224,6 +227,7 @@
   let manualOrderIds = []; 
   const gpsInterval = 30000;
   let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
+  let persistentCheckinRequired = false;
 
   const darkMapStyles = [
     { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -491,7 +495,7 @@
                    const hasUpdate = groupIds.some(id => pendingAlerts[id] && pendingAlerts[id].length > 0);
                    const isNew = groupIds.some(id => !previouslyKnown.includes(id));
                    const isPriority = group.jobs.some(j => j.manual_priority);
-                   const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>` : '';
+                   const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '';
                    
                    listHtml += `
                     <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds.join(',')}" style="position:relative;">
@@ -549,6 +553,11 @@
               btn.innerText = 'START RUN';
               btn.style.background = 'var(--active-green)';
             }
+          });
+
+          db.ref(`driver_locations/${currentDriver}/depot_checkin_required`).on('value', snap => {
+            persistentCheckinRequired = snap.val() === true;
+            mergeAndRender();
           });
 
           const list = document.getElementById('dev-list');
@@ -811,7 +820,69 @@
   function showJobGroup(idsString) {
       const ids = idsString.split(',');
       document.querySelectorAll('.active-card').forEach(c => c.style.display = 'none');
-      ids.forEach(id => { const card = document.getElementById('card-' + id); if(card) card.style.display = 'flex'; });
+      ids.forEach(id => { 
+          let card = document.getElementById('card-' + id);
+          if(!card) {
+              const job = globalJobs[id];
+              if(job) {
+                  const feed = document.getElementById('live-feed');
+                  card = document.createElement('div');
+                  card.className = 'active-card';
+                  card.style.display = 'flex';
+                  card.id = `card-${id}`;
+                  
+                  const badgeColor = job.status === 'DNP' ? 'var(--decline-red)' : (job.status === 'DND' ? 'var(--decline-red)' : '#4caf50');
+                  const badgeText = job.status === 'DNP' ? 'DNP (PICKUP)' : (job.status === 'DND' ? 'DND (DELIVER)' : job.status);
+                  const topOpacity = 1;
+                  const botOpacity = 1;
+                  const displayCity = job.pickup_city || job.city || 'Brandon';
+                  const phone = job.p_phone || job.phone || job.phone_number || job.customer_phone;
+                  
+                  card.innerHTML = `
+                    <div class="flex-row">
+                      <div class="col-main"> 
+                         <div class="card-top">
+                            <div class="card-date-badge" onclick="closeJobCard()">
+                               <div class="seq-badge" style="border:2px solid ${badgeColor};">H</div>
+                               <div class="type-badge" style="background:${badgeColor};">${badgeText}</div>
+                            </div>
+                            <a href="${getNavUrl(job.name, job.pickup_location, displayCity)}" target="_blank" class="nav-link"><div class="city-tag" style="margin:0;">${displayCity}</div></a>
+                         </div>
+                         <div style="opacity:${topOpacity}">
+                             <div class="card-label">FROM</div>
+                             <div class="tech-info" style="margin-bottom:2px; color: var(--queue-orange); font-size:16px; line-height:1.1;">${job.name || 'N/A'}</div>
+                             <a href="${getNavUrl(job.name, job.pickup_location, job.pickup_city || job.city || 'Brandon')}" target="_blank" class="nav-link"><div class="pickup-value">${job.pickup_location}</div></a>
+                         </div>
+                         <div class="pkg-wrapper"><div class="tech-info" style="font-size:12px; color:#ddd; text-transform:uppercase;">${(job.package_details || "-").replace(/\b(skid|pallet)\b/gi, '<span class="heavy-word">$&</span>')}</div></div>
+                         <div style="opacity:${botOpacity}">
+                             <div class="card-label" style="margin-top:4px;">TO</div>
+                             <div class="tech-info" style="color: #bbb; font-size:13px;">${job.delivery_name || 'N/A'}</div>
+                             <a href="${getNavUrl(job.delivery_name, job.destination, job.delivery_city || job.city || 'Brandon')}" target="_blank" class="nav-link"><div class="drop-value" style="font-size:13px; color:#999;">${job.destination}</div></a>
+                         </div>
+                         ${(job.po_number && job.po_number.trim() !== "") ? `<div id="po-container-${id}" onclick="enterPoEdit(event, '${id}', '${(job.po_number||"").replace(/'/g, "\\'")}')" class="po-wrapper">PO: <span style="color:var(--accent);">${job.po_number}</span></div>` : ''}
+                         ${(job.other_info && job.other_info.trim() !== "") ? `<div class="note-box ${(job.other_info || "").match(/(Edited by|DND \(|DNP \(|Driver Note \()/) ? 'notes-edited' : ''}">${job.other_info}</div>` : ''}
+                         ${phone ? `<a href="tel:${phone}" class="phone-link" onclick="event.stopPropagation()">📞 ${phone}</a>` : ''}
+                         ${(job.job_history && job.job_history.trim() !== "") ? `<div style="font-size:10px; color:#666; margin-top:8px; text-align:center; font-style:italic;">${job.job_history}</div>` : ''}
+                      </div>
+                      <div class="col-side"> 
+                         <div style="display:flex; justify-content:center; gap:10px; margin-bottom:5px;">
+                            <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverTransfer(event, '${id}')">
+                               <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: #fff; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M8 10V7L4 11l4 4v-3h8v-2H8zm8 4v3l4-4-4-4v3H8v2h8z"/></svg>
+                            </div>
+                            <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverNoteEdit(event, '${id}')">
+                               <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                            </div>
+                         </div>
+                         <div class="time-stack"><div class="job-time-stamp">${formatTime12(job.timestamp)}</div><div class="job-date-stamp">${formatDateShort(job.timestamp)}</div></div>
+                         <button class="info-btn" onclick="dndJob('${id}')">${job.status==='pending_pickup'?'DNP':'DND'}</button>
+                      </div>
+                    </div>
+                    <div id="driver-note-display-${id}"></div>`;
+                  feed.appendChild(card);
+              }
+          }
+          if(card) card.style.display = 'flex';
+      });
       document.getElementById('live-feed').classList.add('overlay-active');
   }
   
@@ -897,6 +968,11 @@
           badgeColor = "#ff9800"; badgeText = "PICK UP"; btnText = "PICKED UP"; botOpacity = 0.5;
       } else if (p.status === 'in_transit') {
           badgeColor = "#2196f3"; badgeText = "ON TRUCK"; btnText = "UNLOAD AT DEPOT"; topOpacity = 0.5;
+          db.ref(`driver_locations/${currentDriver}`).update({ depot_checkin_required: true }).catch(err => console.error("Failed to set depot_checkin_required:", err));
+      } else if (p.status === 'DNP') {
+          badgeColor = "var(--decline-red)"; badgeText = "DNP (PICKUP)"; btnText = ""; topOpacity = 1; botOpacity = 1;
+      } else if (p.status === 'DND') {
+          badgeColor = "var(--decline-red)"; badgeText = "DND (DELIVER)"; btnText = ""; topOpacity = 1; botOpacity = 1;
       } else {
           badgeColor = "#4caf50"; badgeText = "DELIVERY"; btnText = "DONE"; topOpacity = 0.5;
       }
@@ -983,17 +1059,40 @@
 
     const miniList = document.getElementById('mini-map-list');
     if (pendingCount === 0) {
-        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
+        const completed = Object.values(globalJobs).filter(j => j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday) && (j.status === 'completed' || j.status === 'DND' || j.status === 'DNP')).sort((a,b) => (b.completed_at || b.timestamp) - (a.completed_at || a.timestamp));
         let html = `<div class="perf-header"><div class="score-title">RUN PERFORMANCE</div><div class="perf-stat">${completed.length}</div><div class="score-sub">STOPS COMPLETED</div></div><div style="padding:15px;">`;
         const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
-        const depotClass = (transitCount > 0 && window.isShiftActive) ? "glow-depot" : "";
+        const depotClass = (persistentCheckinRequired && window.isShiftActive) ? "glow-depot" : "";
         const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none; animation: none !important;";
         html += `<button id="unload-depot-btn" class="pulse-glow-btn ${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
         if(completed.length === 0) html += `<div style="text-align:center; color:#555; font-weight:700; margin-top:20px;">READY FOR DISPATCH</div>`;
         else completed.forEach(j => {
-             const color = j.status === 'in_transit' ? '#2196f3' : '#4caf50';
-             const typeText = j.status === 'in_transit' ? 'PICKED UP' : 'COMPLETED';
-             html += `<div class="perf-item"><div class="perf-row"><span class="perf-type" style="color:${color};">${typeText}</span><span class="perf-time">${formatTime12(j.completed_at || j.timestamp)}</span></div><div class="perf-name">${j.status === 'in_transit' ? (j.name || '') : (j.delivery_name || '')}</div><div class="perf-addr">${j.status === 'in_transit' ? (j.pickup_location || '') : (j.destination || '')}</div>${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}</div>`;
+             let color, typeText;
+             if (j.status === 'DNP') {
+                 color = 'var(--decline-red)';
+                 typeText = 'DNP (PICKUP)';
+             } else if (j.status === 'DND') {
+                 color = 'var(--decline-red)';
+                 typeText = 'DND (DELIVER)';
+             } else if (j.status === 'in_transit') {
+                 color = '#2196f3';
+                 typeText = 'PICKED UP';
+             } else {
+                 color = '#4caf50';
+                 typeText = 'COMPLETED';
+             }
+             const displayAddr = (j.status === 'DNP' || j.status === 'pending_pickup' || j.status === 'in_transit') ? j.pickup_location : j.destination;
+             html += `<div class="perf-item" onclick="showJobGroup('${Object.keys(globalJobs).find(key => globalJobs[key] === j)}')">
+                <div class="perf-row">
+                   <span class="perf-type" style="color:${color};">${typeText}</span>
+                   <span class="perf-time">${formatTime12(j.completed_at || j.timestamp)}</span>
+                   <svg viewBox="0 0 24 24" class="icon-note" onclick="event.stopPropagation(); toggleDriverNoteEdit(event, '${Object.keys(globalJobs).find(key => globalJobs[key] === j)}')" style="width: 20px; height: 20px; fill: var(--accent);"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                </div>
+                <div class="perf-name">${j.status === 'in_transit' ? (j.name || '') : (j.delivery_name || '')}</div>
+                <div class="perf-addr">${displayAddr}</div>
+                ${j.po_number ? `<div style="color:var(--accent); font-size:11px; margin-top:2px;">PO: ${j.po_number}</div>` : ''}
+                ${j.package_details ? `<div class="perf-sub">${j.package_details}</div>` : ''}
+             </div>`;
         });
         miniList.innerHTML = html + `</div><div style="height:60px;"></div>`; miniList.style.display = 'block';
     }
@@ -1043,14 +1142,18 @@
          if(!confirm("Confirm Picked Up?")) return;
          document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
          closeJobCard();
-         setTimeout(() => db.ref('jobs').child(id).update({ status: 'in_transit' }), 500);
+         setTimeout(() => {
+            db.ref('jobs').child(id).update({ status: 'in_transit' }).then(() => {
+                db.ref(`driver_locations/${currentDriver}`).update({ depot_checkin_required: true }).catch(err => console.error("Failed to set depot_checkin_required:", err));
+            }).catch(err => console.error("Failed to update job status:", err));
+         }, 500);
     } else if (job.status === 'pending_delivery') {
          if(!confirm("Complete Delivery?")) return;
          document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
          closeJobCard();
          setTimeout(() => {
             sessionStorage.setItem('last_completed_job', id);
-            db.ref('jobs').child(id).update({ status: 'completed', completed_at: Date.now(), job_history: (job.job_history || '') + " | Delivered by " + currentDriver });
+            db.ref('jobs').child(id).update({ status: 'completed', completed_at: Date.now(), job_history: (job.job_history || '') + " | Delivered by " + currentDriver }).catch(err => console.error("Failed to update job status:", err));
          }, 500);
     }
   }
@@ -1093,7 +1196,12 @@
           }
       });
       updates[`driver_locations/${currentDriver}/shift_active`] = false;
-      db.ref().update(updates).then(() => { alert(count > 0 ? "Inventory Unloaded and Run Ended." : "Run Ended."); mergeAndRender(); }).catch(e => alert("Error unloading: " + e.message));
+      updates[`driver_locations/${currentDriver}/depot_checkin_required`] = false;
+      db.ref().update(updates).then(() => { 
+          persistentCheckinRequired = false;
+          alert(count > 0 ? "Inventory Unloaded and Run Ended." : "Run Ended."); 
+          mergeAndRender(); 
+      }).catch(e => alert("Error unloading: " + e.message));
   }
 
   function toggleShift() {
