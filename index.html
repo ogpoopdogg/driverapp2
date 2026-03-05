@@ -1092,11 +1092,16 @@
   function markAction(id) {
     if (!window.isShiftActive) { alert("Please click START RUN before completing your first job."); return; }
     const job = globalJobs[id]; if(!job) return;
-    if (job.status === 'pending_pickup') {
+  if (job.status === 'pending_pickup') {
      if(!confirm("Confirm Picked Up?")) return;
      document.getElementById(`card-${id}`)?.classList.add('card-exit-success');
      closeJobCard();
-     setTimeout(() => db.ref('jobs').child(id).update({ status: 'in_transit' }), 500);
+     setTimeout(() => db.ref('jobs').child(id).update({ 
+         status: 'in_transit',
+         picked_up_by: currentDriver,
+         picked_up_at: Date.now(),
+         job_history: (job.job_history || '') + " | Picked up by " + currentDriver
+     }), 500);
 
     } else if (job.status === 'pending_delivery') {
          if(!confirm("Complete Delivery?")) return;
