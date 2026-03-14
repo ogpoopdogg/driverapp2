@@ -151,12 +151,12 @@
     .grid-btn { padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; transition: transform 0.1s; }
     .grid-btn:active { transform: scale(0.97); }
     .grid-btn svg { width: 18px; height: 18px; fill: currentColor; }
-    .driver-note-btn { background: var(--accent); color: #000; }
-    .transfer-btn { background: var(--update-blue); color: #000; }
-    .dnd-btn { background: var(--decline-red); color: #fff; }
+    .driver-note-btn { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+    .transfer-btn { background: transparent; color: var(--update-blue); border: 2px solid var(--update-blue); }
+    .dnd-btn { background: transparent; color: var(--decline-red); border: 2px solid var(--decline-red); }
+    .edit-btn { background: transparent; color: #ff9800; border: 2px solid #ff9800; }
     .pickup-done-btn { background: var(--active-green); color: #fff; margin-top: 8px; padding: 14px 0; animation: done-pulse 1.5s infinite alternate; }
     @keyframes done-pulse { from { box-shadow: 0 0 5px var(--active-green); } to { box-shadow: 0 0 20px var(--active-green); } }
-    .edit-btn { background: #ff9800; color: #000; }
     .pickup-done-btn { grid-column: span 2; }
     #live-feed > button:first-child { position: sticky; top: 15px; z-index: 2002; margin-bottom: 15px; }
     .pickup-done-btn { grid-column: span 2; }
@@ -193,10 +193,33 @@
       color: #000 !important;
     }
     [data-theme="light"] .pickup-done-btn { background: var(--active-green) !important; }
-    [data-theme="light"] .dnd-btn { background: var(--decline-red) !important; }
-    [data-theme="light"] .transfer-btn { background: var(--update-blue) !important; }
-    [data-theme="light"] .driver-note-btn { background: var(--accent) !important; }
-    [data-theme="light"] .edit-btn { background: #ff9800 !important; }
+    [data-theme="light"] .dnd-btn { background: transparent !important; color: var(--decline-red) !important; border: 2px solid var(--decline-red) !important; }
+    [data-theme="light"] .transfer-btn { background: transparent !important; color: var(--update-blue) !important; border: 2px solid var(--update-blue) !important; }
+    [data-theme="light"] .driver-note-btn { background: transparent !important; color: var(--accent) !important; border: 2px solid var(--accent) !important; }
+    [data-theme="light"] .edit-btn { background: transparent !important; color: #ff9800 !important; border: 2px solid #ff9800 !important; }
+
+    /* Spinner for loading */
+    #global-spinner {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    .spinner {
+      border: 8px solid #f3f3f3;
+      border-top: 8px solid var(--accent);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -219,6 +242,10 @@
   <button id="shift-toggle-btn" class="pulse-glow-btn" style="display:none; cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: none; padding: 4px 10px; border-radius: 4px; white-space: nowrap; background: var(--active-green); margin-right: 10px;" onclick="toggleShift()">START RUN</button>
   <button id="logout-btn" onclick="logoutDriver()" style="cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #ffffff; padding: 2px 8px; border-radius: 4px; white-space: nowrap; background: transparent;">LOGOUT</button>
 </header>
+
+<div id="global-spinner">
+  <div class="spinner"></div>
+</div>
 
 <div id="map-container"><div id="map"></div></div>
 <div id="drag-resizer"></div>
@@ -276,6 +303,9 @@
   let manualOrderIds = []; 
   const gpsInterval = 30000;
   let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
+
+  // Flag to hide spinner after first render
+  let initialRenderDone = false;
 
   const darkMapStyles = [
     { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -591,6 +621,7 @@
           localStorage.setItem('ec_driver_name', currentDriver);
           writeUserLog('login');
           document.getElementById('login-overlay').style.display = 'none';
+          document.getElementById('global-spinner').style.display = 'flex'; // Show spinner
           document.getElementById('header-name').innerHTML = `
             <img src="icon-512.png" class="header-logo" alt="Logo" onclick="toggleTheme()">
             <span class="driver-name-display" onclick="location.reload()" style="cursor:pointer; font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
@@ -1151,6 +1182,12 @@
             }
         }
     });
+
+    // Hide spinner after first successful render
+    if (!initialRenderDone) {
+      initialRenderDone = true;
+      document.getElementById('global-spinner').style.display = 'none';
+    }
   }
 
   function markAction(id) {
@@ -1309,8 +1346,9 @@
         return;
     }
     const logEntry = `Edited by ${currentDriver}: ${changes.join('; ')}`;
-    const newOtherInfo = job.other_info ? job.other_info + ' | ' + logEntry : logEntry;
-    updates.other_info = newOtherInfo;
+    // Append edit log to job_history instead of other_info
+    const newHistory = job.job_history ? job.job_history + ' | ' + logEntry : logEntry;
+    updates.job_history = newHistory;
     updates.last_edit_by = currentDriver;
     fields.forEach(f => {
         if (updates[f.name] !== undefined) {
