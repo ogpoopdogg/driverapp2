@@ -423,6 +423,7 @@
     <span id="stops-counter">0 STOPS</span>
   </div>
   <div style="display: flex; align-items: center; gap: 12px;">
+    <button id="shift-toggle-btn" class="pulse-glow-btn" style="display:none; cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: none; padding: 4px 10px; border-radius: 4px; white-space: nowrap; background: var(--active-green); margin-right: 10px;" onclick="toggleShift()">START RUN</button>
     <button id="install-btn" class="install-btn" onclick="installPWA()" style="display:none;">Install App</button>
     <button id="logout-btn" onclick="logoutDriver()" style="cursor:pointer; font-size: 14px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #ffffff; padding: 2px 8px; border-radius: 4px; white-space: nowrap; background: transparent;">LOGOUT</button>
   </div>
@@ -752,6 +753,12 @@
           
           db.ref(`driver_locations/${currentDriver}/shift_active`).on('value', snap => {
             window.isShiftActive = snap.val() === true;
+            const btn = document.getElementById('shift-toggle-btn');
+            if(btn) {
+              btn.style.display = (!window.isShiftActive && lastPendingCount > 0) ? 'inline-block' : 'none';
+              btn.innerText = 'START RUN';
+              btn.style.background = 'var(--active-green)';
+            }
             mergeAndRender();
           });
 
@@ -784,9 +791,27 @@
 
   function mergeAndRender() {
     if(!currentDriver) return;
+    const prevTop = optimizedOrder[0];
+    
     globalJobs = { ...assignedJobs, ...pickedUpJobs };
-    renderUnifiedFeed(); 
-    updateRoute();
+    
+    const currentPending = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver).length;
+    if (currentPending !== lastPendingCount) {
+         if (currentPending > lastPendingCount) {
+              lastAnnouncedId = null;
+         }
+         if (!isFirstLoad) document.getElementById('route-toggle-btn').classList.add('route-glow-update');
+    }
+    isFirstLoad = false; lastPendingCount = currentPending;
+    
+    const shiftBtn = document.getElementById('shift-toggle-btn');
+    if (shiftBtn) {
+        shiftBtn.style.display = (!window.isShiftActive && currentPending > 0) ? 'inline-block' : 'none';
+        shiftBtn.innerText = 'START RUN';
+        shiftBtn.style.background = 'var(--active-green)';
+    }
+
+    renderUnifiedFeed(); updateRoute();
   }
 
   function renderUnifiedFeed() {
@@ -815,26 +840,39 @@
 
     if (pendingCount === 0) {
       // Performance screen
+      const startOfToday = new Date().setHours(0,0,0,0);
       const completed = Object.values(globalJobs).filter(j => 
-        (j.assigned_to === currentDriver && (j.completed_at || 0) > new Date().setHours(0,0,0,0)) ||
-        (j.picked_up_by === currentDriver && (j.picked_up_at || 0) > new Date().setHours(0,0,0,0))
-      );
+        (j.assigned_to === currentDriver && (j.completed_at >= startOfToday || j.timestamp >= startOfToday)) ||
+        (j.picked_up_by === currentDriver && j.picked_up_at >= startOfToday)
+      ).sort((a,b) => (b.completed_at || b.picked_up_at || b.timestamp) - (a.completed_at || a.picked_up_at || a.timestamp));
+      
       const transitCount = Object.values(globalJobs).filter(j => j.status === 'in_transit' && j.assigned_to === currentDriver).length;
+      const depotClass = (transitCount > 0 && window.isShiftActive) ? "glow-depot" : "";
+      const depotStyle = window.isShiftActive ? "display:block; margin-bottom: 20px;" : "display:block; margin-bottom: 20px; background: #555; color: #aaa; box-shadow: none; border-color: #444; pointer-events: none; animation: none !important;";
 
       let perfHtml = '<div class="performance-screen">';
       perfHtml += `<div class="total-stops">${completed.length}</div>`;
       perfHtml += '<div class="total-label">STOPS COMPLETED TODAY</div>';
+      
+      perfHtml += `<button id="unload-depot-btn" class="pulse-glow-btn ${depotClass}" style="${depotStyle}" onclick="unloadAtDepot()">DEPOT CHECK-IN${transitCount > 0 ? ` (${transitCount})` : ''}</button>`;
 
       completed.slice(0,30).forEach(j => {
-        const name = (j.status === 'in_transit' || (j.picked_up_by && !j.completed_at)) ? (j.name || '') : (j.delivery_name || '');
-        const time = formatTime12(j.completed_at || j.picked_up_at || j.timestamp);
-        perfHtml += `<div class="completed-stop"><span class="completed-name">${name || 'Stop'}</span><span class="completed-time">${time}</span></div>`;
+        let color, typeText;
+        if (j.picked_up_by === currentDriver && !j.completed_at) {
+            color = '#2196f3';
+            typeText = 'PICKED UP';
+        } else {
+            color = j.status === 'in_transit' ? '#2196f3' : (j.status === 'DND' || j.status === 'DNP' ? '#f44336' : '#4caf50');
+            typeText = j.status === 'in_transit' ? 'PICKED UP' : (j.status === 'DND' || j.status === 'DNP' ? j.status : 'COMPLETED');
+        }
+        
+        const displayName = (j.status === 'in_transit' || (j.picked_up_by && !j.completed_at)) ? (j.name || '') : (j.status === 'DND' || j.status === 'DNP' ? (j.name || '') : (j.delivery_name || ''));
+        const displayAddr = (j.status === 'in_transit' || (j.picked_up_by && !j.completed_at)) ? (j.pickup_location || '') : (j.status === 'DND' || j.status === 'DNP' ? (j.pickup_location || '') : (j.destination || ''));
+        
+        perfHtml += `<div class="completed-stop"><span class="completed-name">${displayName || 'Stop'}</span><span class="completed-time">${formatTime12(j.completed_at || j.picked_up_at || j.timestamp)}</span></div>`;
       });
 
-      perfHtml += `<button class="depot-button" onclick="unloadAtDepot()">`;
-      perfHtml += `END SHIFT & CHECK IN AT DEPOT`;
-      if (transitCount > 0) perfHtml += `<span class="onboard-count">${transitCount} PICKUPS ON BOARD</span>`;
-      perfHtml += `</button></div>`;
+      perfHtml += `</div>`;
       miniList.innerHTML = perfHtml;
       feed.innerHTML = '';
       return;
@@ -859,10 +897,10 @@
       let statusClass = '';
       let badgeHtml = '';
       
-      if (!previouslyKnown.includes(jobId)) {
+      if (!previouslyKnown.includes(jobId) && (!job.seen_by || !job.seen_by[currentDriver])) {
         statusClass = 'new-job';
         badgeHtml += '<span class="status-badge badge-new">NEW</span>';
-      } else if (pendingAlerts[jobId] && pendingAlerts[jobId].length > 0) {
+      } else if (pendingAlerts[jobId] && pendingAlerts[jobId].length > 0 && !sessionStorage.getItem(`ack_update_${jobId}`)) {
         statusClass = 'updated-job';
         badgeHtml += '<span class="status-badge badge-updated">UPDATED</span>';
       }
@@ -893,7 +931,7 @@
     const total = optimizedOrder.length;
     const pickupPhone = job.p_phone || job.phone || job.phone_number || job.customer_phone;
     const deliveryPhone = job.d_phone || job.phone || job.phone_number || job.customer_phone;
-    const hasUpdate = pendingAlerts[id] && pendingAlerts[id].length > 0;
+    const hasUpdate = pendingAlerts[id] && pendingAlerts[id].length > 0 && !sessionStorage.getItem(`ack_update_${id}`);
 
     let html = `
       <div class="active-card" style="display:flex !important;">
@@ -1005,7 +1043,7 @@
   }
 
   function unloadAtDepot() {
-    if(!confirm("End Shift and Check-In at Depot?")) return;
+    if(!confirm("Are you sure you want to End Shift and Check-In at Depot?")) return;
     window.isShiftActive = false;
     const updates = {}; 
     let count = 0;
@@ -1020,7 +1058,7 @@
     });
     updates[`driver_locations/${currentDriver}/shift_active`] = false;
     db.ref().update(updates).then(() => { 
-      alert(count > 0 ? "Inventory Unloaded." : "Run Ended."); 
+      alert(count > 0 ? "Inventory Unloaded and Run Ended." : "Run Ended."); 
       mergeAndRender(); 
     });
   }
@@ -1144,7 +1182,9 @@
     const email = document.getElementById('login-user').value.trim();
     const pass = document.getElementById('login-pin').value.trim();
     if (!email || !pass) { alert("Enter both Email and Password"); return; }
-    firebase.auth().signInWithEmailAndPassword(email, pass).catch(e => alert("Login Failed: " + e.message));
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+      return firebase.auth().signInWithEmailAndPassword(email, pass);
+    }).catch(e => alert("Login Failed: " + e.message));
   }
 
   function logoutDriver() { 
