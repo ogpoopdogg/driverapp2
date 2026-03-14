@@ -45,7 +45,7 @@
     #live-feed::before { content: ''; flex: 1 1 auto; }
     #live-feed.overlay-active { display: flex; }
 
-    .active-card { background: var(--card-bg); padding: 15px; border-radius: 16px; border: 1px solid var(--border-soft); width: 100%; max-width: 600px; display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 -10px 40px rgba(0,0,0,0.6); margin-bottom: 30px; flex-shrink: 0; }
+    .active-card { background: var(--card-bg); padding: 15px; border-radius: 16px; border: 1px solid var(--border-soft); width: 100%; max-width: 600px; display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 -10px 40px rgba(0,0,0,0.6); margin-bottom: 30px; flex-shrink: 0; min-height: 40vh; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
     #route-btns-wrap { position: absolute; bottom: 30px; right: 20px; z-index: 100; display: flex; gap: 15px; }
@@ -94,12 +94,12 @@
     .pickup-value { font-size: 15px; font-weight: 700; line-height: 1.25; color: var(--text-main); text-transform: uppercase; margin-bottom: 2px; word-wrap: break-word; }
     .drop-value { font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--text-sec); text-transform: uppercase; word-wrap: break-word; }
     .tech-info { font-size: 14px; font-weight: 700; color: var(--text-main); text-transform: uppercase; line-height: 1.2; }
-    .time-stack { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding-right: 60px; }
+    .time-stack { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     .job-time-stamp { font-size: 13px; font-weight: 700; color: #FFB020; white-space: nowrap; }
     .job-date-stamp { font-size: 9px; font-weight: 600; color: #666; text-transform: uppercase; white-space: nowrap; }
-    .info-btn { width: 100%; background: transparent; color: var(--review-blue); border: 1px solid var(--review-blue); padding: 8px 0; font-size: 11px; font-weight: 800; border-radius: 6px; cursor: pointer; transition: background 0.2s; margin-bottom: 6px; }
+    .info-btn { width: 100%; background: transparent; color: var(--review-blue); border: 1px solid var(--review-blue); padding: 12px 0; font-size: 14px; font-weight: 800; border-radius: 8px; cursor: pointer; transition: background 0.2s; margin-bottom: 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .info-btn:active { background: rgba(33, 150, 243, 0.1); }
-    .done-btn { width: 100%; padding: 12px 0; border: none; border-radius: 6px; color: #fff; font-weight: 800; cursor: pointer; text-transform: uppercase; background: linear-gradient(135deg, var(--active-green), #388e3c); font-size: 14px; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3); transition: transform 0.1s; letter-spacing: 1px; flex: none; }
+    .done-btn { width: 100%; padding: 12px 0; border: none; border-radius: 8px; color: #fff; font-weight: 800; cursor: pointer; text-transform: uppercase; background: linear-gradient(135deg, var(--active-green), #388e3c); font-size: 14px; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3); transition: transform 0.1s; letter-spacing: 1px; flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .done-btn:active { transform: scale(0.98); }
     .arrival-highlight .done-btn { animation: arrival-glow 0.8s infinite alternate !important; border: 3px solid #fff !important; box-shadow: 0 0 25px var(--active-green) !important; }
     @keyframes arrival-glow { from { transform: scale(1); filter: brightness(1); } to { transform: scale(1.08); filter: brightness(1.3); } }
@@ -145,6 +145,17 @@
     .icon-wrap { align-self: center; cursor: pointer; margin-bottom: 5px; }
     @keyframes pulse-glow-btn { 0% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 204, 0, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 204, 0, 1); } 100% { transform: scale(1); box-shadow: 0 0 5px rgba(255, 204, 0, 0.5); } }
     .pulse-glow-btn { animation: pulse-glow-btn 1.5s infinite alternate !important; }
+
+    /* Button grid styles */
+    .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+    .grid-btn { padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; transition: transform 0.1s; }
+    .grid-btn:active { transform: scale(0.97); }
+    .grid-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .driver-note-btn { background: var(--accent); color: #000; }
+    .transfer-btn { background: var(--update-blue); color: #000; }
+    .dnd-btn { background: var(--decline-red); color: #fff; }
+    .pickup-done-btn { background: var(--active-green); color: #fff; }
+    #live-feed > button:first-child { position: sticky; top: 15px; z-index: 2002; margin-bottom: 15px; }
   </style>
 </head>
 <body>
@@ -882,7 +893,7 @@
 
   function renderUnifiedFeed() {
     const feed = document.getElementById("live-feed"), rLog = document.getElementById("recent-log"), qLog = document.getElementById("queue-log"), routeBtn = document.getElementById("multi-route-btn"), stopCounter = document.getElementById("stop-counter");
-    feed.innerHTML = "<button onclick='closeJobCard()' style='position:absolute; top:15px; left:15px; background:var(--bg-panel); color:var(--accent); border:1px solid var(--border-soft); padding:8px 12px; border-radius:6px; font-weight:800; cursor:pointer; z-index:2001; font-size:12px; box-shadow:0 4px 10px rgba(0,0,0,0.5);'>&larr; BACK</button><div style='width:100%; text-align:center; color:#555; font-size:10px; padding:10px; opacity:0.7; letter-spacing:1px;'>>> SWIPE RIGHT TO GO BACK</div>"; 
+    feed.innerHTML = "<button onclick='closeJobCard()' style='position:sticky; top:15px; background:var(--bg-panel); color:var(--accent); border:1px solid var(--border-soft); padding:8px 12px; border-radius:6px; font-weight:800; cursor:pointer; z-index:2001; font-size:12px; box-shadow:0 4px 10px rgba(0,0,0,0.5); margin-bottom:15px;'>&larr; BACK</button><div style='width:100%; text-align:center; color:#555; font-size:10px; padding:10px; opacity:0.7; letter-spacing:1px;'>>> SWIPE RIGHT TO GO BACK</div>"; 
     rLog.innerHTML = ""; qLog.innerHTML = "";
     const startOfToday = new Date().setHours(0,0,0,0), lastDoneId = sessionStorage.getItem('last_completed_job'), uniqueStops = new Set();
     let pendingCount = 0, seqIndex = 0;
@@ -971,19 +982,12 @@
                  ${phone ? `<a href="tel:${phone}" class="phone-link" onclick="event.stopPropagation()">📞 ${phone}</a>` : ''}
                  ${(p.job_history && p.job_history.trim() !== "") ? `<div style="font-size:10px; color:#666; margin-top:8px; text-align:center; font-style:italic;">${p.job_history}</div>` : ''}
               </div>
-              <div class="col-side"> 
-                 <div style="display:flex; justify-content:center; gap:10px; margin-bottom:5px;">
-                    <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverTransfer(event, '${id}')">
-                       <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: #fff; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M8 10V7L4 11l4 4v-3h8v-2H8zm8 4v3l4-4-4-4v3H8v2h8z"/></svg>
-                    </div>
-                    <div class="icon-wrap" style="margin-bottom:0;" onclick="toggleDriverNoteEdit(event, '${id}')">
-                       <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                    </div>
-                 </div>
-                 <div class="time-stack"><div class="job-time-stamp">${formatTime12(p.timestamp)}</div><div class="job-date-stamp">${formatDateShort(p.timestamp)}</div></div>
-                 <button class="info-btn" onclick="dndJob('${id}')">${p.status==='pending_pickup'?'DNP':'DND'}</button>
-                 ${p.status === 'in_transit' ? '' : `<button class="done-btn" onclick="markAction('${id}')">${btnText}</button>`}
-              </div>
+            </div>
+            <div class="button-grid">
+              <button class="grid-btn driver-note-btn" onclick="toggleDriverNoteEdit(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg> NOTES</button>
+              <button class="grid-btn transfer-btn" onclick="toggleDriverTransfer(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M8 10V7L4 11l4 4v-3h8v-2H8zm8 4v3l4-4-4-4v3H8v2h8z"/></svg> TRANSFER</button>
+              <button class="grid-btn dnd-btn" onclick="dndJob('${id}')"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg> ${p.status==='pending_pickup'?'DNP':'DND'}</button>
+              <button class="grid-btn pickup-done-btn" onclick="markAction('${id}')">${btnText}</button>
             </div>
             <div id="driver-note-display-${id}"></div>`;
           feed.appendChild(card); if (observer) observer.observe(card);
@@ -998,8 +1002,6 @@
     if(pendingCount >= 20) { routeBtn.classList.add('glow-max'); routeBtn.innerText = "MAX ROUTE"; } 
     else if(pendingCount > 1) { routeBtn.classList.remove('glow-max'); routeBtn.classList.add('glow-active'); routeBtn.innerText = "ROUTE NAV"; } 
     else { routeBtn.classList.remove('glow-active', 'glow-max'); routeBtn.innerText = "ROUTE NAV"; }
-
-    if (feed.classList.contains('overlay-active') && feed.querySelectorAll('.active-card').length === 0) closeJobCard();
 
     const miniList = document.getElementById('mini-map-list');
    if (pendingCount === 0) {
