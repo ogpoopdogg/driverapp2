@@ -453,6 +453,11 @@
       if (!hasRoutedWithGps && Object.keys(globalJobs).length > 0) { hasRoutedWithGps = true; updateRoute(); }
       if (lastGpsUpdate === 0) broadcastLocation();
     }, (err) => console.warn("GPS Error:", err.message), { enableHighAccuracy: true, maximumAge: 0 });
+
+    // Local timer to re-evaluate scheduled_time every minute (so jobs become active without Firebase update)
+    setInterval(() => {
+        if (currentDriver) mergeAndRender();
+    }, 60000);
   }
 
   // Helper to get future scheduled jobs for the current driver (filtered by zone and schedule)
@@ -1258,6 +1263,43 @@
     
     miniList.innerHTML = html + `</div><div style="height:60px;"></div>`;
     miniList.style.display = 'block';
+} else { // <-- this line added
+    // Build HTML for when there are pending jobs (active jobs)
+    let activeHtml = '';
+    const futureJobsList = getFutureJobs(); // also show upcoming even when there are active jobs
+    if (futureJobsList.length > 0) {
+        activeHtml += '<div style="margin-top:20px; border-top:2px solid var(--accent); padding-top:10px;"><h3 style="color:var(--accent); font-size:14px; margin:0 0 10px 0;">UPCOMING SCHEDULED</h3>';
+        futureJobsList.forEach(job => {
+            const displayName = job.status === 'pending_pickup' ? job.name : job.delivery_name;
+            const displayAddr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
+            const displayCity = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
+            const scheduledTime = new Date(job.scheduled_time).toLocaleString();
+            // Check if job is within 5 minutes (300000 ms) of becoming active to show "SOON" badge
+            const timeDiff = job.scheduled_time - Date.now();
+            const soonBadge = (timeDiff > 0 && timeDiff <= 300000) ? '<span style="background:#ff9800; color:#000; font-size:9px; font-weight:900; padding:2px 6px; border-radius:4px; margin-left:6px;">SOON</span>' : '';
+            activeHtml += `
+                <div class="upcoming-item" style="display:flex; align-items:center; gap:10px; font-size:16px; color:var(--text-main); margin-bottom:12px; padding:12px 15px; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:12px; opacity:0.7;" onclick="alert('Scheduled for ${scheduledTime}')">
+                    <div style="background:var(--accent); width:8px; height:8px; border-radius:50%;"></div>
+                    <div style="flex:1; overflow:hidden;">
+                        <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${displayName} ${soonBadge}</div>
+                        <div style="border:1px solid #333; border-radius:6px; padding:6px; margin-top:5px; background:rgba(0,0,0,0.2);">
+                            <div class="mini-address" style="text-align:left; margin:0;">${displayAddr}</div>
+                            <div style="font-size:13px; font-weight:700; color:#888; margin-top:2px;">${displayCity}</div>
+                        </div>
+                        <div style="font-size:11px; color:var(--accent); margin-top:4px;">📅 ${scheduledTime}</div>
+                    </div>
+                </div>`;
+        });
+        activeHtml += '</div>';
+    }
+    // Append activeHtml to the existing mini-list content (which currently holds the route stops)
+    // But we must not overwrite the route stops. So we'll append to existing innerHTML.
+    // However, the miniList.innerHTML is currently set by updateRoute(). We'll append there.
+    // Since renderUnifiedFeed runs after updateRoute, we can append here.
+    const currentMiniHTML = miniList.innerHTML;
+    if (activeHtml) {
+        miniList.innerHTML = currentMiniHTML + activeHtml;
+    }
 }
 
     const miniListContainer = document.getElementById('mini-map-list');
