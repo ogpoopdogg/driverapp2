@@ -440,6 +440,16 @@
     }, (err) => console.warn("GPS Error:", err.message), { enableHighAccuracy: true, maximumAge: 0 });
   }
 
+  // Helper to get future scheduled jobs for the current driver
+  function getFutureJobs() {
+    if (!currentDriver) return [];
+    const all = { ...assignedJobs, ...pickedUpJobs };
+    const now = Date.now();
+    return Object.entries(all)
+        .filter(([id, job]) => job.assigned_to === currentDriver && job.scheduled_time && job.scheduled_time > now)
+        .map(([id, job]) => ({ id, ...job }));
+  }
+
   async function updateRoute() {
     let jobs = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver);
     if(mapPolyline) mapPolyline.setMap(null);
@@ -594,7 +604,31 @@
                     </div>`;
                 }
             });
-            document.getElementById('mini-map-list').innerHTML = listHtml;
+            let finalHtml = listHtml;
+            const futureJobsList = getFutureJobs();
+            if (futureJobsList.length > 0) {
+                finalHtml += '<div style="margin-top:20px; border-top:2px solid var(--accent); padding-top:10px;"><h3 style="color:var(--accent); font-size:14px; margin:0 0 10px 0;">UPCOMING SCHEDULED</h3>';
+                futureJobsList.forEach(job => {
+                    const displayName = job.status === 'pending_pickup' ? job.name : job.delivery_name;
+                    const displayAddr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
+                    const displayCity = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
+                    const scheduledTime = new Date(job.scheduled_time).toLocaleString();
+                    finalHtml += `
+                        <div class="upcoming-item" style="display:flex; align-items:center; gap:10px; font-size:16px; color:var(--text-main); margin-bottom:12px; padding:12px 15px; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:12px; opacity:0.7;" onclick="alert('Scheduled for ${scheduledTime}')">
+                            <div style="background:var(--accent); width:8px; height:8px; border-radius:50%;"></div>
+                            <div style="flex:1; overflow:hidden;">
+                                <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${displayName}</div>
+                                <div style="border:1px solid #333; border-radius:6px; padding:6px; margin-top:5px; background:rgba(0,0,0,0.2);">
+                                    <div class="mini-address" style="text-align:left; margin:0;">${displayAddr}</div>
+                                    <div style="font-size:13px; font-weight:700; color:#888; margin-top:2px;">${displayCity}</div>
+                                </div>
+                                <div style="font-size:11px; color:var(--accent); margin-top:4px;">📅 ${scheduledTime}</div>
+                            </div>
+                        </div>`;
+                });
+                finalHtml += '</div>';
+            }
+            document.getElementById('mini-map-list').innerHTML = finalHtml;
             document.getElementById('mini-map-list').style.display = 'block';
             if(observer) document.querySelectorAll('.mini-list-item').forEach(item => observer.observe(item));
             isNavigating = true;
@@ -946,7 +980,14 @@
     const prevTop = optimizedOrder[0];
     
     // Merge assigned jobs and picked-up jobs (jobs that appear in both are deduplicated)
-    globalJobs = { ...assignedJobs, ...pickedUpJobs };
+    const allJobs = { ...assignedJobs, ...pickedUpJobs };
+    const now = Date.now();
+    globalJobs = {};
+    Object.entries(allJobs).forEach(([id, job]) => {
+        if (!job.scheduled_time || job.scheduled_time <= now) {
+            globalJobs[id] = job;
+        }
+    });
     
     const currentPending = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver).length;
     // ... rest of the function remains exactly the same
@@ -1142,6 +1183,32 @@
             </div>`;
         });
     }
+    
+    // Add upcoming scheduled jobs if any
+    const futureJobsList = getFutureJobs();
+    if (futureJobsList.length > 0) {
+        html += '<div style="margin-top:20px; border-top:2px solid var(--accent); padding-top:10px;"><h3 style="color:var(--accent); font-size:14px; margin:0 0 10px 0;">UPCOMING SCHEDULED</h3>';
+        futureJobsList.forEach(job => {
+            const displayName = job.status === 'pending_pickup' ? job.name : job.delivery_name;
+            const displayAddr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
+            const displayCity = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
+            const scheduledTime = new Date(job.scheduled_time).toLocaleString();
+            html += `
+                <div class="upcoming-item" style="display:flex; align-items:center; gap:10px; font-size:16px; color:var(--text-main); margin-bottom:12px; padding:12px 15px; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:12px; opacity:0.7;" onclick="alert('Scheduled for ${scheduledTime}')">
+                    <div style="background:var(--accent); width:8px; height:8px; border-radius:50%;"></div>
+                    <div style="flex:1; overflow:hidden;">
+                        <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${displayName}</div>
+                        <div style="border:1px solid #333; border-radius:6px; padding:6px; margin-top:5px; background:rgba(0,0,0,0.2);">
+                            <div class="mini-address" style="text-align:left; margin:0;">${displayAddr}</div>
+                            <div style="font-size:13px; font-weight:700; color:#888; margin-top:2px;">${displayCity}</div>
+                        </div>
+                        <div style="font-size:11px; color:var(--accent); margin-top:4px;">📅 ${scheduledTime}</div>
+                    </div>
+                </div>`;
+        });
+        html += '</div>';
+    }
+    
     miniList.innerHTML = html + `</div><div style="height:60px;"></div>`;
     miniList.style.display = 'block';
 }
