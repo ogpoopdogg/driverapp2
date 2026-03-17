@@ -303,7 +303,6 @@
   let manualOrderIds = []; 
   const gpsInterval = 30000;
   let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
-  window.driverZones = {}; // store driver's zone schedule
 
   // Flag to hide spinner after first render
   let initialRenderDone = false;
@@ -398,20 +397,6 @@
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
-
-  function isTimeInZoneSchedule(zoneId, timestamp) {
-    const zone = window.driverZones[zoneId];
-    if (!zone) return false;
-    const date = new Date(timestamp);
-    const day = date.getDay(); // 0=Sunday, 1=Monday, ...
-    if (!zone.days || !zone.days.includes(day)) return false;
-    const startParts = zone.start.split(':').map(Number);
-    const endParts = zone.end.split(':').map(Number);
-    const startMinutes = startParts[0]*60 + startParts[1];
-    const endMinutes = endParts[0]*60 + endParts[1];
-    const currentMinutes = date.getHours()*60 + date.getMinutes();
-    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-  }
   
   function broadcastLocation() {
     if(!currentDriver || !lastGps) return;
@@ -455,20 +440,13 @@
     }, (err) => console.warn("GPS Error:", err.message), { enableHighAccuracy: true, maximumAge: 0 });
   }
 
-  // Helper to get future scheduled jobs for the current driver (filtered by zone and schedule)
+  // Helper to get future scheduled jobs for the current driver
   function getFutureJobs() {
     if (!currentDriver) return [];
     const all = { ...assignedJobs, ...pickedUpJobs };
     const now = Date.now();
     return Object.entries(all)
-        .filter(([id, job]) => {
-            if (job.assigned_to !== currentDriver) return false;
-            if (!job.scheduled_time || job.scheduled_time <= now) return false;
-            // Must belong to a zone the driver covers
-            if (!job.zone_id || !window.driverZones[job.zone_id]) return false;
-            // Check if scheduled_time falls within that zone's schedule
-            return isTimeInZoneSchedule(job.zone_id, job.scheduled_time);
-        })
+        .filter(([id, job]) => job.assigned_to === currentDriver && job.scheduled_time && job.scheduled_time > now)
         .map(([id, job]) => ({ id, ...job }));
   }
 
@@ -609,7 +587,7 @@
                    const hasUpdate = groupIds.some(id => pendingAlerts[id] && pendingAlerts[id].length > 0);
                    const isNew = groupIds.some(id => !previouslyKnown.includes(id));
                    const isPriority = group.jobs.some(j => j.manual_priority);
-                   const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '';
+                   const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>` : '';
                    
                    listHtml += `
                     <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds.join(',')}" style="position:relative;">
@@ -683,11 +661,6 @@
             <span class="driver-name-display" onclick="location.reload()" style="cursor:pointer; font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
           `;
           clearAllNotifications();
-          // Listen for driver's zone schedule
-          db.ref(`driver_zones/${currentDriver}`).on('value', (snap) => {
-            window.driverZones = snap.val() || {};
-            mergeAndRender(); // re-render when schedule changes
-          });
           startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
           
           db.ref(`driver_locations/${currentDriver}/shift_active`).on('value', snap => {
@@ -1010,30 +983,10 @@
     const allJobs = { ...assignedJobs, ...pickedUpJobs };
     const now = Date.now();
     globalJobs = {};
-
     Object.entries(allJobs).forEach(([id, job]) => {
-        // Only consider jobs assigned to current driver
-        if (job.assigned_to !== currentDriver) return;
-
-        // Filter by scheduled_time <= now for active jobs (future scheduled are handled separately)
-        if (job.scheduled_time && job.scheduled_time > now) {
-            // future scheduled, not added to globalJobs
-            return;
+        if (!job.scheduled_time || job.scheduled_time <= now) {
+            globalJobs[id] = job;
         }
-
-        // For pending_pickup and pending_delivery, apply zone/schedule filter
-        if (job.status === 'pending_pickup' || job.status === 'pending_delivery') {
-            // Must have zone_id and be in driver's zones
-            if (!job.zone_id || !window.driverZones[job.zone_id]) {
-                return; // skip
-            }
-            // Check if current time is within zone's schedule
-            if (!isTimeInZoneSchedule(job.zone_id, now)) {
-                return; // skip
-            }
-        }
-        // For in_transit and other statuses (completed, DND, etc.) include them (they will be filtered later in render)
-        globalJobs[id] = job;
     });
     
     const currentPending = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver).length;
