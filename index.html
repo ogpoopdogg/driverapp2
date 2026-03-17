@@ -490,7 +490,7 @@
         try {
             const addr = j.status === 'pending_pickup' ? j.pickup_location : j.destination;
             const name = j.status === 'pending_pickup' ? j.name : j.delivery_name;
-            const city = j.status === 'pending_pickup' ? (j.pickup_city || job.city || "Brandon") : (j.delivery_city || job.city || "Brandon");
+            const city = j.status === 'pending_pickup' ? (j.pickup_city || j.city || "Brandon") : (j.delivery_city || j.city || "Brandon");
             const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
             const key = isCoords ? addr.replace(/\s+/g, '') : `${name}|${addr}|${city}`.toLowerCase();
             const displayStr = isCoords ? addr.trim() : `${name} ${addr}, ${city}`;
