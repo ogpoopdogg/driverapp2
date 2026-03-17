@@ -277,6 +277,28 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <script>
+  // Define functions needed before they're called
+  function attemptLogin() {
+    const email = document.getElementById('login-user').value.trim(), pass = document.getElementById('login-pin').value.trim();
+    if (!email || !pass) { alert("Please enter both Email and Password"); return; }
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+      return firebase.auth().signInWithEmailAndPassword(email, pass);
+    }).catch(e => alert("Login Failed: " + e.code + "\n" + e.message));
+  }
+
+  function initMap() {
+    map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 13, center: { lat: 49.8485, lng: -99.9501 }, disableDefaultUI: true, styles: document.body.getAttribute('data-theme') === 'light' ? [] : darkMapStyles
+    });
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      map: map, suppressMarkers: true, preserveViewport: true,
+      polylineOptions: { strokeColor: "#00d4ff", strokeWeight: 6, strokeOpacity: 0.8 }
+    });
+    driverMarker = new google.maps.Marker({ map: map, icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 6, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "white", rotation: 0 }, zIndex: 999 });
+    map.addListener('dragstart', () => { autoCenter = false; });
+  }
+
   const savedTheme = localStorage.getItem('ec_theme') || 'dark';
   document.body.setAttribute('data-theme', savedTheme);
   
@@ -323,19 +345,6 @@
     document.body.setAttribute('data-theme', newTheme);
     localStorage.setItem('ec_theme', newTheme);
     if(map) map.setOptions({ styles: newTheme === 'light' ? [] : darkMapStyles });
-  }
-  
-  function initMap() {
-    map = new google.maps.Map(document.getElementById("map"), {
-      zoom: 13, center: { lat: 49.8485, lng: -99.9501 }, disableDefaultUI: true, styles: document.body.getAttribute('data-theme') === 'light' ? [] : darkMapStyles
-    });
-    directionsService = new google.maps.DirectionsService();
-    directionsRenderer = new google.maps.DirectionsRenderer({
-      map: map, suppressMarkers: true, preserveViewport: true,
-      polylineOptions: { strokeColor: "#00d4ff", strokeWeight: 6, strokeOpacity: 0.8 }
-    });
-    driverMarker = new google.maps.Marker({ map: map, icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 6, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "white", rotation: 0 }, zIndex: 999 });
-    map.addListener('dragstart', () => { autoCenter = false; });
   }
 
   function enableAutoCenter() {
@@ -803,13 +812,6 @@
     if (badge) { badge.innerText = `${newCards.length} NEW`; badge.style.display = newCards.length > 0 ? 'inline-block' : 'none'; }
   }
 
-  function attemptLogin() {
-    const email = document.getElementById('login-user').value.trim(), pass = document.getElementById('login-pin').value.trim();
-    if (!email || !pass) { alert("Please enter both Email and Password"); return; }
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
-      return firebase.auth().signInWithEmailAndPassword(email, pass);
-    }).catch(e => alert("Login Failed: " + e.code + "\n" + e.message));
-  }
   document.addEventListener('keypress', (e) => { if (e.key === 'Enter' && document.getElementById('login-overlay').style.display !== 'none') attemptLogin(); });
 
   function formatTime12(ts) { return (ts ? new Date(ts) : new Date()).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }); }
