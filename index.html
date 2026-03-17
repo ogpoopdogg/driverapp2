@@ -229,7 +229,7 @@
         <h2>E&C PORTAL</h2>
         <input type="email" id="login-user" class="login-input" placeholder="Email (DriverName@ec.com)" autofocus>
         <input type="password" id="login-pin" class="login-input" placeholder="Password">
-        <button class="login-submit" onclick="attemptLogin()">Enter</button>
+        <button class="login-submit" onclick="window.attemptLogin()">Enter</button>
     </div>
 </div>
 
@@ -273,7 +273,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=places,geometry&callback=initMap" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=places,geometry&callback=Function.prototype"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <script>
@@ -317,15 +317,15 @@
     { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
   ];
   
-  function toggleTheme() {
+  window.toggleTheme = function() {
     const isLight = document.body.getAttribute('data-theme') === 'light';
     const newTheme = isLight ? 'dark' : 'light';
     document.body.setAttribute('data-theme', newTheme);
     localStorage.setItem('ec_theme', newTheme);
     if(map) map.setOptions({ styles: newTheme === 'light' ? [] : darkMapStyles });
-  }
+  };
   
-  function initMap() {
+  window.initMap = function() {
     map = new google.maps.Map(document.getElementById("map"), {
       zoom: 13, center: { lat: 49.8485, lng: -99.9501 }, disableDefaultUI: true, styles: document.body.getAttribute('data-theme') === 'light' ? [] : darkMapStyles
     });
@@ -336,7 +336,7 @@
     });
     driverMarker = new google.maps.Marker({ map: map, icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 6, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "white", rotation: 0 }, zIndex: 999 });
     map.addListener('dragstart', () => { autoCenter = false; });
-  }
+  };
 
   function enableAutoCenter() {
       autoCenter = true;
@@ -808,14 +808,14 @@
     if (badge) { badge.innerText = `${newCards.length} NEW`; badge.style.display = newCards.length > 0 ? 'inline-block' : 'none'; }
   }
 
-  function attemptLogin() {
+  window.attemptLogin = function() {
     const email = document.getElementById('login-user').value.trim(), pass = document.getElementById('login-pin').value.trim();
     if (!email || !pass) { alert("Please enter both Email and Password"); return; }
     firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
       return firebase.auth().signInWithEmailAndPassword(email, pass);
     }).catch(e => alert("Login Failed: " + e.code + "\n" + e.message));
-  }
-  document.addEventListener('keypress', (e) => { if (e.key === 'Enter' && document.getElementById('login-overlay').style.display !== 'none') attemptLogin(); });
+  };
+  document.addEventListener('keypress', (e) => { if (e.key === 'Enter' && document.getElementById('login-overlay').style.display !== 'none') window.attemptLogin(); });
 
   function formatTime12(ts) { return (ts ? new Date(ts) : new Date()).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }); }
   function formatDateShort(ts) { return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric' }).toUpperCase(); }
