@@ -308,6 +308,15 @@
   // Flag to hide spinner after first render
   let initialRenderDone = false;
 
+  // Define attemptLogin function at the very beginning so it's available globally
+  window.attemptLogin = function() {
+    const email = document.getElementById('login-user').value.trim(), pass = document.getElementById('login-pin').value.trim();
+    if (!email || !pass) { alert("Please enter both Email and Password"); return; }
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+      return firebase.auth().signInWithEmailAndPassword(email, pass);
+    }).catch(e => alert("Login Failed: " + e.code + "\n" + e.message));
+  };
+
   const darkMapStyles = [
     { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
     { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
@@ -808,13 +817,6 @@
     if (badge) { badge.innerText = `${newCards.length} NEW`; badge.style.display = newCards.length > 0 ? 'inline-block' : 'none'; }
   }
 
-  window.attemptLogin = function() {
-    const email = document.getElementById('login-user').value.trim(), pass = document.getElementById('login-pin').value.trim();
-    if (!email || !pass) { alert("Please enter both Email and Password"); return; }
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
-      return firebase.auth().signInWithEmailAndPassword(email, pass);
-    }).catch(e => alert("Login Failed: " + e.code + "\n" + e.message));
-  };
   document.addEventListener('keypress', (e) => { if (e.key === 'Enter' && document.getElementById('login-overlay').style.display !== 'none') window.attemptLogin(); });
 
   function formatTime12(ts) { return (ts ? new Date(ts) : new Date()).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }); }
