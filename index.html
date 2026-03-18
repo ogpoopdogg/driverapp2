@@ -304,11 +304,14 @@
   const gpsInterval = 30000;
   let previouslyKnown = JSON.parse(localStorage.getItem('ec_known_jobs') || '[]');
 
+  // NEW: driver schedule and zone filtering data
+  window.driverSchedule = null;               // stores the driver's zone schedule object
+  window.zoneFilterActive = true;              // can be toggled if needed
+  let driverScheduleListener = null;            // Firebase listener ref for cleanup
+  let zoneRefreshInterval = null;               // periodic refresh of job filtering
+
   // Flag to hide spinner after first render
   let initialRenderDone = false;
-
-  // ========== NEW: Driver zone schedule storage ==========
-  let driverSchedule = null; // will hold the schedule object from driver_zones/<driverName>
 
   const darkMapStyles = [
     { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -328,16 +331,27 @@
   }
   
   function initMap() {
-    map = new google.maps.Map(document.getElementById("map"), {
-      zoom: 13, center: { lat: 49.8485, lng: -99.9501 }, disableDefaultUI: true, styles: document.body.getAttribute('data-theme') === 'light' ? [] : darkMapStyles
-    });
-    directionsService = new google.maps.DirectionsService();
-    directionsRenderer = new google.maps.DirectionsRenderer({
-      map: map, suppressMarkers: true, preserveViewport: true,
-      polylineOptions: { strokeColor: "#00d4ff", strokeWeight: 6, strokeOpacity: 0.8 }
-    });
-    driverMarker = new google.maps.Marker({ map: map, icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 6, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "white", rotation: 0 }, zIndex: 999 });
-    map.addListener('dragstart', () => { autoCenter = false; });
+    // Defensive: ensure google maps loaded
+    if (typeof google === 'undefined' || !google.maps) {
+      console.warn("Google Maps not available yet, retrying...");
+      setTimeout(initMap, 500);
+      return;
+    }
+    try {
+      map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 13, center: { lat: 49.8485, lng: -99.9501 }, disableDefaultUI: true, styles: document.body.getAttribute('data-theme') === 'light' ? [] : darkMapStyles
+      });
+      directionsService = new google.maps.DirectionsService();
+      directionsRenderer = new google.maps.DirectionsRenderer({
+        map: map, suppressMarkers: true, preserveViewport: true,
+        polylineOptions: { strokeColor: "#00d4ff", strokeWeight: 6, strokeOpacity: 0.8 }
+      });
+      driverMarker = new google.maps.Marker({ map: map, icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 6, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "white", rotation: 0 }, zIndex: 999 });
+      map.addListener('dragstart', () => { autoCenter = false; });
+    } catch (e) {
+      console.error("Map init error, will retry:", e);
+      setTimeout(initMap, 2000);
+    }
   }
 
   function enableAutoCenter() {
@@ -453,8 +467,156 @@
         .map(([id, job]) => ({ id, ...job }));
   }
 
+  // --- ZONE FILTERING CORE ---
+  function isJobInDriverZone(job) {
+    try {
+      // 1. Defensive: if no schedule or zone filtering disabled, include all
+      if (!window.driverSchedule || !window.zoneFilterActive) return true;
+      
+      // 2. Validate job object
+      if (!job || typeof job !== 'object') return false;
+      
+      // 3. If job has no zone requirement (e.g., already completed), always include? We'll include all non-pending as before.
+      if (job.status !== 'pending_pickup' && job.status !== 'pending_delivery') return true;
+
+      // 4. Check scheduled_time vs driver's zone hours (working hours)
+      if (job.scheduled_time) {
+        const sched = new Date(job.scheduled_time);
+        if (!isNaN(sched)) {
+          // get day of week (0-6) from timestamp
+          const day = sched.getUTCDay(); // 0 = Sunday ... 6 = Saturday
+          const hour = sched.getUTCHours();
+          const minute = sched.getUTCMinutes();
+          const timeNum = hour * 100 + minute; // HHMM format for comparison
+          
+          const zoneKey = `zone_${day}`; // driverSchedule.zone_0 ... zone_6
+          const zoneHours = window.driverSchedule[zoneKey];
+          if (zoneHours && typeof zoneHours === 'string') {
+            // Expected format: "HHMM-HHMM" e.g., "0900-1700"
+            const parts = zoneHours.split('-');
+            if (parts.length === 2) {
+              const start = parseInt(parts[0], 10);
+              const end = parseInt(parts[1], 10);
+              if (!isNaN(start) && !isNaN(end)) {
+                if (timeNum < start || timeNum >= end) {
+                  // Outside working hours -> filter out
+                  return false;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 5. Geographic containment: check if job coordinates lie within zone polygon (if polygon defined)
+      //    Use zone_id fallback or geometry library.
+      const zonePolygonCoords = window.driverSchedule?.zone_polygon; // optional GeoJSON or array of {lat,lng}
+      if (zonePolygonCoords && Array.isArray(zonePolygonCoords) && zonePolygonCoords.length > 2) {
+        // Prefer precomputed zone_id if available and matches
+        if (job.zone_id && job.zone_id === window.driverSchedule.zone_id) {
+          return true; // quick match
+        }
+        
+        // If google maps geometry is available, use point in polygon
+        if (typeof google !== 'undefined' && google.maps && google.maps.geometry) {
+          try {
+            const point = new google.maps.LatLng(job.lat, job.lng);
+            const poly = new google.maps.Polygon({ paths: zonePolygonCoords });
+            if (google.maps.geometry.poly.containsLocation(point, poly)) {
+              return true;
+            } else {
+              return false; // outside polygon
+            }
+          } catch (e) {
+            console.warn("Geometry check failed, fallback to zone_id", e);
+            // fallback: if zone_id exists but mismatch, maybe still include? better to include if no zone_id.
+            if (job.zone_id && job.zone_id !== window.driverSchedule.zone_id) {
+              return false; // explicit mismatch
+            }
+            // else include (conservative)
+          }
+        } else {
+          // No geometry: rely on zone_id if present
+          if (job.zone_id && job.zone_id !== window.driverSchedule.zone_id) {
+            return false;
+          }
+        }
+      } else {
+        // No polygon defined: fallback to zone_id only
+        if (job.zone_id && job.zone_id !== window.driverSchedule?.zone_id) {
+          return false;
+        }
+      }
+      
+      // If no filter disqualified the job, include it
+      return true;
+    } catch (e) {
+      console.warn("isJobInDriverZone error (safe ignore)", e);
+      return true; // On any error, include job (fail open)
+    }
+  }
+
+  // Filter globalJobs before rendering
+  function filterJobsByZone(jobsObj) {
+    if (!jobsObj || typeof jobsObj !== 'object') return {};
+    const filtered = {};
+    try {
+      Object.entries(jobsObj).forEach(([id, job]) => {
+        if (isJobInDriverZone(job)) {
+          filtered[id] = job;
+        }
+      });
+    } catch (e) {
+      console.warn("Filtering error, returning original", e);
+      return jobsObj; // fallback to original
+    }
+    return filtered;
+  }
+
+  // --- NEW: Driver schedule listener ---
+  function setupDriverZoneListener() {
+    if (!currentDriver) return;
+    // Clean up previous listener
+    if (driverScheduleListener) {
+      db.ref(`driver_zones/${currentDriver}`).off('value', driverScheduleListener);
+    }
+    driverScheduleListener = db.ref(`driver_zones/${currentDriver}`).on('value', (snap) => {
+      try {
+        const val = snap.val();
+        if (val && typeof val === 'object') {
+          window.driverSchedule = val;
+        } else {
+          window.driverSchedule = null; // no schedule = show all jobs
+        }
+        // Trigger UI refresh
+        mergeAndRender();
+      } catch (e) {
+        console.warn("Error loading driver schedule", e);
+        window.driverSchedule = null;
+      }
+    }, (err) => {
+      console.warn("Firebase schedule listener error", err);
+      window.driverSchedule = null;
+    });
+  }
+
+  // Periodic refresh of filter (safe interval)
+  function startZoneRefreshInterval() {
+    if (zoneRefreshInterval) clearInterval(zoneRefreshInterval);
+    zoneRefreshInterval = setInterval(() => {
+      try {
+        // Re-run filtering on existing globalJobs and update UI
+        mergeAndRender();
+      } catch (e) {
+        console.warn("Zone refresh error", e);
+      }
+    }, 60000); // every 60 seconds
+  }
+
   async function updateRoute() {
-    let jobs = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver);
+    // Apply zone filtering before route generation
+    const filteredGlobal = filterJobsByZone(globalJobs);
+    let jobs = Object.values(filteredGlobal).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver);
     if(mapPolyline) mapPolyline.setMap(null);
     if (mapMarkers.length > 0) { mapMarkers.forEach(m => m.setMap(null)); mapMarkers = []; }
     mapLabels.forEach(l => l.close()); mapLabels = [];
@@ -490,8 +652,8 @@
     });
 
     priorityGroups.sort((a, b) => {
-        const aId = Object.keys(globalJobs).find(k => globalJobs[k] === a.jobs[0]);
-        const bId = Object.keys(globalJobs).find(k => globalJobs[k] === b.jobs[0]);
+        const aId = Object.keys(filteredGlobal).find(k => filteredGlobal[k] === a.jobs[0]);
+        const bId = Object.keys(filteredGlobal).find(k => filteredGlobal[k] === b.jobs[0]);
         let idxA = manualOrderIds.indexOf(aId);
         let idxB = manualOrderIds.indexOf(bId);
         if(idxA === -1) idxA = 999;
@@ -549,7 +711,7 @@
             if(order && order.length > 0) orderedGroups = order.map(idx => finalGroups[idx]);
             
             optimizedOrder = [];
-            orderedGroups.forEach(g => g.jobs.forEach(j => { const jId = Object.keys(globalJobs).find(k => globalJobs[k] === j); if(jId) optimizedOrder.push(jId); }));
+            orderedGroups.forEach(g => g.jobs.forEach(j => { const jId = Object.keys(filteredGlobal).find(k => filteredGlobal[k] === j); if(jId) optimizedOrder.push(jId); }));
 
             if(result.routes[0].polyline) {
                  let dur = result.routes[0].duration ? parseInt(result.routes[0].duration) : 0;
@@ -567,7 +729,7 @@
                    if(loc) {
                         group.jobs.forEach(gj => { 
                             gj.lat = loc.latitude; gj.lng = loc.longitude;
-                            const jId = Object.keys(globalJobs).find(k => globalJobs[k] === gj);
+                            const jId = Object.keys(filteredGlobal).find(k => filteredGlobal[k] === gj);
                             if(jId) db.ref('jobs').child(jId).update({ lat: loc.latitude, lng: loc.longitude });
                         });
                    }
@@ -585,12 +747,12 @@
                    const info = new google.maps.InfoWindow({ content: `<div>${bizName}</div>`, disableAutoPan: true, position: { lat: loc.latitude, lng: loc.longitude }, pixelOffset: new google.maps.Size(0, -25) });
                    info.open(map); mapLabels.push(info);
 
-                   const groupIds = group.jobs.map(j => Object.keys(globalJobs).find(k => globalJobs[k] === j));
+                   const groupIds = group.jobs.map(j => Object.keys(filteredGlobal).find(k => filteredGlobal[k] === j));
                    const countBadge = group.jobs.length > 1 ? `<span style="background:var(--accent); color:#000; font-size:10px; font-weight:900; padding:1px 6px; border-radius:8px; margin-left:6px; vertical-align:middle;">${group.jobs.length} ORDERS</span>` : "";
                    const hasUpdate = groupIds.some(id => pendingAlerts[id] && pendingAlerts[id].length > 0);
                    const isNew = groupIds.some(id => !previouslyKnown.includes(id));
                    const isPriority = group.jobs.some(j => j.manual_priority);
-                   const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '';
+                   const starHtml = isPriority ? `<svg viewBox="0 0 24 24" onclick="togglePriority(event, '${groupIds.join(',')}')" style="position:absolute; right:15px; top:15px; width:28px; height:28px; fill:#ffcc00; stroke:#000; stroke-width:1px; cursor:pointer; z-index:10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>` : '';
                    
                    listHtml += `
                     <div class="mini-list-item ${(hasUpdate || isNew) ? 'mini-flash' : ''}" onclick="showJobGroup('${groupIds.join(',')}')" id="mini-${groupIds.join(',')}" style="position:relative;">
@@ -664,14 +826,11 @@
             <span class="driver-name-display" onclick="location.reload()" style="cursor:pointer; font-size: 14px; color: #39FF14; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #39FF14; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-right: 8px;">${currentDriver}</span>
           `;
           clearAllNotifications();
-          startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); mergeAndRender(); 
-          
-          // ===== NEW: Listen to driver's zone schedule =====
-          db.ref(`driver_zones/${currentDriver}`).on('value', snap => {
-              driverSchedule = snap.val(); // store schedule object
-              // Re-run filtering whenever schedule changes
-              mergeAndRender();
-          });
+          startContinuousTracking(); setupIntersectionObserver(); startDataListeners(); 
+          // NEW: setup zone schedule listener and refresh interval
+          setupDriverZoneListener();
+          startZoneRefreshInterval();
+          mergeAndRender(); 
           
           db.ref(`driver_locations/${currentDriver}/shift_active`).on('value', snap => {
   window.isShiftActive = snap.val() === true;
@@ -895,7 +1054,7 @@
                    <select id="transfer-select-${id}" class="login-input glow-yellow" style="margin-bottom:10px;" onclick="event.stopPropagation()" onchange="this.style.background='#222'; this.style.color='#00d4ff';">
                       ${driversHtml}
                    </select>
-                   <div style="display:flex; gap:10px;">
+                   <div style="display:flex; gap-10px;">
                       <button onclick="document.getElementById('driver-note-display-${id}').innerHTML=''" class="cancel-note-btn" style="position:relative; right:auto; bottom:auto; flex:1;">CANCEL</button>
                       <button class="save-note-btn" style="margin-top:0; flex:1; padding:12px; font-size:14px; background:var(--update-blue); color:#000;" onclick="event.stopPropagation(); executeTransfer('${id}')">TRANSFER JOB</button>
                    </div>
@@ -985,55 +1144,6 @@
 }
   let jobsData = {};
 
-// ===== NEW: Zone+Time Filtering Helper =====
-function isJobAllowedBySchedule(job) {
-    if (!driverSchedule || !job) return false; // if no schedule, hide job (strict)
-    const now = Date.now();
-    const jobScheduled = job.scheduled_time ? job.scheduled_time : null;
-    
-    // Determine which zone this job belongs to (using stored zone_id if available)
-    const jobZoneId = job.zone_id; // expected from command center
-    if (!jobZoneId) return false; // no zone assigned -> hide (per spec)
-    
-    // Get schedule for that zone from driverSchedule
-    const zoneSchedule = driverSchedule[jobZoneId];
-    if (!zoneSchedule) return false; // driver doesn't cover this zone -> hide
-    
-    // days: array of day numbers (0=Sunday, 1=Monday, ..., 6=Saturday)
-    const days = zoneSchedule.days;
-    const startTime = zoneSchedule.start; // e.g., "09:00"
-    const endTime = zoneSchedule.end;     // e.g., "17:00"
-    
-    // If missing schedule data, hide job
-    if (!days || !startTime || !endTime) return false;
-    
-    // Determine the timestamp to check (job scheduled time or current time)
-    const checkTime = jobScheduled ? jobScheduled : now;
-    
-    const date = new Date(checkTime);
-    const dayOfWeek = date.getDay(); // 0-6
-    
-    // Check day
-    if (!days.includes(dayOfWeek)) return false;
-    
-    // Helper to convert "HH:MM" to minutes since midnight
-    function timeToMinutes(timeStr) {
-        const parts = timeStr.split(':');
-        return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-    }
-    
-    const checkMinutes = date.getHours() * 60 + date.getMinutes();
-    const startMinutes = timeToMinutes(startTime);
-    let endMinutes = timeToMinutes(endTime);
-    
-    // Handle overnight (if end < start, treat as next day; but we only check same day due to days array, so we assume end > start)
-    // For simplicity, assume end > start
-    if (checkMinutes >= startMinutes && checkMinutes < endMinutes) {
-        return true;
-    }
-    return false;
-}
-
  function mergeAndRender() {
     if(!currentDriver) return;
     const prevTop = optimizedOrder[0];
@@ -1042,27 +1152,15 @@ function isJobAllowedBySchedule(job) {
     const allJobs = { ...assignedJobs, ...pickedUpJobs };
     const now = Date.now();
     globalJobs = {};
-    
-    // ===== NEW: Apply zone+time filtering here =====
     Object.entries(allJobs).forEach(([id, job]) => {
-        // First, basic filter: only jobs assigned to current driver
-        if (job.assigned_to !== currentDriver) return;
-        
-        // Apply zone+time filter
-        if (!isJobAllowedBySchedule(job)) {
-            // Job does not satisfy schedule -> skip (do not include in globalJobs)
-            return;
-        }
-        
-        // Additionally, if job has scheduled_time > now, we keep it (isJobAllowedBySchedule handled the time)
         if (!job.scheduled_time || job.scheduled_time <= now) {
-            globalJobs[id] = job;
-        } else {
-            // future scheduled job that passes schedule: keep it
             globalJobs[id] = job;
         }
     });
     
+    // Apply zone filtering to globalJobs (hides jobs outside driver's zone/hours)
+    globalJobs = filterJobsByZone(globalJobs);
+
     const currentPending = Object.values(globalJobs).filter(j => (j.status === 'pending_pickup' || j.status === 'pending_delivery') && j.assigned_to === currentDriver).length;
     // ... rest of the function remains exactly the same
     if (currentPending !== lastPendingCount) {
@@ -1357,6 +1455,11 @@ function isJobAllowedBySchedule(job) {
   }
 
   function logoutDriver() {
+    // Cleanup intervals and listeners
+    if (zoneRefreshInterval) clearInterval(zoneRefreshInterval);
+    if (driverScheduleListener && currentDriver) {
+      db.ref(`driver_zones/${currentDriver}`).off('value', driverScheduleListener);
+    }
     if(confirm("Are you sure you want to log out?")) {
         writeUserLog('logout');
         firebase.auth().signOut().then(() => {
