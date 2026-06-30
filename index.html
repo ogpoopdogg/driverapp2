@@ -434,11 +434,11 @@
     lastRouteClick = Date.now();
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     if (/android/i.test(userAgent)) {
-        window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+        window.location.href = `intent://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving&waypoint_label=Contact%20Name#Intent;scheme=https;package=com.google.android.apps.maps;end`;
     } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-        window.location.href = `comgooglemaps://?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&waypoints=${waypoints}&directionsmode=driving`;
+        window.location.href = `comgooglemaps://?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&waypoints=${waypoints}&directionsmode=driving&waypoint_label=Contact%20Name`;
     } else {
-        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving`, '_blank');
+        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${waypoints}&travelmode=driving&waypoint_label=Contact%20Name`, '_blank');
     }
   }
 
