@@ -386,14 +386,52 @@
     const waypoints = optimizedOrder.map(id => {
         const job = globalJobs[id];
         if(!job) return "";
+        // Priority 1: coordinates
+        const lat = job.lat;
+        const lng = job.lng;
+        if (typeof lat === 'number' && !isNaN(lat) && lat !== 0 && typeof lng === 'number' && !isNaN(lng) && lng !== 0) {
+            const coordStr = `${lat},${lng}`;
+            const key = coordStr.replace(/\s+/g, '').toLowerCase();
+            if(seenLocs.has(key)) return "";
+            seenLocs.add(key);
+            return encodeURIComponent(coordStr);
+        }
+        // Priority 2 & 3: address based
         const addr = job.status === 'pending_pickup' ? job.pickup_location : job.destination;
         const name = job.status === 'pending_pickup' ? job.name : job.delivery_name;
-        const city = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
-        const isCoords = addr ? /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(addr.trim()) : false;
-        const key = isCoords ? addr.replace(/\s+/g, '') : `${name} ${addr}, ${city}`;
+        let city = job.status === 'pending_pickup' ? (job.pickup_city || job.city || "Brandon") : (job.delivery_city || job.city || "Brandon");
+        // If address is missing, fallback
+        if (!addr || addr.trim() === "") {
+            // fallback: use name and city only
+            let locStr = `${name}, ${city}`;
+            // Ensure province suffix
+            if (!/MB|Manitoba/i.test(city)) {
+                locStr += ", MB";
+            }
+            const key = locStr.replace(/\s+/g, '').toLowerCase();
+            if(seenLocs.has(key)) return "";
+            seenLocs.add(key);
+            return encodeURIComponent(locStr);
+        }
+        const addrTrim = addr.trim();
+        // Check if address contains a digit (house number)
+        const hasDigit = /\d/.test(addrTrim);
+        let locStr;
+        if (hasDigit) {
+            // Priority 2: address only, no business name
+            locStr = `${addrTrim}, ${city}`;
+        } else {
+            // Priority 3: include business name
+            locStr = `${name}, ${addrTrim}, ${city}`;
+        }
+        // Ensure province suffix
+        if (!/MB|Manitoba/i.test(city)) {
+            locStr += ", MB";
+        }
+        const key = locStr.replace(/\s+/g, '').toLowerCase();
         if(seenLocs.has(key)) return "";
         seenLocs.add(key);
-        return encodeURIComponent(key);
+        return encodeURIComponent(locStr);
     }).filter(w => w !== "").join("|");
 
     lastRouteClick = Date.now();
@@ -529,7 +567,7 @@
             }
           } catch (e) {
             console.warn("Geometry check failed, fallback to zone_id", e);
-            // fallback: if zone_id exists but mismatch, maybe still include? better to include if no zone_id.
+            // fallback: if zone_id exists but mismatch, still maybe include? better to include if no zone_id.
             if (job.zone_id && job.zone_id !== window.driverSchedule.zone_id) {
               return false; // explicit mismatch
             }
